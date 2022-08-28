@@ -1,0 +1,11 @@
+serial.c:58:5:serial_init	24	static
+serial.c:72:5:serial_is_send_enable	24	static
+serial.c:79:5:serial_send_byte	24	static
+serial.c:93:5:serial_is_recv_enable	24	static
+serial.c:100:15:serial_recv_byte	24	static
+serial.c:115:5:serial_intr_is_send_enable	24	static
+serial.c:122:6:serial_intr_send_enable	24	static
+serial.c:129:6:serial_intr_send_disable	24	static
+serial.c:136:5:serial_intr_is_recv_enable	24	static
+serial.c:143:6:serial_intr_recv_enable	24	static
+serial.c:150:6:serial_intr_recv_disable	24	static

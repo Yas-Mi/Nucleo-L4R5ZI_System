@@ -1,0 +1,17 @@
+syscall.c:8:16:kz_run	56	static
+syscall.c:22:6:kz_exit	8	static
+syscall.c:27:5:kz_wait	40	static
+syscall.c:34:5:kz_sleep	40	static
+syscall.c:41:5:kz_wakeup	48	static
+syscall.c:49:16:kz_getid	40	static
+syscall.c:56:5:kz_chpri	48	static
+syscall.c:64:7:kz_kmalloc	48	static
+syscall.c:72:5:kz_kmfree	48	static
+syscall.c:80:5:kz_send	56	static
+syscall.c:90:16:kz_recv	56	static
+syscall.c:100:5:kz_setintr	48	static
+syscall.c:109:5:kz_tsleep	48	static
+syscall.c:119:5:kx_wakeup	48	static
+syscall.c:127:7:kx_kmalloc	48	static
+syscall.c:135:5:kx_kmfree	48	static
+syscall.c:143:5:kx_send	56	static

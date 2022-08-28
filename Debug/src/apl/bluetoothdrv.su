@@ -1,0 +1,4 @@
+bluetoothdrv.c:25:13:bluetoothdrv_handler	24	static
+bluetoothdrv.c:42:13:bluetoothdrv_init	16	static
+bluetoothdrv.c:59:8:command_analyze	32	static
+bluetoothdrv.c:90:5:bluetoothdrv_main	24	static

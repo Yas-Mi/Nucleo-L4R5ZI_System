@@ -1,0 +1,4 @@
+memory.c:30:12:kzmem_init_pool	32	static
+memory.c:55:5:kzmem_init	16	static
+memory.c:65:7:kzmem_alloc	32	static
+memory.c:97:6:kzmem_free	32	static

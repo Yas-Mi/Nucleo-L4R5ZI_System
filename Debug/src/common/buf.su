@@ -1,0 +1,3 @@
+buf.c:25:9:buf_create	24	static
+buf.c:48:9:put_buf	24	static
+buf.c:88:9:get_buf	24	static
