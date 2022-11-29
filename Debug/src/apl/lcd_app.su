@@ -1,0 +1,16 @@
+lcd_app.c:83:13:lcd_app_init	16	static
+lcd_app.c:95:13:lcd_app_start_up	8	static
+lcd_app.c:105:13:lcd_app_select_mode	16	static
+lcd_app.c:118:13:lcd_app_move_cursor	16	static
+lcd_app.c:133:5:LCD_app_main	40	static
+lcd_app.c:179:6:LCD_APP_MSG_init	16	static
+lcd_app.c:195:6:LCD_APP_MSG_start_up	16	static
+lcd_app.c:211:6:LCD_APP_MSG_select_mode	16	static
+lcd_app.c:227:6:LCD_APP_MSG_btn_up_long	16	static
+lcd_app.c:243:6:LCD_APP_MSG_btn_up_short	16	static
+lcd_app.c:259:6:LCD_APP_MSG_btn_down_long	16	static
+lcd_app.c:275:6:LCD_APP_MSG_btn_down_short	16	static
+lcd_app.c:291:6:LCD_APP_MSG_btn_back_long	16	static
+lcd_app.c:307:6:LCD_APP_MSG_btn_back_short	16	static
+lcd_app.c:323:6:LCD_APP_MSG_btn_select_long	16	static
+lcd_app.c:339:6:LCD_APP_MSG_btn_select_short	16	static

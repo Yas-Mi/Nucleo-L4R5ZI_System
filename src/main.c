@@ -44,62 +44,49 @@ SOFTWARE.
 **
 **  Abstract: main program
 **
+**===================
 **===========================================================================
 */
-int a = 0;
-int task_1000ms(int argc, char *argv[])
-{
-	while(1)
-	{
-		kz_tsleep(1000);
-		a++;
-	}
-}
-int task_1500ms(int argc, char *argv[])
-{
-	while(1)
-	{
-		kz_tsleep(1500);
-		a++;
-	}
-}
-int task_2000ms(int argc, char *argv[])
-{
-	while(1)
-	{
-		kz_tsleep(2000);
-		a++;
-	}
-}
 /* システム・タスクとユーザ・タスクの起動 */
 static int start_threads(int argc, char *argv[])
 {
-  kz_run(consdrv_main, "consdrv",  1, 0x200, 0, NULL);
-  kz_run(command_main, "command",  8, 0x200, 0, NULL);
-  kz_run(task_1000ms, "task_1000ms",  8, 0x200, 0, NULL);
-  kz_run(task_1500ms, "task_1500ms",  8, 0x200, 0, NULL);
-  kz_run(task_2000ms, "task_2000ms",  8, 0x200, 0, NULL);
-  //kz_run(bluetoothdrv_main, "blue_tooth",  8, 0x200, 0, NULL);
-  //kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
+	// タスクの起動
+	//kz_run(consdrv_main, "consdrv",  1, 0x1000, 0, NULL);
+	//kz_run(command_main, "command",  8, 0x1000, 0, NULL);
+	//kz_run(US_main, "US_main",  8, 0x1000, 0, NULL);
+	//kz_run(BT_main, "BT_main",  8, 0x1000, 0, NULL);
+	//kz_run(BT_mng_connect_sts, "BT_mng_connect_sts",  8, 0x1000, 0, NULL);
+	//kz_run(BT_dev_main, "bt_dev",  8, 0x1000, 0, NULL);
 
-  kz_chpri(15); /* 優先順位を下げて，アイドルスレッドに移行する */
-  //INTR_ENABLE; /* 割込み有効にする */
-  while (1) {
-    //TASK_IDLE; /* 省電力モードに移行 */
-  }
+	//kz_run(bluetoothdrv_main, "blue_tooth",  8, 0x200, 0, NULL);
+	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
+	
+	kz_run(LCD_app_main, "LCD_app_main",  3, 0x1000, 0, NULL);
+	kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
+	
+	kz_run(ctl_main, "ctl_main",  3, 0x1000, 0, NULL);
+	kz_run(ctl_cycmsg_main, "ctl_cycmsg",  3, 0x1000, 0, NULL);
 
-  return 0;
+	/* 優先順位を下げて，アイドルスレッドに移行する */
+	kz_chpri(15); 
+	
+	// システム制御タスクの初期化
+	CTL_MSG_init();
+	
+	//INTR_ENABLE; /* 割込み有効にする */
+ 	while (1) {
+		//TASK_IDLE; /* 省電力モードに移行 */
+	}
+	
+	return 0;
 }
 
 int main(void)
-{
-  //INTR_DISABLE; /* 割込み無効にする */
-
-  puts("kozos boot succeed!\n");
-
-  /* OSの動作開始 */
-  kz_start(start_threads, "idle", 0, 0x100, 0, NULL);
-  /* ここには戻ってこない */
-
-  return 0;
+{	
+	/* OSの動作開始 */
+	kz_start(start_threads, "idle", 0, 0x100, 0, NULL);
+	
+	/* ここには戻ってこない */
+	
+	return 0;
 }

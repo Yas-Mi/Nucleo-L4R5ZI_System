@@ -3,6 +3,25 @@
 #include "interrupt.h"
 #include "syscall.h"
 
+static void consdrv_send_write_wrapper(void* address)
+{
+	uint32_t adr;
+	char ascii[8];
+
+	adr = (uint32_t)address;
+
+	ascii[0] = ((adr & 0xF0000000) >> 28) >= 10 ? ((adr & 0xF0000000) >> 28) + 55 : ((adr & 0xF0000000) >> 28) + 48;
+	ascii[1] = ((adr & 0x0F000000) >> 24) >= 10 ? ((adr & 0x0F000000) >> 24) + 55 : ((adr & 0x0F000000) >> 24) + 48;
+	ascii[2] = ((adr & 0x00F00000) >> 20) >= 10 ? ((adr & 0x00F00000) >> 20) + 55 : ((adr & 0x00F00000) >> 20) + 48;
+	ascii[3] = ((adr & 0x000F0000) >> 16) >= 10 ? ((adr & 0x000F0000) >> 16) + 55 : ((adr & 0x000F0000) >> 16) + 48;
+	ascii[4] = ((adr & 0x0000F000) >> 12) >= 10 ? ((adr & 0x0000F000) >> 12) + 55 : ((adr & 0x0000F000) >> 12) + 48;
+	ascii[5] = ((adr & 0x00000F00) >> 8) >= 10 ? ((adr & 0x00000F00) >> 8) + 55 : ((adr & 0x00000F00) >> 8) + 48;
+	ascii[6] = ((adr & 0x000000F0) >> 4) >= 10 ? ((adr & 0x000000F0) >> 4) + 55 : ((adr & 0x000000F0) >> 4) + 48;
+	ascii[7] = ((adr & 0x0000000F) >> 0) >= 10 ? ((adr & 0x0000000F) >> 0) + 55 : ((adr & 0x0000000F) >> 0) + 48;
+	consdrv_send_write(ascii);
+	consdrv_send_write('\n');
+}
+
 /* システム・コール */
 
 kz_thread_id_t kz_run(kz_func_t func, char *name, int priority, int stacksize,
@@ -66,6 +85,8 @@ void *kz_kmalloc(int size)
   kz_syscall_param_t param;
   param.un.kmalloc.size = size;
   kz_syscall(KZ_SYSCALL_TYPE_KMALLOC, &param);
+  //consdrv_send_write("malloc ");
+  //consdrv_send_write_wrapper(param.un.kmalloc.ret);
   return param.un.kmalloc.ret;
 }
 
@@ -74,6 +95,8 @@ int kz_kmfree(void *p)
   kz_syscall_param_t param;
   param.un.kmfree.p = p;
   kz_syscall(KZ_SYSCALL_TYPE_KMFREE, &param);
+  //consdrv_send_write("free ");
+  //consdrv_send_write_wrapper(p);
   return param.un.kmfree.ret;
 }
 

@@ -1,0 +1,12 @@
+consdrv.c:48:16:get_buf	24	static
+consdrv.c:63:13:set_buf	24	static
+consdrv.c:77:12:get_difference_idx	16	static
+consdrv.c:92:13:send_char	32	static
+consdrv.c:108:13:send_string	32	static
+consdrv.c:150:12:consdrv_intrproc	24	static
+consdrv.c:208:13:consdrv_intr	16	static
+consdrv.c:224:12:consdrv_init	8	static
+consdrv.c:231:6:consdrv_send_use	24	static
+consdrv.c:242:6:consdrv_send_write	24	static
+consdrv.c:270:12:consdrv_command	24	static
+consdrv.c:309:5:consdrv_main	40	static

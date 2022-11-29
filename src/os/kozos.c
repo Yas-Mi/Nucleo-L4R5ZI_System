@@ -7,13 +7,15 @@
 #include "lib.h"
 #include "stm32l4xx.h"
 #include "usart.h"
+#include "btn_dev.h"
 #include "stm32l4xx_hal_rcc.h"
 #include "stm32l4xx_hal_cortex.h"
+#include "stm32l4xx_hal_i2c.h"
 
-#define THREAD_NUM 6
+#define THREAD_NUM 15
 #define PRIORITY_NUM 16
 #define THREAD_NAME_SIZE 15
-
+extern void connected_handler(void) ;
 /* スレッド・コンテキスト */
 typedef struct _kz_context {
   uint32 sp; /* スタック・ポインタ */
@@ -71,6 +73,11 @@ typedef struct _kz_msgbox {
   long dummy[1];
 } kz_msgbox;
 
+typedef struct{
+	uint32 time_ms; /* ms */
+	uint32 time_s;  /*  s */
+}kz_time;
+
 /* スレッドのレディー・キュー */
 static struct {
   kz_thread *head;
@@ -87,10 +94,12 @@ static kz_thread *current; /* カレント・スレッド */
 static kz_thread threads[THREAD_NUM]; /* タスク・コントロール・ブロック */
 static kz_handler_t handlers[SOFTVEC_TYPE_NUM]; /* 割込みハンドラ */
 static kz_msgbox msgboxes[MSGBOX_ID_NUM]; /* メッセージ・ボックス */
+static kz_time mng_time;
 
 void dispatch(kz_context *context);
 void SysTick_Handler(void);
 void static SysTick_init(void);
+static void mng_tsleep(void);
 
 /* カレント・スレッドをレディー・キューから抜き出す */
 static int getcurrent(void)
@@ -145,9 +154,10 @@ static void thread_end(void)
 /* スレッドのスタート・アップ */
 static void thread_init(kz_thread *thp)
 {
-  /* スレッドのメイン関数を呼び出す */
-  thp->init.func(thp->init.argc, thp->init.argv);
-  thread_end();
+
+	/* スレッドのメイン関数を呼び出す */
+	thp->init.func(thp->init.argc, thp->init.argv);
+	thread_end();
 }
 
 /* システム・コールの処理(kz_run():スレッドの起動) */
@@ -377,9 +387,9 @@ static int thread_send(kz_msgbox_id_t id, int size, char *p)
 
   /* 受信待ちスレッドが存在している場合には受信処理を行う */
   if (mboxp->receiver) {
-    current = mboxp->receiver; /* 受信待ちスレッド */
-    recvmsg(mboxp); /* メッセージの受信処理 */
-    putcurrent(); /* 受信により動作可能になったので，ブロック解除する */
+	current = mboxp->receiver; /* 受信待ちスレッド */
+	recvmsg(mboxp); /* メッセージの受信処理 */
+	putcurrent(); /* 受信により動作可能になったので，ブロック解除する */
   }
 
   return size;
@@ -589,41 +599,47 @@ void thread_intr(softvec_type_t type, unsigned long sp)
 void kz_start(kz_func_t func, char *name, int priority, int stacksize,
 	      int argc, char *argv[])
 {
-  kzmem_init(); /* 動的メモリの初期化 */
+	kzmem_init(); /* 動的メモリの初期化 */
 
-  /*
-   * 以降で呼び出すスレッド関連のライブラリ関数の内部で current を
-   * 見ている場合があるので，current を NULL に初期化しておく．
-   */
-  current = NULL;
+	/*
+	* 以降で呼び出すスレッド関連のライブラリ関数の内部で current を
+	* 見ている場合があるので，current を NULL に初期化しておく．
+	*/
+	current = NULL;
 
-  memset(readyque, 0, sizeof(readyque));
-  memset(threads,  0, sizeof(threads));
-  memset(handlers, 0, sizeof(handlers));
-  memset(msgboxes, 0, sizeof(msgboxes));
+	memset(readyque, 0, sizeof(readyque));
+	memset(threads,  0, sizeof(threads));
+	memset(handlers, 0, sizeof(handlers));
+	memset(msgboxes, 0, sizeof(msgboxes));
+	memset(&mng_time, 0, sizeof(mng_time));
 
-  /* 割込みハンドラの登録 */
-  thread_setintr(SVCall_INTERRUPT_NO, syscall_intr); /* システム・コール */
-  thread_setintr(SYSTICK_INTERRUPT_NO, SysTick_Handler);
-  thread_setintr(USART1_GLOBAL_INTERRUPT_NO, usart1_handler); /* USART1 */
-  thread_setintr(USART2_GLOBAL_INTERRUPT_NO, usart2_handler); /* USART2 */
-  thread_setintr(USART3_GLOBAL_INTERRUPT_NO, usart3_handler); /* USART3 */
+	/* 割込みハンドラの登録 */
+	thread_setintr(SVCall_INTERRUPT_NO, syscall_intr); /* システム・コール */
+	thread_setintr(SYSTICK_INTERRUPT_NO, SysTick_Handler);
+	thread_setintr(USART1_GLOBAL_INTERRUPT_NO, usart1_handler); /* USART1 */
+	thread_setintr(USART2_GLOBAL_INTERRUPT_NO, usart2_handler); /* USART2 */
+	thread_setintr(USART3_GLOBAL_INTERRUPT_NO, usart3_handler); /* USART3 */
+	thread_setintr(I2C1_EV_INTERRUPT_NO, I2C1_EV_IRQHandler);   /* I2C1 */
+	thread_setintr(I2C1_ER_INTERRUPT_NO, I2C1_ER_IRQHandler);   /* I2C1 */
+	thread_setintr(EXTI0_INTERRUPT_NO, btn_up_interrupt);   	/* EXTI0 */
+	thread_setintr(EXTI1_INTERRUPT_NO, btn_down_interrupt);     /* EXTI1 */
+	thread_setintr(EXTI2_INTERRUPT_NO, btn_back_interrupt);     /* EXTI2 */
+	thread_setintr(EXTI3_INTERRUPT_NO, btn_select_interrupt);   /* EXTI3 */
   //thread_setintr(OCTOSPI1_GLOBAL_INTERRUPT_NO, opctspi1_handler); /* OCTSPI1 */
   //thread_setintr(OCTOSPI2_GLOBAL_INTERRUPT_NO, opctspi2_handler); /* OCTSPI2 */
   //thread_setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); /* ダウン要因発生 */
 
-
-  /* Systickタイマの初期化 */
-  SysTick_init();
-
-  /* システム・コール発行不可なので直接関数を呼び出してスレッド作成する */
-  current = (kz_thread *)thread_run(func, name, priority, stacksize,
+	/* システム・コール発行不可なので直接関数を呼び出してスレッド作成する */
+	current = (kz_thread *)thread_run(func, name, priority, stacksize,
 				    argc, argv);
 
-  /* 最初のスレッドを起動 */
-  _dispatch(current->context);
+	/* Systickタイマの初期化 */
+	SysTick_init();
 
-  /* ここには返ってこない */
+	/* 最初のスレッドを起動 */
+	_dispatch(current->context);
+
+	/* ここには返ってこない */
 }
 
 void kz_sysdown(void)
@@ -648,15 +664,40 @@ void kz_srvcall(kz_syscall_type_t type, kz_syscall_param_t *param)
   srvcall_proc(type, param);
 }
 
+uint32 kz_get_time_ms(void)
+{
+	return mng_time.time_ms;
+}
+
+uint32 kz_get_time_s(void)
+{
+	return mng_time.time_s;
+}
+
 /* Systick割り込み */
 void static SysTick_init(void)
 {
+	/* 1us周期でSystick割り込みを発生させる */
     SysTick_Config(SystemCoreClock / 1000);
 }
 
 /* Systick割り込み */
 void SysTick_Handler(void)
 {
+
+	/* 時間の管理 */
+	mng_time.time_ms++;
+	/* 1000ms経過後 */
+	if(1000 == mng_time.time_ms){
+		mng_time.time_s++;
+		mng_time.time_ms = 0;
+	}
+
+	/* 待ち状態のタスクをチェック */
+	mng_tsleep();
+}
+
+static void mng_tsleep(void){
     int i;
     kz_thread *current_task;
     kz_thread *prev_task;
@@ -667,6 +708,7 @@ void SysTick_Handler(void)
     while(NULL != current_task){
         if(0 == current_task->time){
             /* レディーキューへ接続*/
+
             if(readyque[current_task->priority].tail) {
             	readyque[current_task->priority].tail->next = current_task;
             }else{

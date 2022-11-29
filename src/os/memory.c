@@ -2,7 +2,7 @@
 #include "kozos.h"
 #include "lib.h"
 #include "memory.h"
-
+#include "consdrv.h"
 /*
  * メモリ・ブロック構造体
  * (獲得された各領域は，先頭に以下の構造体を持っている)
@@ -20,8 +20,11 @@ typedef struct _kzmem_pool {
 } kzmem_pool;
 
 /* メモリ・プールの定義(個々のサイズと個数) */
+// メモリプール領域は0x30000(196,608byte)
+// 16*32 = 512byte, 32*64 = 2,048byte, 64*64 = 4,096byte, 128*16 = 2,048byte, 256*16 = 4,096byte
+// 512 + 2,048 + 4,096 + 2,048 + 4,096 = 10,752byte
 static kzmem_pool pool[] = {
-  { 16, 8, NULL }, { 32, 8, NULL }, { 64, 4, NULL },
+  { 16, 32, NULL }, { 32, 64, NULL }, { 64, 64, NULL }, { 128, 16, NULL }, { 256, 16, NULL },
 };
 
 #define MEMORY_AREA_NUM (sizeof(pool) / sizeof(*pool))
@@ -72,14 +75,13 @@ void *kzmem_alloc(int size)
     p = &pool[i];
     if (size <= p->size - sizeof(kzmem_block)) {
       if (p->free == NULL) { /* 解放済み領域が無い(メモリ・ブロック不足) */
-	kz_sysdown();
-	return NULL;
+		kz_sysdown();
+		return NULL;
       }
       /* 解放済みリンクリストから領域を取得する */
       mp = p->free;
       p->free = p->free->next;
       mp->next = NULL;
-
       /*
        * 実際に利用可能な領域は，メモリ・ブロック構造体の直後の領域に
        * なるので，直後のアドレスを返す．
@@ -115,3 +117,5 @@ void kzmem_free(void *mem)
 
   kz_sysdown();
 }
+
+

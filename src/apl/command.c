@@ -2,6 +2,8 @@
 #include "kozos.h"
 #include "consdrv.h"
 #include "lib.h"
+#include "us_sensor.h"
+#include "stm32l4xx_hal_gpio.h"
 
 typedef struct{
 	kz_thread_id_t tsk_id;
@@ -14,6 +16,7 @@ int command_main(int argc, char *argv[])
   char *p;
   int size;
   COMMAND_CTL *this = &command_ctl;
+	GPIO_PinState pin;
 
   /* 自身のタスクIDをコンテキストに設定 */
   this->tsk_id = kz_getid();
@@ -30,15 +33,22 @@ int command_main(int argc, char *argv[])
     if (!strncmp(p, "echo", 4)) { /* echoコマンド */
     	consdrv_send_write(p + 4); /* echoに続く文字列を出力する */
     	consdrv_send_write("\n");
-    }else if(!strncmp(p, "BT ", 3)){
-    	kz_send(MSGBOX_ID_BTINPUT, strlen(p)-3, &p[3]);
-
-
+    }else if(!strncmp(p, "measure start", 13)){
+    	// 測定開始
+    	US_MSG_measure_start();
+    	//kz_send(MSGBOX_ID_BTINPUT, strlen(p)-3, &p[3]);
+    }else if(!strncmp(p, "measure stop", 12)){
+    	// 測定停止
+    	US_MSG_measure_stop();
+    	//kz_send(MSGBOX_ID_BTINPUT, strlen(p)-3, &p[3]);
+    }else if(!strncmp(p, "BT status", 9)){
+    	BT_MSG_get_status();
     }else{
     	consdrv_send_write("unknown.\n");
     }
-
+#ifndef USE_STATIC_BUFFER
     kz_kmfree(p);
+#endif
   }
 
   return 0;

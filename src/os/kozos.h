@@ -25,6 +25,9 @@ int kx_wakeup(kz_thread_id_t id);
 void *kx_kmalloc(int size);
 int kx_kmfree(void *p);
 int kx_send(kz_msgbox_id_t id, int size, char *p);
+/* utility */
+uint32 kz_get_time_ms(void);
+uint32 kz_get_time_s(void);
 
 /* ライブラリ関数 */
 void kz_start(kz_func_t func, char *name, int priority, int stacksize,
@@ -34,12 +37,25 @@ void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param);
 void kz_srvcall(kz_syscall_type_t type, kz_syscall_param_t *param);
 
 /* システム・タスク */
+int ctl_main(int argc, char *argv[]);
+int ctl_cycmsg_main(int argc, char *argv[]);
+
+/* コンソールタスク */
+int command_main(int argc, char *argv[]);
 int consdrv_main(int argc, char *argv[]);
 
-/* ユーザ・タスク */
-int command_main(int argc, char *argv[]);
+/* 超音波センサデータ取得タスク */
+int US_main(int argc, char *argv[]);
 
-/* ユーザ・タスク */
-int bluetoothdrv_main(int argc, char *argv[]);
+/* BlueToothタスク */
+int BT_main(int argc, char *argv[]);
+int BT_mng_connect_sts(int argc, char *argv[]);
+int BT_dev_main(int argc, char *argv[]);
+
+// 表示アプリタスク
+int LCD_app_main(int argc, char *argv[]);
+
+// ボタンデバイスタスク
+int BTN_dev_main(int argc, char *argv[]);
 
 #endif
