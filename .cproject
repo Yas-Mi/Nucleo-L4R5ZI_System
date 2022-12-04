@@ -107,7 +107,6 @@
 						</toolChain>
 					</folderInfo>
 					<fileInfo id="com.atollic.truestudio.exe.debug.1571999415.930246193" name="octspi.h" rcbsApplicability="disable" resourcePath="src/drv/octspi.h" toolsToInvoke=""/>
-					<fileInfo id="com.atollic.truestudio.exe.debug.1571999415.1467928436" name="us_sensor.h" rcbsApplicability="disable" resourcePath="src/apl/us_sensor.h" toolsToInvoke=""/>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
 						<entry excluding="drv/octspi.h|drv/octspi.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>

@@ -38,14 +38,16 @@ ENTRY(Reset_Handler)
 _estack = 0x20030000;    /* end of 192K RAM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
-_Min_Heap_Size = 0;      /* required amount of heap  */
-_Min_Stack_Size = 0x400; /* required amount of stack */
+_OS_STACK_SIZE = 0x8000;		/* required amount of stack */
+_OS_SYSTEM_POOL_SIZE = 0x8000;	/* required amount of stack */
+_OS_INTERRUPT_STACK_SIZE = 0x800;	/* required amount of stack */
+_OS_MEMORY_SIZE = 0x1F800;	/* required amount of stack */
 
 /* Specify the memory areas */
 MEMORY
 {
-  FLASH (rx)      : ORIGIN = 0x08000000, LENGTH = 2048K
-  RAM (xrw)       : ORIGIN = 0x20000000, LENGTH = 192K
+  FLASH (rx)	  : ORIGIN = 0x08000000, LENGTH = 2048K
+  RAM1 (xrw)	  : ORIGIN = 0x20000000, LENGTH = 192k
   RAM2 (rw)       : ORIGIN = 0x10000000, LENGTH = 64K
   RAM3 (rw)       : ORIGIN = 0x20040000, LENGTH = 384K
   MEMORY_B1 (rx)  : ORIGIN = 0x60000000, LENGTH = 0K
@@ -118,18 +120,30 @@ SECTIONS
 
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
-
-  /* Initialized data sections goes into RAM, load LMA copy after code */
-  .data : 
-  {
-    . = ALIGN(4);
-    _sdata = .;        /* create a global symbol at data start */
-    *(.data)           /* .data sections */
-    *(.data*)          /* .data* sections */
-
-    . = ALIGN(4);
-    _edata = .;        /* define a global symbol at data end */
-  } >RAM AT> FLASH
+  
+	._os_interrupt_stack :
+	{
+		. = ALIGN(4);
+		_os_interrupt_stack_start = .;
+		. = . + _OS_INTERRUPT_STACK_SIZE;
+		_os_interrupt_stack_end = .;
+	} > RAM1
+  
+	._os_stack :
+	{
+		. = ALIGN(4);
+		_task_stack_start = .;
+		. = . + _OS_STACK_SIZE;
+		_task_stack_end = .;
+	} >RAM1
+  
+	._system_pool :
+	{
+		. = ALIGN(4);
+		_system_pool_start = .;
+		. = . + _OS_SYSTEM_POOL_SIZE;
+		_system_pool_end = .;
+	} >RAM1
   
   _siram2 = LOADADDR(.ram2);
 
@@ -149,6 +163,17 @@ SECTIONS
     . = ALIGN(4);
     _eram2 = .;       /* create a global symbol at ram2 end */
   } >RAM2 AT> FLASH
+  
+  /* Initialized data sections goes into RAM, load LMA copy after code */
+  .data : 
+  {
+    . = ALIGN(4);
+    _sdata = .;        /* create a global symbol at data start */
+    *(.data)           /* .data sections */
+    *(.data*)          /* .data* sections */ 
+    . = ALIGN(4);
+    _edata = .;        /* define a global symbol at data end */
+  } >RAM3 AT> FLASH
 
   /* Uninitialized data section */
   . = ALIGN(4);
@@ -160,30 +185,9 @@ SECTIONS
     *(.bss)
     *(.bss*)
     *(COMMON)
-
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
-  } >RAM
-
-  /* User_heap_stack section, used to check that there is enough RAM left */
-  ._user_heap_stack :
-  {
-    . = ALIGN(4);
-    PROVIDE ( end = . );
-    PROVIDE ( _end = . );
-    . = . + _Min_Heap_Size;
-    . = . + _Min_Stack_Size;
-    . = ALIGN(4);
-  } >RAM
-
-  ._system_pool :
-  {
-    . = ALIGN(4);
-    _task_stack_start = .;
-    . = . + 0x30000;
-    _task_stack_end = .;
-    _system_pool_start = .;
   } >RAM3
 
   /* MEMORY_bank1 section, code must be located here explicitly            */

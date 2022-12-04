@@ -1,2 +1,2 @@
-main.c:51:12:start_threads	24	static
-main.c:84:5:main	16	static
+main.c:55:12:start_threads	24	static
+main.c:91:5:main	16	static

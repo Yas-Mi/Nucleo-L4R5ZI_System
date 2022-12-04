@@ -2,7 +2,7 @@
 #include "kozos.h"
 #include "lib.h"
 #include "memory.h"
-#include "consdrv.h"
+#include "console.h"
 /*
  * メモリ・ブロック構造体
  * (獲得された各領域は，先頭に以下の構造体を持っている)

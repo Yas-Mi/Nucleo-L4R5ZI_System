@@ -1,9 +1,8 @@
-consdrv.c:33:13:send_char	24	static
-consdrv.c:44:13:send_string	32	static
-consdrv.c:73:12:consdrv_intrproc	24	static
-consdrv.c:117:13:consdrv_intr	16	static
-consdrv.c:133:12:consdrv_init	8	static
-consdrv.c:140:6:consdrv_send_use	24	static
-consdrv.c:151:6:consdrv_send_write	24	static
-consdrv.c:164:12:consdrv_command	24	static
-consdrv.c:197:5:consdrv_main	40	static
+consdrv.c:26:8:console_recv_callback	24	static
+consdrv.c:38:8:console_send_callback	16	static
+consdrv.c:43:13:console_init	16	static
+consdrv.c:65:16:console_recv	16	static
+consdrv.c:83:13:console_analysis	32	static
+consdrv.c:119:5:console_main	24	static
+consdrv.c:142:9:console_str_send	32	static
+consdrv.c:161:9:console_set_command	24	static

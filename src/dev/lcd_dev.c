@@ -6,7 +6,7 @@
  */
 #include "defines.h"
 #include "kozos.h"
-#include "stm32l4xx_hal_i2c.h"
+#include "i2c_wrapper.h"
 #include "lcd_dev.h"
 #include "lib.h"
 
@@ -15,7 +15,7 @@
 #define LCD_ST_INITIALIZED		(1U) // 初期化済み
 
 // 使用するI2Cのチャネル
-#define LCD_USE_I2C_CH		I2C1 // CH1を使用
+#define LCD_USE_I2C_CH		I2C_CH1 // CH1を使用
 
 // LCDデバイスのスレーブアドレス
 #define LCD_SLAVE_ADDRESS	(0x3E)
@@ -31,7 +31,6 @@
 // 制御用ブロック
 typedef struct {
 	uint8_t status;											// 状態
-	I2C_HandleTypeDef hi2c1;								// I2Cのコンフィグ情報
 	uint8_t lcd_img[LCD_DISPLAY_WIDTH*LCD_DISPLAY_HEIGHT];	// LCDのイメージRAM
 }LCD_CTL;
 
@@ -57,8 +56,8 @@ static const uint8_t init_cmd[] = {
 // 文字列パターンテーブル
 static const CHAR_PTN char_ptn[] = {
 	// 0～9
-	{0x8250, 0x30}, {0x8251, 0x31}, {0x8252, 0x32}, {0x8253, 0x33}, {0x8254, 0x34}, // 0～4
-	{0x8255, 0x35}, {0x8256, 0x36}, {0x8257, 0x37}, {0x8258, 0x38}, {0x8259, 0x39}, // 5～9
+	{0x824F, 0x30}, {0x8250, 0x31}, {0x8251, 0x32}, {0x8252, 0x33}, {0x8253, 0x34},  // 0～4
+	{0x8254, 0x35}, {0x8255, 0x36}, {0x8256, 0x37}, {0x8257, 0x38}, {0x8258, 0x39},  // 5～9
 	// A～Z
 	{0x8260, 0x41}, {0x8261, 0x42}, {0x8262, 0x43}, {0x8263, 0x44}, {0x8264, 0x45}, // A～E
 	{0x8265, 0x46}, {0x8266, 0x47}, {0x8267, 0x48}, {0x8268, 0x49}, {0x8269, 0x4A}, // F～J
@@ -75,7 +74,7 @@ static const CHAR_PTN char_ptn[] = {
 	{0x829A, 0x7A},                                                                 // z
 	// ア～ン
 	{0x8341, 0xB1}, {0x8343, 0xB2}, {0x8345, 0xB3}, {0x8347, 0xB4}, {0x8349, 0xB5}, // ア行
-	{0x834B, 0xB6}, {0x834C, 0xB7}, {0x834E, 0xB8}, {0x8350, 0xB9}, {0x8352, 0xBA}, // カ行
+	{0x834A, 0xB6}, {0x834C, 0xB7}, {0x834E, 0xB8}, {0x8350, 0xB9}, {0x8352, 0xBA}, // カ行
 	{0x8354, 0xBB}, {0x8356, 0xBC}, {0x8358, 0xBD}, {0x835A, 0xBE}, {0x835C, 0xBF}, // サ行
 	{0x835E, 0xC0}, {0x8360, 0xC1}, {0x8363, 0xC2}, {0x8365, 0xC3}, {0x8367, 0xC4}, // タ行
 	{0x8369, 0xC5}, {0x836A, 0xC6}, {0x836B, 0xC7}, {0x836C, 0xC8}, {0x836D, 0xC9}, // ナ行
@@ -87,9 +86,11 @@ static const CHAR_PTN char_ptn[] = {
 	{0x8340, 0xA7}, {0x8342, 0xA8}, {0x8343, 0xA9}, {0x8346, 0xAA}, {0x8348, 0xAB}, // ァ行
 	{0x8383, 0xAC}, {0x8385, 0xAD}, {0x8387, 0xAE},                                 // ャ行
 	// 記号
+	{0x8140, 0x20},                                                                 // 　
 	{0x814A, 0xDE},                                                                 // ゛
 	{0x814B, 0xDF},                                                                 // ゜
 	{0x8144, 0x2E},                                                                 //．
+	{0x815B, 0x2D},                                                                 //ー	
 	{0x8183, 0x3C},                                                                 //＜
 	{0x8184, 0x3E},                                                                 //＞
 };
@@ -97,94 +98,9 @@ static const CHAR_PTN char_ptn[] = {
 static LCD_CTL lcd_ctl; // 制御ブロックの実体
 
 //内部関数
-// I2Cドライバのエラーハンドラ
-static Error_Handler(void)
-{
-	while(1) {} ;
-}
-
-// I2Cのピン設定をする関数
-//   現状I2C CH1しか使用しないためI2C CH1のみ初期化する
-static void lcd_dev_pin_init(void)
-{
-	GPIO_InitTypeDef GPIO_InitStruct = {0};
-	RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
-	
-	/** Initializes the peripherals clock
-	*/
-	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_I2C1;
-	PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_PCLK1;
-	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	__HAL_RCC_PWR_CLK_ENABLE();
-	__HAL_RCC_GPIOG_CLK_ENABLE();
-	HAL_PWREx_EnableVddIO2();
-	/**I2C1 GPIO Configuration
-	PG13     ------> I2C1_SDA
-	PG14     ------> I2C1_SCL
-	*/
-    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_14;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
-    HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
-	/* Peripheral clock enable */
-	__HAL_RCC_I2C1_CLK_ENABLE();
-	
-	return;
-}
-
-// I2Cの設定をする関数
-//   現状I2C CH1しか使用しないためI2C CH1のみ初期化する
-static void lcd_dev_set_config(void) 
-{
-	LCD_CTL *this = &lcd_ctl;
-	
-	this->hi2c1.Instance = LCD_USE_I2C_CH;
-	this->hi2c1.Init.Timing = 0x00000004;
-	this->hi2c1.Init.OwnAddress1 = 0;
-	this->hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-	this->hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-	this->hi2c1.Init.OwnAddress2 = 0;
-	this->hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
-	this->hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-	this->hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-	// I2Cの初期化
-	if (HAL_I2C_Init(&(this->hi2c1)) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	
-	/** Configure Analogue filter
-	*/
-	if (HAL_I2CEx_ConfigAnalogFilter(&(this->hi2c1), I2C_ANALOGFILTER_ENABLE) != HAL_OK)
-	{
-		Error_Handler();
-	}
-
-	/** Configure Digital filter
-	*/
-	if (HAL_I2CEx_ConfigDigitalFilter(&(this->hi2c1), 0) != HAL_OK)
-	{
-		Error_Handler();
-	}
-	
-	// 割込みの設定
-	HAL_NVIC_SetPriority(I2C1_EV_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
-	HAL_NVIC_SetPriority(I2C1_ER_IRQn, 0, 0);
-	HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
-	
-	return;
-}
-
 // I2Cへデータを送信する関数
-static void lcd_send_data(uint32_t type, uint8_t *send_data, uint8_t size) 
+static void lcd_send_data(uint32_t type, const uint8_t *send_data, uint8_t size) 
 {
-	LCD_CTL *this = &lcd_ctl;
 	uint8_t data[2];
 	uint8_t i;
 	
@@ -202,26 +118,17 @@ static void lcd_send_data(uint32_t type, uint8_t *send_data, uint8_t size)
 	
 	for (i = 0; i < size; i++) {
 		data[1] = send_data[i];
-		// データを送信(sampleを参考)
-		while(HAL_I2C_Master_Transmit_IT(&(this->hi2c1), (uint16_t)(LCD_SLAVE_ADDRESS << 1), data, 2)!= HAL_OK) {
-			/* Error_Handler() function is called when Timout error occurs.
-			 When Acknowledge failure ocucurs (Slave don't acknowledge it's address)
-			 Master restarts communication */
-			if (HAL_I2C_GetError(&(this->hi2c1)) != HAL_I2C_ERROR_AF) {
-				Error_Handler();
-			}
-		}
+		// データを送信
+		i2c_wrapper_send(LCD_USE_I2C_CH, LCD_SLAVE_ADDRESS, data, 2);
 		// 5msのディレイ
 		kz_tsleep(5);
 	}
-
 }
 
 // sjisコードからLCDの文字パターンに変換する関数
 static uint8_t lcd_get_ptn(uint16_t sjis)
 {
 	uint16_t i;
-	uint8_t ptn;
 	
 	// パターンを検索
 	for (i = 0; i < sizeof(char_ptn)/sizeof(char_ptn[0]); i++) {
@@ -244,11 +151,8 @@ void LCD_dev_init(void)
 	// 制御ブロックの初期化
 	memset(&lcd_ctl, 0, sizeof(lcd_ctl));
 	
-	// ピンの設定
-	lcd_dev_pin_init();
-	
-	// I2Cの設定
-	lcd_dev_set_config();
+	// I2Cをオープンする
+	i2c_wrapper_open(LCD_USE_I2C_CH);
 	
 	// LCDの初期化
 	lcd_send_data(CONTROL_TYPE, init_cmd, sizeof(init_cmd)/sizeof(init_cmd[0]));
@@ -313,9 +217,38 @@ int8_t LCD_dev_write(uint8_t x, uint8_t y, uint16_t *str)
 		}
 		
 		// 文字を進める
-		*str++;
+		str++;
 		// オフセットを進める
 		ofst++;
+	}
+	
+	return 0;
+}
+
+// LCDクリア関数
+int8_t LCD_dev_clear(uint8_t x, uint8_t y, uint8_t num)
+{
+	LCD_CTL *this = &lcd_ctl;
+	uint8_t i = 0;
+	
+	// 状態が未初期化の場合、エラーを返す
+	if (this->status == LCD_ST_NOT_INTIALIZED) {
+		return -1;
+	}
+	
+	// LCDの表示位置が範囲外の場合、エラーを返す
+	if ((x > LCD_DISPLAY_WIDTH) || (y > LCD_DISPLAY_HEIGHT)) {
+		return -1;
+	}
+	
+	// 表示文字が行をまたぐ場合、エラーを返す
+	if(x + num > LCD_DISPLAY_WIDTH) {
+		return -1;
+	}
+	
+	// 空白(0x20)を設定
+	for (i = 0; i < num; i++) {
+		this->lcd_img[(y * LCD_DISPLAY_WIDTH + x) + i] = 0x20;
 	}
 	
 	return 0;

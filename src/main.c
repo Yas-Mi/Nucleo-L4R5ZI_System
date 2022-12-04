@@ -28,11 +28,15 @@ SOFTWARE.
 */
 
 /* Includes */
+#include <console.h>
 #include "stm32l4xx.h"
 #include "defines.h"
 #include "kozos.h"
 #include "interrupt.h"
-#include "lib.h"
+#include "clock.h"
+#include "pin_function.h"
+#include "console.h"
+#include "i2c_wrapper.h"
 
 /* Private macro */
 /* Private variables */
@@ -50,23 +54,26 @@ SOFTWARE.
 /* システム・タスクとユーザ・タスクの起動 */
 static int start_threads(int argc, char *argv[])
 {
+	// ペリフェラルの初期化
+	usart_init();
+	i2c_wrapper_init();
+	
 	// タスクの起動
-	//kz_run(consdrv_main, "consdrv",  1, 0x1000, 0, NULL);
-	//kz_run(command_main, "command",  8, 0x1000, 0, NULL);
+	// デバイス
+	kz_run(BTN_dev_main, "BTN_dev_main",  2, 0x1000, 0, NULL);
+	// アプリ
+	kz_run(console_main, "console",  3, 0x1000, 0, NULL);
+	kz_run(LCD_app_main, "LCD_app_main",  3, 0x1000, 0, NULL);
+	kz_run(ctl_main, "ctl_main",  3, 0x1000, 0, NULL);
+	kz_run(ctl_cycmsg_main, "ctl_cycmsg",  3, 0x1000, 0, NULL);
 	//kz_run(US_main, "US_main",  8, 0x1000, 0, NULL);
 	//kz_run(BT_main, "BT_main",  8, 0x1000, 0, NULL);
 	//kz_run(BT_mng_connect_sts, "BT_mng_connect_sts",  8, 0x1000, 0, NULL);
 	//kz_run(BT_dev_main, "bt_dev",  8, 0x1000, 0, NULL);
-
 	//kz_run(bluetoothdrv_main, "blue_tooth",  8, 0x200, 0, NULL);
 	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
+	//kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
 	
-	kz_run(LCD_app_main, "LCD_app_main",  3, 0x1000, 0, NULL);
-	kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
-	
-	kz_run(ctl_main, "ctl_main",  3, 0x1000, 0, NULL);
-	kz_run(ctl_cycmsg_main, "ctl_cycmsg",  3, 0x1000, 0, NULL);
-
 	/* 優先順位を下げて，アイドルスレッドに移行する */
 	kz_chpri(15); 
 	
@@ -83,6 +90,11 @@ static int start_threads(int argc, char *argv[])
 
 int main(void)
 {	
+	// ペリフェラルのクロックを有効化
+	periferal_clock_init();
+	// ピンファンクションの設定
+	pin_function_init();
+	
 	/* OSの動作開始 */
 	kz_start(start_threads, "idle", 0, 0x100, 0, NULL);
 	

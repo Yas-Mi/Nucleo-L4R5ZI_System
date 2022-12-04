@@ -7,8 +7,7 @@
 #include "defines.h"
 #include "kozos.h"
 #include "bt_main.h"
-#include "consdrv.h"
-#include "us_sensor.h"
+#include "console.h"
 #include "bt_dev.h"
 #include "btn_dev.h"
 #include "lcd_app.h"
@@ -18,7 +17,6 @@
 #define	CYC_TASK_PERIOD			(10U)	//!< 周期メッセージを送信するタスクの周期[ms]
 #define	CTL_TASK_EVENT_PERIOD	(100U)	//!< 制御タスクのイベント送信周期[ms]
 #define	QUE_NUM					(1U)	//!< キューの数
-#define	TASK_NUM				(2U)	//!< タスクの数
 #define MODE_SELECT_TIME		(1000U)	//!< 起動画面からモードセレクト画面までの時間
 
 // 状態
@@ -33,17 +31,10 @@ enum State_Type {
 
 // メッセージ
 enum MSG_Type {
-	MSG_INIT = 0U,	//!< 初期化要求メッセージ
-	MSG_EVENT,		//!< イベント発生メッセージ
-	MSG_BTN,		//!< ボタン押下メッセージ
+	MSG_INIT = 0U,		//!< 初期化要求メッセージ
+	MSG_EVENT,			//!< イベント発生メッセージ
 	MSG_MAX,		//!< 最大値
 };
-
-// ボタン情報構造体
-typedef struct {
-	BTN_TYPE btn;	// ボタンの種類
-	BTN_STATUS sts;	// ボタンの状態
-} BTN_INFO;
 
 // 関数ポインタ
 typedef void (*INIT_TSK)(void);
@@ -68,6 +59,7 @@ typedef struct {
 	kz_thread_id_t tsk_id;      // メインタスクのID
 	kz_msgbox_id_t msg_id;      // メッセージID
 	uint8_t state;              // 状態
+	uint8_t req_chg_sts;		// 状態変更要求フラグ
 	uint8_t mode_select_timer;  // 起動画面からモードセレクト画面までの時間をカウントするためのタイマー
 } CTL_CTL;
 
@@ -78,9 +70,8 @@ static struct {
 } cycmsg_que[QUE_NUM];
 
 // タスク初期化関数テーブル
-static const INIT_TSK init_tsk_func[TASK_NUM] =
+static const INIT_TSK init_tsk_func[] =
 {
-	BT_MSG_init,      // BlueToothタスク初期化関数
 	//US_MSG_init,    // 超音波データ取得タスク初期化関数
 	LCD_APP_MSG_init, // LCDアプリタスク初期化関数
 };
@@ -93,17 +84,27 @@ static void ctl_btn(void* info);
 
 // 状態遷移テーブル
 static const FSM fsm[ST_MAX][MSG_MAX] = {
-	// MSG_INIT                    MSG_EVENT								 MSG_BTN				 MSG_MAX
-	{{init_apl_tsk, ST_START_UP}, {NULL, ST_UNDEIFNED},  					{NULL, ST_UNDEIFNED},  	{NULL, ST_UNDEIFNED},},		// ST_UNINITIALIZED
-	{{NULL, ST_UNDEIFNED},        {ctl_disp_start_up, ST_SELECT_MODE}, 		{NULL, ST_UNDEIFNED},  	{NULL, ST_UNDEIFNED},},		// ST_START_UP
-	{{NULL, ST_UNDEIFNED},        {ctl_disp_mode_select, ST_SELECT_MODE},	{NULL, ST_UNDEIFNED},  	{NULL, ST_UNDEIFNED},},	 	// ST_SELECT_MODE
-	{{NULL, ST_UNDEIFNED},        {NULL, ST_UNDEIFNED},						{ctl_btn, ST_RUN},  	{NULL, ST_UNDEIFNED},},	 	// ST_RUN
+	// MSG_INIT                    MSG_EVENT								 MSG_MAX
+	{{init_apl_tsk, ST_START_UP}, {NULL, ST_UNDEIFNED},  					{NULL, ST_UNDEIFNED}, },	// ST_UNINITIALIZED
+	{{NULL, ST_UNDEIFNED},        {ctl_disp_start_up, ST_SELECT_MODE}, 		{NULL, ST_UNDEIFNED}, },	// ST_START_UP
+	{{NULL, ST_UNDEIFNED},        {ctl_disp_mode_select, ST_SELECT_MODE},	{NULL, ST_UNDEIFNED}, },	// ST_SELECT_MODE
+	{{NULL, ST_UNDEIFNED},        {NULL, ST_UNDEIFNED},						{NULL, ST_UNDEIFNED}, },	// ST_RUN
 };
 
 // 制御ブロックの実体
 static CTL_CTL ctl_ctl;
 
 // 内部関数
+// 状態変更関数
+static void ctl_main_chg_sts(uint8_t req_sts) 
+{
+	CTL_CTL *this = &ctl_ctl;
+	
+	// 状態を更新する
+	this->state = req_sts;
+	this->req_chg_sts = 1U;
+}
+
 // 起動画面表示関数
 static void ctl_disp_start_up(void* info) 
 {
@@ -119,7 +120,7 @@ static void ctl_disp_mode_select(void* info)
 	// 起動画面からモードセレクト画面までの時間経過したときにモードセレクト表示メッセージを送る
 	if (this->mode_select_timer > (MODE_SELECT_TIME/CTL_TASK_EVENT_PERIOD)) {
 		// 状態を更新する
-		this->state = ST_RUN;
+		ctl_main_chg_sts(ST_RUN);
 		// 100msのイベントを削除
 		del_cyclic_message(CTL_MSG_event);
 		// メッセージを送信
@@ -127,85 +128,6 @@ static void ctl_disp_mode_select(void* info)
 	} else {
 		// カウンタを進める
 		this->mode_select_timer++;
-	}
-}
-
-// 上ボタンコールバック
-static void ctl_btn_up(BTN_STATUS sts)
-{
-	// メッセージ送信
-	CTL_MSG_btn(BTN_UP, sts);
-}
-
-// 下ボタンコールバック
-static void ctl_btn_down(BTN_STATUS sts)
-{
-	// メッセージ送信
-	CTL_MSG_btn(BTN_DOWN, sts);
-}
-
-// 戻るボタンコールバック
-static void ctl_btn_back(BTN_STATUS sts)
-{
-	// メッセージ送信
-	CTL_MSG_btn(BTN_BACK, sts);
-}
-
-// 決定ボタンコールバック
-static void ctl_btn_select(BTN_STATUS sts)
-{
-	// メッセージ送信
-	CTL_MSG_btn(BTN_SELECT, sts);
-}
-
-// ボタン種類に応じてLCDアプリにメッセージを送る関数
-static void ctl_btn(void* info)
-{
-	BTN_INFO btn_info;
-	
-	// ボタン情報をコピー
-	memcpy(&btn_info, (BTN_INFO*)info, sizeof(BTN_INFO));
-	
-	// ボタンの種類と状態に応じてメッセージを送信
-	switch (btn_info.btn) {
-	case BTN_UP:
-		// 短押しの場合
-		if (btn_info.sts == BTN_SHORT_PUSHED) {
-			LCD_APP_MSG_btn_up_short();
-		// 長押しの場合
-		} else {
-			LCD_APP_MSG_btn_up_long();
-		}
-		break;
-	case BTN_DOWN:
-		// 短押しの場合
-		if (btn_info.sts == BTN_SHORT_PUSHED) {
-			LCD_APP_MSG_btn_down_short();
-		// 長押しの場合
-		} else {
-			LCD_APP_MSG_btn_down_long();
-		}
-		break;
-	case BTN_BACK:
-		// 短押しの場合
-		if (btn_info.sts == BTN_SHORT_PUSHED) {
-			LCD_APP_MSG_btn_back_short();
-		// 長押しの場合
-		} else {
-			LCD_APP_MSG_btn_back_long();
-		}
-		break;
-	case BTN_SELECT:
-		// 短押しの場合
-		if (btn_info.sts == BTN_SHORT_PUSHED) {
-			LCD_APP_MSG_btn_select_short();
-		// 長押しの場合
-		} else {
-			LCD_APP_MSG_btn_select_long();
-		}
-		break;
-	default:
-		break;
 	}
 }
 
@@ -217,18 +139,16 @@ static void ctl_btn(void* info)
 static void init_apl_tsk(void* info)
 {
 	uint8_t i;
+	uint8_t size;
 	uint32_t ret;
 	
+	// サイズを計算
+	size = sizeof(init_tsk_func)/sizeof(init_tsk_func[0]);
+	
 	// タスクの初期化関数をコール
-	for (i = 0; i < TASK_NUM; i++) {
+	for (i = 0; i < size; i++) {
 		init_tsk_func[i]();
 	}
-	
-	//ボタンのコールバックを設定
-	BTN_dev_reg_callback_up(ctl_btn_up);
-	BTN_dev_reg_callback_down(ctl_btn_down);
-	BTN_dev_reg_callback_back(ctl_btn_back);
-	BTN_dev_reg_callback_select(ctl_btn_select);
 	
 	// 自身のタスクが100ms周期で動作するように設定
 	ret = set_cyclic_message(CTL_MSG_event, CTL_TASK_EVENT_PERIOD);
@@ -277,8 +197,10 @@ int ctl_main(int argc, char *argv[])
 		}
 		
 		// 状態遷移
-		if (nxt_state != ST_UNDEIFNED) {
+		if ((nxt_state != ST_UNDEIFNED) && (this->req_chg_sts == 0U)) {
 			this->state = nxt_state;
+		} else if (this->req_chg_sts == 1U) {
+			this->req_chg_sts = 0U;
 		}
 	}
 }
@@ -438,27 +360,6 @@ void CTL_MSG_event(void)
 	
 	msg->msg_type = MSG_EVENT;
 	msg->msg_data = NULL;
-	
-	kz_send(this->msg_id, sizeof(CTL_MSG), msg);
-	
-	return;
-}
-		
-// ボタン押下メッセージを送信する関数
-void CTL_MSG_btn(BTN_TYPE btn, BTN_STATUS sts)
-{
-	CTL_CTL *this = &ctl_ctl;
-	CTL_MSG *msg;
-	BTN_INFO btn_info;
-	
-	// ボタンの情報を設定
-	btn_info.btn = btn;
-	btn_info.sts = sts;
-
-	msg = kz_kmalloc(sizeof(CTL_MSG));
-	
-	msg->msg_type = MSG_BTN;
-	msg->msg_data = &btn_info;
 	
 	kz_send(this->msg_id, sizeof(CTL_MSG), msg);
 	

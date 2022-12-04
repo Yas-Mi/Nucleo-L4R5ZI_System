@@ -1628,14 +1628,10 @@ HAL_StatusTypeDef HAL_I2C_Slave_Receive(I2C_HandleTypeDef *hi2c, uint8_t *pData,
   * @param  Size Amount of data to be sent
   * @retval HAL status
   */
-static I2C_HandleTypeDef *g_hi2c;
 HAL_StatusTypeDef HAL_I2C_Master_Transmit_IT(I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint8_t *pData,
                                              uint16_t Size)
 {
   uint32_t xfermode;
-	
-	// added
-	g_hi2c = hi2c;
 
   if (hi2c->State == HAL_I2C_STATE_READY)
   {
@@ -4504,40 +4500,7 @@ void HAL_I2C_ER_IRQHandler(I2C_HandleTypeDef *hi2c)
   }
 }
   	
-// Added 
-// start
-/**
-  * @brief This function handles I2C1 event interrupt.
-  */
-void I2C1_EV_IRQHandler(void)
-{
-  /* USER CODE BEGIN I2C1_EV_IRQn 0 */
 
-  /* USER CODE END I2C1_EV_IRQn 0 */
-	if (g_hi2c != 0) {
-		HAL_I2C_EV_IRQHandler(g_hi2c);
-	}
-  /* USER CODE BEGIN I2C1_EV_IRQn 1 */
-
-  /* USER CODE END I2C1_EV_IRQn 1 */
-}
-
-/**
-  * @brief This function handles I2C1 error interrupt.
-  */
-void I2C1_ER_IRQHandler(void)
-{
-	/* USER CODE BEGIN I2C1_ER_IRQn 0 */
-
-	/* USER CODE END I2C1_ER_IRQn 0 */
-	if (g_hi2c != 0) {
-		HAL_I2C_ER_IRQHandler(g_hi2c);
-	}
-	/* USER CODE BEGIN I2C1_ER_IRQn 1 */
-
-	/* USER CODE END I2C1_ER_IRQn 1 */
-}
-// end
 
 /**
   * @brief  Master Tx Transfer completed callback.

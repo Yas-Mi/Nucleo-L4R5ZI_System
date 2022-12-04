@@ -28,10 +28,6 @@ typedef enum {
 typedef void (*BTN_CALLBACK)(BTN_STATUS sts);
 
 // 公開関数
-extern void btn_up_interrupt(void);
-extern void btn_down_interrupt(void);
-extern void btn_back_interrupt(void);
-extern void btn_select_interrupt(void);
 extern int BTN_dev_main(int argc, char *argv[]);
 extern int BTN_dev_reg_callback_up(BTN_CALLBACK cb);
 extern int BTN_dev_reg_callback_down(BTN_CALLBACK cb);

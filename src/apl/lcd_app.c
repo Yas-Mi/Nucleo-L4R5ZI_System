@@ -6,7 +6,7 @@
  */
 #include "defines.h"
 #include "kozos.h"
-#include "consdrv.h"
+#include "console.h"
 #include "lib.h"
 #include "lcd_dev.h"
 #include "btn_dev.h"
@@ -79,18 +79,6 @@ static const FSM fsm[ST_MAX][MSG_MAX] = {
 };
 
 // 内部関数
-// 初期化関数
-static void lcd_app_init(void)
-{
-	LCD_APP_CTL *this = &lcd_ap_ctl;
-	
-	// LCDデバイスドライバ初期化
-	LCD_dev_init();
-	
-	// "＞"のy位置を0としておく
-	this->select_ypos = 0;
-}
-
 // 起動画面表示関数
 static void lcd_app_start_up(void)
 {
@@ -109,9 +97,83 @@ static void lcd_app_select_mode(void)
 	// サイセイ/ダウンロード
 	LCD_dev_clear_disp();
 	LCD_dev_write(1,0,"サイセイ");
-	LCD_dev_write(1,1,"タ゛ウンロード");
+	LCD_dev_write(1,1,"タ゛ウンロート゛");
 	LCD_dev_write(0,this->select_ypos,"＞");
 	LCD_dev_disp();
+}
+
+// 上ボタンコールバック
+static void lcd_app_btn_up(BTN_STATUS sts)
+{
+	// 短押しの場合
+	if (sts == BTN_SHORT_PUSHED) {
+		// メッセージの送信
+		LCD_APP_MSG_btn_up_short();
+	// 長押しの場合
+	} else {
+		// メッセージの送信
+		LCD_APP_MSG_btn_up_long();
+	}
+}
+
+// 下ボタンコールバック
+static void lcd_app_btn_down(BTN_STATUS sts)
+{
+	// 短押しの場合
+	if (sts == BTN_SHORT_PUSHED) {
+		// メッセージの送信
+		LCD_APP_MSG_btn_down_short();
+	// 長押しの場合
+	} else {
+		// メッセージの送信
+		LCD_APP_MSG_btn_down_long();
+	}
+}
+
+// 戻るボタンコールバック
+static void lcd_app_btn_back(BTN_STATUS sts)
+{
+	// 短押しの場合
+	if (sts == BTN_SHORT_PUSHED) {
+		// メッセージの送信
+		LCD_APP_MSG_btn_back_short();
+	// 長押しの場合
+	} else {
+		// メッセージの送信
+		LCD_APP_MSG_btn_back_long();
+	}
+}
+
+// 決定ボタンコールバック
+static void lcd_app_btn_select(BTN_STATUS sts)
+{
+	// 短押しの場合
+	if (sts == BTN_SHORT_PUSHED) {
+		// メッセージの送信
+		LCD_APP_MSG_btn_select_short();
+	// 長押しの場合
+	} else {
+		// メッセージの送信
+		LCD_APP_MSG_btn_select_long();
+	}
+}
+
+// 初期化関数
+static void lcd_app_init(void)
+{
+	LCD_APP_CTL *this = &lcd_ap_ctl;
+	
+	// LCDデバイスドライバ初期化
+	LCD_dev_init();
+	
+	//ボタンのコールバックを設定
+	BTN_dev_reg_callback_up(lcd_app_btn_up);
+	BTN_dev_reg_callback_down(lcd_app_btn_down);
+	BTN_dev_reg_callback_back(lcd_app_btn_back);
+	BTN_dev_reg_callback_select(lcd_app_btn_select);
+	
+	// "＞"のy位置を0としておく
+	this->select_ypos = 0;
 }
 
 // カーソル移動関数
@@ -119,12 +181,15 @@ static void lcd_app_move_cursor(void)
 {
 	LCD_APP_CTL *this = &lcd_ap_ctl;
 	
+	// 現在表示されている"＞"を削除
+	LCD_dev_clear(0, this->select_ypos, 1);
+	
 	// カーソル位置を反転させる
 	this->select_ypos = ~this->select_ypos & 0x01;
 	
 	// カーソル("＞")を移動 (*)x位置が0の場所には文字がない前提
-	LCD_dev_clear_disp();
-	LCD_dev_write(0,this->select_ypos,"＞");
+	//LCD_dev_clear_disp();
+	LCD_dev_write(0, this->select_ypos, "＞");
 	LCD_dev_disp();
 }
 

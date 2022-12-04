@@ -7,46 +7,58 @@
 #include "stm32l4xx_hal_cortex.h"
 #include "stm32l4xx.h"
 #include "usart.h"
+#include "intr.h"
 
-/* マクロ */
-#define USART_CH_NUM (2U)
-#define BUF_SIZE (32U)
-#define USE_FIFO (1U)
+// マクロ
+#define USART_BUF_SIZE		(1024U)		// 1024byte
+#define USART_CLOCK			(4000000)	// 4MHz
+#define USART_FIFO_SIZE		(8U)		// 8段
 
-/* USART ベースレジスタ */
-#define USART1_BASE_ADDR (0x40013800)
-#define USART2_BASE_ADDR (0x40004400)
-#define USART3_BASE_ADDR (0x40004800)
+//USART ベースレジスタ
+#define USART1_BASE_ADDR	(0x40013800)
+#define USART2_BASE_ADDR	(0x40004400)
+#define USART3_BASE_ADDR	(0x40004800)
 
-/* レジスタ設定値 */
-#define CR1_FIFOEN_MASK    (0x20000000)
-#define CR1_FIFOEN_ENABLE  (0x20000000)
-#define CR1_FIFOEN_DISABLE (0x20000000)
-#define CR1_M1_MASK        (0x10000000)
-#define CR1_M0_MASK        (0x00001000)
-#define CR1_M_8DATA        (0x00000000)
-#define CR1_TXEIE_MASK     (0x00000080)
-#define CR1_TXEIE_ENABLE   (0x00000080)
-#define CR1_TCIE_MASK      (0x00000040)
-#define CR1_TCIE_ENABLE    (0x00000040)
-#define CR1_RXNEIE_MASK    (0x00000020)
-#define CR1_RXNEIE_ENABLE  (0x00000020)
-#define CR1_TE_MASK        (0x00000008)
-#define CR1_TE_ENABLE      (0x00000004)
-#define CR1_RE_MASK        (0x00000004)
-#define CR1_RE_ENABLE      (0x00000004)
-#define CR1_UE_MASK        (0x00000001)
-#define CR1_UE_ENABLE      (0x00000001)
-// FIFO mode enable
-#define CR1_RXFFIE_ENABLE  (0x80000000)
-#define CR1_TXFEIE_ENABLE  (0x40000000)
-#define CR1_RXFNEIE_ENABLE (0x00000020)
-#define CR3_OVRDIS_MASK    (0x00001000)
-#define ISR_BUSY_MASK      (0x00010000)
-#define ISR_TXE_MASK       (0x00000080)
-#define ISR_TC_MASK        (0x00000040)
-#define ISR_RXNE_MASK      (0x00000020)
+// レジスタ設定値
+// USART_CR1 (FIFO有効時)
+#define CR1_RXFIE		(1UL << 31)		// RXFIFO FULL interrupt enable
+#define CR1_TXFIE		(1UL << 30)		// RXFIFO FULL interrupt enable
+#define CR1_FIFOEN		(1UL << 29)		// FIFO mode enable
+#define CR1_M1			(1UL << 28)		//
+#define CR1_M0			(1UL << 12)
+#define CR1_TXFNFIE		(1UL << 7)
+#define CR1_TCIE		(1UL << 6)
+#define CR1_RXNEIE		(1UL << 5)
+#define CR1_TE			(1UL << 3)
+#define CR1_RE			(1UL << 2)
+#define CR1_UE			(1UL << 0)
+// USART_CR2
+// USART_CR3
+#define CR3_TXFTCFG		(7UL << 29)		// TXFIFO threshold configuration
+#define CR3_RXFTIE		(1UL << 28)		// RXFIFO threshold interrupt enable
+#define CR3_RXFTCFG		(7UL << 25)		// Receive FIFO threshold configuration
+#define CR3_TXFTIE		(1UL << 23)		// TXFIFO threshold interrupt enable
+// USART_BRR
+// USART_ISR (FIFO有効時)
+#define ISR_TXFT	(1UL << 27)		// TXFIFO threshold flag
+#define ISR_RXFT	(1UL << 26)		// RXFIFO threshold flag
+#define ISR_RXFF	(1UL << 24)		// RXFIFO ful
+#define ISR_TXFE	(1UL << 23)		// TXFIFO empty
+#define ISR_BUSY	(1UL << 16)		// Busy flag
+#define ISR_TXFNF	(1UL << 7)		// TXFIFO not full
+#define ISR_TC		(1UL << 6)		// Transmission complete
+#define ISR_RXFNE	(1UL << 5)		// RXFIFO not empty
+#define ISR_ORE		(1UL << 3)		// Overrun error
+#define ISR_NE		(1UL << 2)		// Noise detection flag
+#define ISR_FE		(1UL << 1)		// Framing error
+#define ISR_PE		(1UL << 0)		// Parity error
+// USART_ICR (FIFO有効時)
 
+// レジスタ設定マクロ
+#define SET_CR3_TXFTCFG(val)	((val & 0x7) << 29)
+#define SET_CR3_RXFTCFG(val)	((val & 0x7) << 25)
+
+// USARTレジスタ定義
 struct stm32l4_usart {
   volatile uint32_t cr1;
   volatile uint32_t cr2;
@@ -62,401 +74,310 @@ struct stm32l4_usart {
   volatile uint32_t presc;
 };
 
+/* リングバッファ */
+typedef struct {
+	uint8_t  buf[USART_BUF_SIZE];	// バッファ
+	uint16_t r_idx;					// リードインデックス
+	uint16_t w_idx;					// ライトインデックス
+} RING_BUF;
+
 /* USART制御ブロック */
 typedef struct {
-	uint8_t ch;
-	USART_CALLBACK callback;
-	uint8_t     *send_buf;
-	uint8_t     *recv_buf;
-	uint8_t		*p_send_data;
-	uint32_t	send_num;
+	uint8_t				ch;					// 	チャネル
+	RING_BUF			r_buf;				// 受信用リングバッファ
+	RING_BUF 			s_buf;				// 送信用リングバッファ
+	USART_CALLBACK		send_callback;		// 送信コールバック
+	void 				*send_callback_vp;	// 送信コールバック引数
+	USART_CALLBACK		recv_callback;		// 受信コールバック
+	void 				*recv_callback_vp;	// 受信コールバック引数
 } USART_CTL;
-static USART_CTL usart_ctl[USART_CH_NUM];
+static USART_CTL usart_ctl[USART_CH_MAX];
 #define get_myself(n) (&usart_ctl[(n)])
 
-/* USARTレジスタ情報 */
-typedef struct {
-	/* USART */
-	volatile struct stm32l4_usart *usart_base_addr;
-	uint32_t baudrate;
-	/* GPIO */
-	uint32_t rx_Pin;
-	uint32_t tx_Pin;
-	uint32_t Mode;
-	uint32_t Pull;
-	uint32_t Speed;
-	uint32_t Alternate;
-	/* NVIC */
-	IRQn_Type irq_type;
-} USART_REG;
+// 割込みハンドラのプロトタイプ
+void usart1_handler(void);
+void usart2_handler(void);
 
-static const USART_REG usart_reg_table[USART_CH_NUM]=
+/* USARTチャネル固有情報 */
+typedef struct {
+	volatile struct stm32l4_usart *usart_base_addr;		// ベースレジスタ
+	IRQn_Type irq_type;									// 割込みタイプ
+	INT_HANDLER handler;								// 割込みハンドラ
+	uint32_t	vec_no;									// 割込み番号
+} USART_CFG;
+
+/* USARTチャネル固有情報テーブル */
+static const USART_CFG usart_cfg[USART_CH_MAX] =
 {
-	/* USART1 */
-	/* Console */
-	/**USART1 GPIO Configuration
-    PA9     ------> USART1_TX
-	PA10    ------> USART1_RX
-	*/
-	{
-		USART1_BASE_ADDR,
-		9600,
-		GPIO_PIN_9,
-		GPIO_PIN_10,
-		GPIO_MODE_AF_PP,
-		GPIO_NOPULL,
-		GPIO_SPEED_FREQ_VERY_HIGH,
-		GPIO_AF7_USART1,
-		USART1_IRQn,
-	},
-	/* USART2 */
-	/* BlueTooth */
-	/**USART2 GPIO Configuration
-    PA2     ------> USART2_TX
-	PA3     ------> USART2_RX
-	*/
-	{
-		USART2_BASE_ADDR,
-		115200,
-		GPIO_PIN_2,
-		GPIO_PIN_3,
-		GPIO_MODE_AF_PP,
-		GPIO_NOPULL,
-		GPIO_SPEED_FREQ_VERY_HIGH,
-		GPIO_AF7_USART2,
-		USART2_IRQn,
-	},
+	{USART1_BASE_ADDR, USART1_IRQn, usart1_handler, USART1_GLOBAL_INTERRUPT_NO},
+	{USART2_BASE_ADDR, USART2_IRQn, usart2_handler, USART2_GLOBAL_INTERRUPT_NO},
 };
+#define get_reg(ch)			(usart_cfg[ch].usart_base_addr)		// レジスタ取得マクロ
+#define get_ire_type(ch)	(usart_cfg[ch].irq_type)			// 割込みタイプ取得マクロ
+#define get_handler(ch)		(usart_cfg[ch].handler)				// 割り込みハンドラ取得マクロ
+#define get_vec_no(ch)		(usart_cfg[ch].vec_no)				// 割り込み番号取得マクロ
 
 /* 割込み共通ハンドラ */
-void usart_common_handler(uint32_t ch){
+static void usart_common_handler(USART_CH ch){
 	USART_CTL *this;
-
+	RING_BUF *buf_info;
+	volatile struct stm32l4_usart *usart_base_addr;
+	
+	// ベースレジスタ取得
+	usart_base_addr = get_reg(ch);
+	// 制御ブロック取得
 	this = get_myself(ch);
-	this->callback(ch);
+	
+	// エラーをチェック
+	if (usart_base_addr->isr & (ISR_ORE | ISR_FE | ISR_PE)) {
+		// エラーが発生したらとりあえず無限ループ
+		while(1){};
+	}
+	
+	// 受信データがある？
+	if (usart_base_addr->isr & ISR_RXFNE) {
+		buf_info = &(this->r_buf);
+		// 受信用リングバッファに空きがある?
+		if (((buf_info->w_idx + 1U) & (USART_BUF_SIZE - 1U)) != buf_info->r_idx) {
+			// 受信データを受信用リングバッファに設定
+			buf_info->buf[buf_info->w_idx] = usart_base_addr->rdr;
+			// ライトインデックスを進める
+			buf_info->w_idx = (buf_info->w_idx + 1U) & (USART_BUF_SIZE - 1U);
+		}
+		// コールバック実行
+		if (this->recv_callback) {
+			this->recv_callback(ch, this->recv_callback_vp);
+		}
+	}
+	
+	// 送信データがある？
+	// 送信割り込みが有効? かつ 送信可能?
+	if ((usart_base_addr->cr3 & CR3_TXFTIE) && (usart_base_addr->isr & ISR_TXFNF)) {
+		// 送信用リングバッファにデータがある？
+		buf_info = &(this->s_buf);
+		if (buf_info->w_idx != buf_info->r_idx) {
+			// 送信データを設定
+			usart_base_addr->tdr = buf_info->buf[buf_info->r_idx];
+			// リードインデックスを進める
+			buf_info->r_idx = (buf_info->r_idx + 1U) & (USART_BUF_SIZE - 1U);
+			// コールバック実行
+			if (this->send_callback) {
+				this->send_callback(ch, this->send_callback_vp);
+			}
+		// 送信リングバッファにデータがない場合
+		} else {
+			// 割込みを無効にする
+			usart_base_addr->cr3 &= ~CR3_TXFTIE;
+		}
+	}
 }
 
 /* 割込みハンドラ */
 void usart1_handler(void){
-	usart_common_handler(USART1);
+	usart_common_handler(USART_CH1);
 }
 
 void usart2_handler(void){
-	usart_common_handler(USART2);
+	usart_common_handler(USART_CH2);
 }
 
-void usart3_handler(void){
-	usart_common_handler(USART3);
-}
-
+// 指定したボーレートからレジスタ設定値を計算する関数
 static uint32_t calc_brr(uint32_t baudrate)
 {
-	return (4000000/baudrate);
+	return (USART_CLOCK/baudrate);
 }
 
-/* 現状、USART1,2の初期化のみ */
-uint32_t usart_open(uint32_t ch)
+// 外部公開関数
+// USART初期化関数
+void usart_init(void)
 {
-	GPIO_InitTypeDef GPIO_InitStruct;
+	uint32_t ch;
+	USART_CTL *this;
+	
+	for (ch = 0; ch < USART_CH_MAX; ch++) {
+		// 制御ブロック取得
+		this = get_myself(ch);
+		// 制御ブロック初期化
+		memset(this, 0, sizeof(USART_CTL));
+		// 割込みハンドラ登録
+		kz_setintr(get_vec_no(ch), get_handler(ch));
+	}
+	
+	return;
+}
+
+// USARTオープン関数
+int32_t usart_open(USART_CH ch, uint32_t baudrate)
+{
 	volatile struct stm32l4_usart *usart_base_addr;
 	
-	/* pin設定 */
-	/*   クロックをイネーブル */
-	__HAL_RCC_USART1_CLK_ENABLE();
-	__HAL_RCC_USART2_CLK_ENABLE();
-	__HAL_RCC_USART3_CLK_ENABLE();
+	// チャネル番号が範囲外の場合エラーを返して終了
+	if (ch >= USART_CH_MAX) {
+		return -1;
+	}
 	
-	/*   GPIOのクロックをイネーブル */
-	__HAL_RCC_GPIOA_CLK_ENABLE();
-	
-	/*   電源供給 */
-	HAL_PWREx_EnableVddIO2();
-
-	/* 送信設定 */
-    GPIO_InitStruct.Pin = usart_reg_table[ch].tx_Pin;
-    GPIO_InitStruct.Mode = usart_reg_table[ch].Mode;
-    GPIO_InitStruct.Pull = usart_reg_table[ch].Pull;
-    GPIO_InitStruct.Speed = usart_reg_table[ch].Speed;
-    GPIO_InitStruct.Alternate = usart_reg_table[ch].Alternate;
-
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-	/* 受信設定 */
-    GPIO_InitStruct.Pin = usart_reg_table[ch].rx_Pin;
-    GPIO_InitStruct.Mode = usart_reg_table[ch].Mode;
-    GPIO_InitStruct.Pull = usart_reg_table[ch].Pull;
-    GPIO_InitStruct.Speed = usart_reg_table[ch].Speed;
-    GPIO_InitStruct.Alternate = usart_reg_table[ch].Alternate;
-
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-	/* USART1レジスタ設定 */
-	/*
-	     usart_ker_ck_pres = 4MHz
-	     9600baud
-	     USARTDIV = 4000000/9600 = 416.666...(0x1A0)
-	     BRR = 0x1A0
-	*/
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-	usart_base_addr->brr = calc_brr(usart_reg_table[ch].baudrate);
-    /*   騾∝女菫｡譛牙柑 */
-#if USE_FIFO
-	// FIFO有効
-	usart_base_addr->cr1 |= CR1_FIFOEN_ENABLE | CR1_TE_MASK | CR1_RE_ENABLE ;
+	// ベースレジスタ取得
+	usart_base_addr = get_reg(ch);
+	// ボーレート設定
+	usart_base_addr->brr = calc_brr(baudrate);
+	// FIFO有効、送受信有効
+	usart_base_addr->cr1 |= (CR1_FIFOEN | CR1_TE | CR1_RE);
 	// USART1の有効
-	usart_base_addr->cr1 |= CR1_UE_ENABLE ;
-#else
-	usart_base_addr->cr1 |= CR1_UE_ENABLE | CR1_TE_MASK | CR1_RE_ENABLE ;
-#endif
-
-	// オーバーランは見ない
-	usart_base_addr->cr3 |= CR3_OVRDIS_MASK;
-
+	usart_base_addr->cr1 |= CR1_UE ;
+	
+	// FIFOの設定
+	// いったんクリア
+	usart_base_addr->cr3 &= (~CR3_TXFTCFG | ~CR3_RXFTCFG);
+	// 送信FIFOが空になった時に送信割り込みが入るように設定
+	usart_base_addr->cr3 |= SET_CR3_TXFTCFG(5);
+	// 受信FIFOに一つでもデータがあった時に受信割り込みが入るように設定
+	usart_base_addr->cr3 |= SET_CR3_RXFTCFG(0);
+	
+	// 受信割り込みを有効
+	usart_base_addr->cr3 |= CR3_RXFTIE;
+	
 	/* 割り込み有効 */
-    HAL_NVIC_SetPriority(usart_reg_table[ch].irq_type, 0, 0);
-    HAL_NVIC_EnableIRQ(usart_reg_table[ch].irq_type);
+    HAL_NVIC_SetPriority(get_ire_type(ch), INTERRPUT_PRIORITY_5, 0);
+    HAL_NVIC_EnableIRQ(get_ire_type(ch));
 
 	return 0;
 }
 
-uint32_t usart_init(uint32_t ch, USART_CALLBACK callback)
+// USART送信関数
+int32_t usart_send(USART_CH ch, uint8_t *data, uint32_t size) 
 {
-	int i = 0;
 	USART_CTL *this;
-	
-	/* 制御ブロックの初期化 */
-	memset(&usart_ctl[ch], 0, sizeof(usart_ctl[0]));
-
-	this = get_myself(ch);
-	this->send_buf = kz_kmalloc(BUF_SIZE);
-	this->recv_buf = kz_kmalloc(BUF_SIZE);
-	this->callback = callback;
-	
-	return 0;
-}
-
-#if 0
-uint32_t usart_send(uint32_t ch, uint8_t *data, uint32_t send_num)
-{
-	uint32_t ret;
+	RING_BUF *buf_info;
+	uint32_t tmp_w_idx;
 	uint32_t i;
-	uint32_t is_send_enable;
-	USART_CTL *this;
 	volatile struct stm32l4_usart *usart_base_addr;
 	
-	/* パラメータチェック */
-	if(ch >= USART_CH_NUM){
+	// チャネル番号が範囲外の場合エラーを返して終了
+	if (ch >= USART_CH_MAX) {
 		return -1;
 	}
 	
-	if(data == NULL){
+	// 送信データがNULLの場合、エラーを返して終了
+	if (data == NULL) {
 		return -1;
 	}
 	
-	if(send_num > BUF_SIZE){
+	// 制御ブロック取得
+	this = get_myself(ch);
+	// リングバッファ情報取得
+	buf_info = &(this->s_buf);
+	
+	// 送信リングバッファに空きがない場合、エラーを返して終了
+	tmp_w_idx = buf_info->w_idx;
+	for (i = 0; i < size; i++) {
+		tmp_w_idx++;
+		if (tmp_w_idx == buf_info->r_idx) {
+			return -1;
+		}
+	}
+	
+	// 割込み禁止
+	INTR_DISABLE;
+	
+	for (i = 0; i < size; i++) {
+		// 送信用リングバッファに送信データを設定
+		buf_info->buf[buf_info->w_idx] = *(data++);
+		// ライトインデックスを進める
+		buf_info->w_idx = (buf_info->w_idx + 1U) & (USART_BUF_SIZE - 1U);
+	}
+	
+	// 割込み禁止解除
+	INTR_ENABLE;
+	
+	// USARTの割り込み有効
+	usart_base_addr = get_reg(ch);
+	usart_base_addr->cr3 |= CR3_TXFTIE;
+	
+	return 0;
+}
+
+// USART受信関数
+int32_t usart_recv(USART_CH ch, uint8_t *data, uint32_t size) 
+{
+	USART_CTL *this;
+	RING_BUF *buf_info;
+	uint32_t read_size;
+	uint32_t i;
+	
+	// チャネル番号が範囲外の場合エラーを返して終了
+	if (ch >= USART_CH_MAX) {
 		return -1;
 	}
 	
-	/* 制御ブロック取得 */
+	// 送信データがNULLの場合、エラーを返して終了
+	if (data == NULL) {
+		return -1;
+	}
+	
+	// 制御ブロック取得
+	this = get_myself(ch);
+	// リングバッファ情報取得
+	buf_info = &(this->r_buf);
+	
+	// 読みたいサイズ分データがない場合は、エラーを返して終了
+	if ((buf_info->r_idx + size) > buf_info->w_idx) {
+		return -1;
+	}
+	
+	// 割込み禁止
+	INTR_DISABLE;
+	
+	for (i = 0; i < size; i++) {
+		// 受信用リングバッファからデータを取得
+		*data = buf_info->buf[buf_info->r_idx];
+		// リードインデックスを進める
+		buf_info->r_idx = (buf_info->r_idx + 1U) & (USART_BUF_SIZE - 1U);
+		// データのポインタを進める
+		data++;
+	}
+	
+	// 割込み禁止解除
+	INTR_ENABLE;
+	
+	return 0;
+}
+
+// 受信コールバック設定関数
+int32_t usart_reg_recv_callback(USART_CH ch, USART_CALLBACK cb, void *vp)
+{
+	USART_CTL *this;
+	
+	// コールバック関数がNULLの場合、エラーを返して終了
+	if (cb == NULL) {
+		return -1;
+	}
+	
+	// 制御ブロック取得
 	this = get_myself(ch);
 	
-	/* ベースレジスタ取得 */
-	usart_base_addr = (volatile struct stm32l4_usart *)&usart_reg_table[ch];
+	// コールバック関数を登録
+	this->recv_callback = cb;
+	this->recv_callback_vp = vp;
 	
-	/* 送信可能かチェック */
-	is_send_enable = usart_is_send_enable(ch);
+	return 0;
+}
+
+// 送信コールバック設定関数
+int32_t usart_reg_send_callback(USART_CH ch, USART_CALLBACK cb, void *vp)
+{
+	USART_CTL *this;
 	
-	/* 送信 */
-	if(is_send_enable){
-		/* 送信データをバッファに設定 */
-		for(i=0;i<send_num;i++){
-			this->send_buf[i] = data[i];
-		}
-		
-		/* 送信レジスタから割り込み有効 */
-		usart_base_addr->cr1 |= CR1_TXEIE_MASK;
-		
-		ret = 0;
-	}else{
-		ret = -1;
+	// コールバック関数がNULLの場合、エラーを返して終了
+	if (cb == NULL) {
+		return -1;
 	}
 	
-	return ret;
-}
-#endif
-
-uint32_t usart_is_send_enable(uint32_t ch)
-{
-	int ret;
-	volatile struct stm32l4_usart *usart_base_addr;
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-	int tmp;
-
-	/* TXE : Transmit data register empty */
-	/*   TDRにデータを設定すると、自動的に0クリアされる */
-	/*   TXEIE=1の場合、割り込みを発生させる */
-	/*   0 : Data register full */
-	/*   1 : Data register not full */
-	tmp = usart_base_addr->isr;
-	if(usart_base_addr->isr & ISR_TXE_MASK){
-		ret = 1;
-	}else{
-		ret = 0;
-	}
-
-	return ret;
-}
-
-/* １文字送信 */
-uint32_t usart_send_byte(uint32_t ch, uint8_t c)
-{
-	volatile struct stm32l4_usart *usart_base_addr;
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-
-	/* 送信可能になるまで待つ */
-	while (!usart_is_send_enable(ch))
-    ;
-	usart_base_addr->tdr = c;
-	/* 自動的にTXEはclearされる */
-
-  return 0;
-}
-
-/* 受信可能か？ */
-uint32_t usart_is_rcv_enable(uint32_t ch)
-{
-	int ret;
-	volatile struct stm32l4_usart *usart_base_addr;
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-	/* RXNE : Read data register not empty */
-	/*   RDRにデータが格納されると、自動的に1に設定される */
-	/*   RDRを読むと、RXNEは0クリアされる */
-	/*   RXNEIE=1の場合、割り込みが発生する */
-	/*   0 : Data is not received */
-	/*   1 : DReceived data is ready to be read */
-	if(usart_base_addr->isr & ISR_RXNE_MASK){
-		ret = 1;
-	}else{
-		ret = 0;
-	}
-
-	return ret;
-}
-
-/* １文字受信 */
-uint8_t usart_recv_byte(uint32_t ch)
-{
-	volatile struct stm32l4_usart *usart_base_addr;
-	uint8_t c;
-
-	/* ベースレジスタ取得 */
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-
-
-  /* 受信文字が来るまで待つ */
-  while (!usart_is_rcv_enable(ch))
-    ;
-  c = usart_base_addr->rdr;
-
-  return c;
-}
-
-/* 送信割込み有効か？ */
-uint32_t usart_intr_is_send_enable(uint32_t ch)
-{
-	volatile struct stm32l4_usart *usart_base_addr;
-	uint32_t ret;
-
-	/* ベースレジスタ取得 */
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-#if USE_FIFO
-	if(usart_base_addr->cr1 & CR1_TXFEIE_ENABLE){
-#else
-	if(usart_base_addr->cr1 & CR1_TXEIE_ENABLE){
-#endif
-		ret = 1;
-	}else{
-		ret = 0;
-	}
-
-	return ret;
-}
-
-/* 送信割込み有効化 */
-void usart_intr_send_enable(int32_t ch)
-{
-	volatile struct stm32l4_usart *usart_base_addr;
-
-	/* ベースレジスタ取得 */
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-#if USE_FIFO
-	usart_base_addr->cr1 |= CR1_TXFEIE_ENABLE;
-#else
-	usart_base_addr->cr1 |= CR1_TXEIE_ENABLE;
-#endif
-}
-
-/* 送信割込み無効化 */
-void usart_intr_send_disable(int32_t ch)
-{
-	volatile struct stm32l4_usart *usart_base_addr;
-
-	/* ベースレジスタ取得 */
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-#if USE_FIFO
-	usart_base_addr->cr1 &= ~CR1_TXFEIE_ENABLE;
-#else
-	usart_base_addr->cr1 &= ~CR1_TXEIE_ENABLE;
-#endif
-}
-
-/* 受信割込み有効か？ */
-int usart_intr_is_recv_enable(int32_t ch)
-{
-	volatile struct stm32l4_usart *usart_base_addr;
-	uint32_t ret;
-
-	/* ベースレジスタ取得 */
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-#if USE_FIFO
-	if(usart_base_addr->cr1 & CR1_RXNEIE_ENABLE){
-#else
-	if(usart_base_addr->cr1 & CR1_RXNEIE_ENABLE){
-#endif
-		ret = 1;
-	}else{
-		ret = 0;
-	}
-
-	return ret;
-}
-
-/* 受信割込み有効化 */
-void usart_intr_recv_enable(int32_t ch)
-{
-	volatile struct stm32l4_usart *usart_base_addr;
-
-	/* ベースレジスタ取得 */
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-#if USE_FIFO
-	//usart_base_addr->cr1 |= CR1_RXFFIE_ENABLE;
-	usart_base_addr->cr1 |= CR1_RXNEIE_ENABLE;
-#else
-	usart_base_addr->cr1 |= CR1_RXNEIE_ENABLE;
-#endif
-}
-
-/* 受信割込み無効化 */
-void usart_intr_recv_disable(int32_t ch)
-{
-	volatile struct stm32l4_usart *usart_base_addr;
-
-	/* ベースレジスタ取得 */
-	usart_base_addr = (volatile struct stm32l4_usart *)usart_reg_table[ch].usart_base_addr;
-
-#if USE_FIFO
-	usart_base_addr->cr1 &= ~CR1_RXFFIE_ENABLE;
-#else
-	usart_base_addr->cr1 &= ~CR1_RXNEIE_ENABLE;
-#endif
+	// 制御ブロック取得
+	this = get_myself(ch);
+	
+	// コールバック関数を登録
+	this->send_callback = cb;
+	this->send_callback_vp = vp;
+	
+	return 0;
 }
