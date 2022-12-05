@@ -16,7 +16,7 @@ typedef struct {
 	kz_thread_id_t		tsk_id;						// コンソールタスクのID
 	kz_thread_id_t		snd_tsk_id;					// 送信要求を出したタスクのID
 	kz_msgbox_id_t		msg_id;						// メッセージID
-	uint8_t				buf[CONOLE_BUF_SIZE];		// コマンドラインバッファ
+	char				buf[CONOLE_BUF_SIZE];		// コマンドラインバッファ
 	uint8_t				buf_idx;					// コマンドラインバッファインデックス
 	COMMAND_INFO		cmd_info[CONOLE_CMD_NUM];	// コマンド関数
 	uint8_t				cmd_idx;					// コマンド関数インデックス
@@ -24,7 +24,7 @@ typedef struct {
 static CONSOLE_CTL console_ctl;
 
 // 受信コールバック
-static console_recv_callback(USART_CH ch, void *vp)
+static void console_recv_callback(USART_CH ch, void *vp)
 {
 	CONSOLE_CTL *this;
 	
@@ -36,7 +36,7 @@ static console_recv_callback(USART_CH ch, void *vp)
 }
 
 // 送信コールバック
-static console_send_callback(USART_CH ch, void *vp)
+static void console_send_callback(USART_CH ch, void *vp)
 {
 	// 特に何もしない
 }
@@ -69,11 +69,7 @@ static void console_init(void)
 // コンソールからの入力を受信する関数
 static uint8_t console_recv(void)
 {
-	CONSOLE_CTL *this;
 	uint8_t data;
-	
-	// 制御ブロックの取得
-	this = &console_ctl;
 	
 	// 受信できるで待つ
 	while (usart_recv(CONSOLE_USART_CH, &data, 1)) {
@@ -89,8 +85,6 @@ static void console_analysis(uint8_t data)
 {
 	CONSOLE_CTL *this;
 	COMMAND_INFO *cmd_info;
-	uint8_t snd_data[2];
-	uint8_t len;
 	uint8_t i;
 	
 	// 制御ブロックの取得
@@ -104,8 +98,6 @@ static void console_analysis(uint8_t data)
 		case '\n':	// Enter
 			// NULL文字を設定
 			this->buf[this->buf_idx++] = '\0';
-			// 文字列の長さを取得
-			len = strlen(this->buf);
 			// コマンドに設定されている？
 			for (i = 0; i < this->cmd_idx; i++) {
 				cmd_info = &(this->cmd_info[i]);
@@ -144,7 +136,7 @@ int console_main(int argc, char *argv[])
 	while (1) {
 		// "command>"を出力
 		if (this->buf_idx == 0) {
-			console_str_send("command>");
+			console_str_send((uint8_t*)"command>");
 		}
 		// コンソールからの入力を受信する
 		data[0] = console_recv();
@@ -152,7 +144,7 @@ int console_main(int argc, char *argv[])
 		// 改行コード変換(\r→\n)
 		if (data[0] == '\r') data[0] = '\n';
 		// エコーバック
-		ret = console_str_send(data);
+		ret = console_str_send((uint8_t*)data);
 		// 受信データ解析
 		console_analysis(data[0]);
 	}
@@ -163,15 +155,11 @@ int console_main(int argc, char *argv[])
 // コンソールへ文字列を送信する関数
 uint8_t console_str_send(uint8_t *data)
 {
-	CONSOLE_CTL *this;
 	int32_t ret;
 	uint8_t len;
 	
-	// 制御ブロックの取得
-	this = &console_ctl;
-	
 	// 文字列の長さを取得
-	len = strlen(data);
+	len = strlen((char*)data);
 	
 	// 送信
 	ret = usart_send(CONSOLE_USART_CH, data, len);

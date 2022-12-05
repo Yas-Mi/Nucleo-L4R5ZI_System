@@ -1,8 +1,8 @@
-console.c:27:8:console_recv_callback	24	static
-console.c:39:8:console_send_callback	16	static
+console.c:27:13:console_recv_callback	24	static
+console.c:39:13:console_send_callback	16	static
 console.c:44:13:console_init	16	static
 console.c:70:16:console_recv	16	static
-console.c:88:13:console_analysis	40	static
-console.c:132:5:console_main	32	static
-console.c:164:9:console_str_send	32	static
-console.c:183:9:console_set_command	24	static
+console.c:84:13:console_analysis	32	static
+console.c:124:5:console_main	32	static
+console.c:156:9:console_str_send	24	static
+console.c:171:9:console_set_command	24	static

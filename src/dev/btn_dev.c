@@ -59,7 +59,6 @@ static const BTN_CFG btn_info_tbl[BTN_MAX] = {
 static void btn_dev_init(void)
 {
 	BTN_CTL *this = &btn_ctl;
-	GPIO_InitTypeDef GPIO_InitStruct = {0};
 	uint8_t i;
 	
 	// 制御ブロックの初期化

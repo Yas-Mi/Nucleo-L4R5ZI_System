@@ -1,9 +1,11 @@
 /* Includes ------------------------------------------------------------------*/
+#include <string.h>
 #include "defines.h"
 #include "kozos.h"
 #include "stm32l4xx_hal_i2c.h"
 #include "i2c_wrapper.h"
 #include "intr.h"
+#include "stdlib.h"
 
 // 制御用ブロック
 typedef struct {
@@ -43,7 +45,7 @@ static const I2C_CH_CFG i2c_cfg_tbl[I2C_CH_MAX] =
 
 // 内部関数
 // I2Cドライバのエラーハンドラ
-static Error_Handler(void)
+static void Error_Handler(void)
 {
 	while(1) {} ;
 }

@@ -1,4 +1,5 @@
 /* Includes ------------------------------------------------------------------*/
+#include "string.h"
 #include "defines.h"
 #include "kozos.h"
 #include "stm32l4xx_hal_rcc.h"
@@ -109,8 +110,8 @@ typedef struct {
 /* USARTチャネル固有情報テーブル */
 static const USART_CFG usart_cfg[USART_CH_MAX] =
 {
-	{USART1_BASE_ADDR, USART1_IRQn, usart1_handler, USART1_GLOBAL_INTERRUPT_NO},
-	{USART2_BASE_ADDR, USART2_IRQn, usart2_handler, USART2_GLOBAL_INTERRUPT_NO},
+	{(volatile struct stm32l4_usart*)USART1_BASE_ADDR, USART1_IRQn, usart1_handler, USART1_GLOBAL_INTERRUPT_NO},
+	{(volatile struct stm32l4_usart*)USART2_BASE_ADDR, USART2_IRQn, usart2_handler, USART2_GLOBAL_INTERRUPT_NO},
 };
 #define get_reg(ch)			(usart_cfg[ch].usart_base_addr)		// レジスタ取得マクロ
 #define get_ire_type(ch)	(usart_cfg[ch].irq_type)			// 割込みタイプ取得マクロ
@@ -301,7 +302,6 @@ int32_t usart_recv(USART_CH ch, uint8_t *data, uint32_t size)
 {
 	USART_CTL *this;
 	RING_BUF *buf_info;
-	uint32_t read_size;
 	uint32_t i;
 	
 	// チャネル番号が範囲外の場合エラーを返して終了
