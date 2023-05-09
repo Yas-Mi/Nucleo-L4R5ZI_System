@@ -1,6 +1,8 @@
-i2c_wrapper.c:48:13:Error_Handler	4	static
-i2c_wrapper.c:54:13:I2C1_EV_IRQHandler	16	static
-i2c_wrapper.c:71:13:I2C1_ER_IRQHandler	16	static
-i2c_wrapper.c:90:6:i2c_wrapper_init	16	static
-i2c_wrapper.c:107:9:i2c_wrapper_open	24	static
-i2c_wrapper.c:158:9:i2c_wrapper_send	32	static
+i2c_wrapper.c:51:13:Error_Handler	4	static
+i2c_wrapper.c:57:13:I2C1_EV_IRQHandler	16	static
+i2c_wrapper.c:74:13:I2C1_ER_IRQHandler	16	static
+i2c_wrapper.c:91:13:I2C2_EV_IRQHandler	16	static
+i2c_wrapper.c:108:13:I2C2_ER_IRQHandler	16	static
+i2c_wrapper.c:127:6:i2c_wrapper_init	16	static
+i2c_wrapper.c:144:9:i2c_wrapper_open	24	static
+i2c_wrapper.c:195:9:i2c_wrapper_send	32	static

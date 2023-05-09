@@ -1,0 +1,7 @@
+lcd_fw.c:42:16:push_disp	32	static
+lcd_fw.c:79:16:get_disp_num	24	static
+lcd_fw.c:102:16:del_top_disp	32	static
+lcd_fw.c:130:6:LCD_fw_init	16	static
+lcd_fw.c:150:8:LCD_fw_disp	40	static
+lcd_fw.c:234:8:LCD_fw_disp_back	40	static
+lcd_fw.c:293:8:LCD_fw_get_cursor_pos	16	static

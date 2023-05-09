@@ -6,7 +6,8 @@
 
 // チャネル定義
 typedef enum {
-	I2C_CH1,
+	I2C_CH1,		// LCDとの通信で使用
+	I2C_CH2,		// PCM3060との通信で使用
 	I2C_CH_MAX,
 } I2C_CH;
 

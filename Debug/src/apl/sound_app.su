@@ -1,0 +1,4 @@
+sound_app.c:46:13:sound_app_sta	16	static
+sound_app.c:51:13:sound_app_stp	16	static
+sound_app.c:66:12:sound_app_main	40	static
+sound_app.c:98:6:sound_app_init	24	static

@@ -29,13 +29,16 @@ typedef struct {
 // 割込みハンドラのプロトタイプ宣言
 static void I2C1_EV_IRQHandler(void);
 static void I2C1_ER_IRQHandler(void);
+static void I2C2_EV_IRQHandler(void);
+static void I2C2_ER_IRQHandler(void);
 
-// USARTチャネル固有情報テーブル
+// I2Cチャネル固有情報テーブル
 static const I2C_CH_CFG i2c_cfg_tbl[I2C_CH_MAX] =
 {
-	{ I2C1, { I2C1_EV_IRQn, I2C1_EV_IRQHandler, I2C1_EV_INTERRUPT_NO}, { I2C1_ER_IRQn, I2C1_ER_IRQHandler, I2C1_ER_INTERRUPT_NO}},
+	{ I2C1, { I2C1_EV_IRQn, I2C1_EV_IRQHandler, I2C1_EV_INTERRUPT_NO}, { I2C1_ER_IRQn, I2C1_ER_IRQHandler, I2C1_ER_INTERRUPT_NO}},		// CH1 
+	{ I2C2, { I2C2_EV_IRQn, I2C2_EV_IRQHandler, I2C2_EV_INTERRUPT_NO}, { I2C2_ER_IRQn, I2C2_ER_IRQHandler, I2C2_ER_INTERRUPT_NO}},		// CH2
 };
-#define get_instance(ch)		(i2c_cfg_tbl[ch].instance)			// インスタンス取得マクロ
+#define get_instance(ch)		(i2c_cfg_tbl[ch].instance)				// インスタンス取得マクロ
 #define get_irq_type(ch)		(i2c_cfg_tbl[ch].irq.irq_type)			// 割込みタイプ取得マクロ
 #define get_handler(ch)			(i2c_cfg_tbl[ch].irq.handler)			// 割り込みハンドラ取得マクロ
 #define get_vec_no(ch)			(i2c_cfg_tbl[ch].irq.vec_no)			// 割り込み番号取得マクロ
@@ -75,6 +78,40 @@ static void I2C1_ER_IRQHandler(void)
 	
 	// 制御ブロック取得
 	this = get_myself(I2C_CH1);
+	
+	/* USER CODE END I2C1_ER_IRQn 0 */
+	if (&(this->hi2c1) != 0) {
+		HAL_I2C_ER_IRQHandler(&(this->hi2c1));
+	}
+	/* USER CODE BEGIN I2C1_ER_IRQn 1 */
+	
+	/* USER CODE END I2C1_ER_IRQn 1 */
+}
+
+static void I2C2_EV_IRQHandler(void)
+{
+	/* USER CODE BEGIN I2C1_EV_IRQn 0 */
+	I2C_CTL *this;
+	
+	// 制御ブロック取得
+	this = get_myself(I2C_CH2);
+	
+	/* USER CODE END I2C1_EV_IRQn 0 */
+	if (&(this->hi2c1) != 0) {
+		HAL_I2C_EV_IRQHandler(&(this->hi2c1));
+	}
+	/* USER CODE BEGIN I2C1_EV_IRQn 1 */
+
+	/* USER CODE END I2C1_EV_IRQn 1 */
+}
+
+static void I2C2_ER_IRQHandler(void)
+{
+	/* USER CODE BEGIN I2C1_ER_IRQn 0 */
+	I2C_CTL *this;
+	
+	// 制御ブロック取得
+	this = get_myself(I2C_CH2);
 	
 	/* USER CODE END I2C1_ER_IRQn 0 */
 	if (&(this->hi2c1) != 0) {

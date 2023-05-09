@@ -170,6 +170,7 @@ int8_t LCD_dev_write(uint8_t x, uint8_t y, uint16_t *str)
 	uint16_t sjis;
 	uint16_t ptn;
 	uint8_t ofst = 0;
+	uint8_t len;
 	
 	// strがNULLの場合、エラーを返す
 	if (str == NULL) {
@@ -186,8 +187,11 @@ int8_t LCD_dev_write(uint8_t x, uint8_t y, uint16_t *str)
 		return -1;
 	}
 	
+	// 文字数を取得
+	len = strlen(str)/2;
+	
 	// 表示文字が行をまたぐ場合、エラーを返す
-	if((x + strlen(str)/2) > LCD_DISPLAY_WIDTH) {
+	if((x + len) > LCD_DISPLAY_WIDTH) {
 		return -1;
 	}
 	

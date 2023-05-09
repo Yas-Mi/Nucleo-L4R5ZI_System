@@ -36,7 +36,11 @@ SOFTWARE.
 #include "clock.h"
 #include "pin_function.h"
 #include "console.h"
+#include "sound_app.h"
 #include "i2c_wrapper.h"
+#include "sai_mng.h"
+#include "bt_dev.h"
+#include "pcm3060.h"
 
 /* Private macro */
 /* Private variables */
@@ -51,21 +55,48 @@ SOFTWARE.
 **===================
 **===========================================================================
 */
+// テスト用タスク 
+static int test_tsk(int argc, char *argv[])
+{
+	sai_mng_open();
+	
+	while(1) {
+		kz_tsleep(1000);
+		sai_mng_send();
+	}
+	
+	return 0;
+}
 /* システム・タスクとユーザ・タスクの起動 */
 static int start_threads(int argc, char *argv[])
 {
 	// ペリフェラルの初期化
 	usart_init();
 	i2c_wrapper_init();
+	sai_init();
+	
+	// デバイスの初期化
+	bt_dev_init();
+	pcm3060_init();
+	
+	// マネージャの初期化
+	sai_mng_init();
+	
+	// アプリの初期化
+	console_init();
+	sound_app_init();
+	
+	// コマンドの設定
+	bt_dev_set_cmd();
 	
 	// タスクの起動
 	// デバイス
-	kz_run(BTN_dev_main, "BTN_dev_main",  2, 0x1000, 0, NULL);
+	//kz_run(BTN_dev_main, "BTN_dev_main",  2, 0x1000, 0, NULL);
 	// アプリ
-	kz_run(console_main, "console",  3, 0x1000, 0, NULL);
-	kz_run(LCD_app_main, "LCD_app_main",  3, 0x1000, 0, NULL);
-	kz_run(ctl_main, "ctl_main",  3, 0x1000, 0, NULL);
-	kz_run(ctl_cycmsg_main, "ctl_cycmsg",  3, 0x1000, 0, NULL);
+	//kz_run(console_main, "console",  3, 0x1000, 0, NULL);
+	//kz_run(LCD_app_main, "LCD_app_main",  3, 0x1000, 0, NULL);
+	//kz_run(ctl_main, "ctl_main",  3, 0x1000, 0, NULL);
+	//kz_run(ctl_cycmsg_main, "ctl_cycmsg",  3, 0x1000, 0, NULL);
 	//kz_run(US_main, "US_main",  8, 0x1000, 0, NULL);
 	//kz_run(BT_main, "BT_main",  8, 0x1000, 0, NULL);
 	//kz_run(BT_mng_connect_sts, "BT_mng_connect_sts",  8, 0x1000, 0, NULL);
@@ -73,12 +104,13 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(bluetoothdrv_main, "blue_tooth",  8, 0x200, 0, NULL);
 	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
 	//kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
+	//kz_run(test_tsk, "test_tsk",  3, 0x1000, 0, NULL);
 	
 	/* 優先順位を下げて，アイドルスレッドに移行する */
 	kz_chpri(15); 
 	
 	// システム制御タスクの初期化
-	CTL_MSG_init();
+	//CTL_MSG_init();
 	
 	//INTR_ENABLE; /* 割込み有効にする */
  	while (1) {

@@ -48,10 +48,10 @@ typedef struct {
 // ボタン固有情報テーブル
 static const BTN_CFG btn_info_tbl[BTN_MAX] = {
 //   gpio_grp   pin_no
-	{GPIOE,		GPIO_PIN_0},	// 上ボタンに対応するGPIO情報
-	{GPIOE,		GPIO_PIN_1},	// 下ボタンに対応するGPIO情報
-	{GPIOE,		GPIO_PIN_2},	// 戻るボタンに対応するGPIO情報
-	{GPIOE,		GPIO_PIN_3},	// 決定ボタンに対応するGPIO情報
+	{GPIOE,		GPIO_PIN_0},	// 上ボタンのGPIO情報
+	{GPIOE,		GPIO_PIN_1},	// 下ボタンのGPIO情報
+	{GPIOE,		GPIO_PIN_2},	// 戻るボタンのGPIO情報
+	{GPIOE,		GPIO_PIN_3},	// 決定ボタンのGPIO情報
 };
 
 // 内部関数
@@ -114,7 +114,7 @@ static void btn_dev_check(void)
 				if (info->cb) {
 					info->cb(BTN_LONG_PUSHED);
 				}
-				console_str_send("long\n");
+				console_str_send((uint8_t*)"long\n");
 			} else {
 				; // ボタン押し込み中
 			}
@@ -134,7 +134,7 @@ static void btn_dev_check(void)
 					if (info->cb) {
 						info->cb(BTN_SHORT_PUSHED);
 					}
-					console_str_send("short\n");
+					console_str_send((uint8_t*)"short\n");
 				} else {
 					;
 				}

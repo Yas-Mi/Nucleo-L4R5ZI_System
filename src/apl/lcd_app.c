@@ -8,7 +8,7 @@
 #include "kozos.h"
 #include "console.h"
 #include "lib.h"
-#include "lcd_dev.h"
+#include "lcd_fw.h"
 #include "btn_dev.h"
 #include "lcd_app.h"
 
@@ -20,10 +20,19 @@ enum State_Type {
 	ST_UNINITIALIZED = 0U,
 	ST_INTIALIZED,
 	ST_START_UP,
-	ST_SELECT_MODE_DISP,		// サイセイ/タ゛ウンロード選択画面
+	ST_SELECT_MODE_DISP,			// サイセイ/タ゛ウンロード選択画面
+	ST_SELECT_RESUME_MODE_DISP,		// ストリーミングサイセイ/ダウンロードサイセイ選択画面
 	ST_UNDEIFNED,
 	ST_MAX,
 };
+
+typedef enum {
+	DISPLAY_LIST_NO_DISP = 0,		//	何も表示しない
+	DISPLAY_LIST_START_UP,			//	起動画面
+	DISPLAY_LIST_SELECT_MODE,		//	モード選択
+	DISPLAY_LIST_RESUME_MODE,		//	サイセイモード選択
+	DISPLAY_LIST_MAX,				//	最大値
+}DISPLAY_LIST;
 
 // メッセージ
 enum MESSSAGE_Type {
@@ -43,15 +52,6 @@ enum MESSSAGE_Type {
 	MSG_MAX,
 };
 
-// 関数ポインタ
-typedef int (*FUNC)(void);
-
-// 状態遷移用定義
-typedef struct {
-	FUNC func;
-	uint8_t nxt_state;
-}FSM;
-
 // 制御用ブロック
 typedef struct {
 	kz_thread_id_t tsk_id;		// メインタスクのID
@@ -59,47 +59,116 @@ typedef struct {
 	uint8_t state;				// 状態
 	// ST_SELECT_MODE_DISPで使用する情報
 	uint8_t select_ypos;			//"＞"のy位置
-	
 } LCD_APP_CTL;
 LCD_APP_CTL lcd_ap_ctl;
 
-// プロトタイプ宣言
-static void lcd_app_init(void);
-static void lcd_app_start_up(void);
-static void lcd_app_select_mode(void);
-static void lcd_app_move_cursor(void);
+static const DISPLAY_INFO disp_info[DISPLAY_LIST_MAX] = {
+	// DISPLAY_LIST_NO_DISP
+	{	
+		{
+			{	0, 0, ""	},
+			{	0, 0, ""	},
+		}
+	},
+	// DISPLAY_LIST_START_UP
+	{	
+		{
+			{	1, 0, "オンカ゛クサイセイシステム"	},
+			{	1, 1, "ＶＥＲＳＩＯＮ１．０．０"	},
+		}
+	},
+	// DISPLAY_LIST_SELECT_MODE
+	{
+		{
+			{	1, 0, "サイセイ"			},
+			{	1, 1, "タ゛ウンロート゛"	},
+		}
+	},
+	// DISPLAY_LIST_RESUME_MODE
+	{
+		{
+			{	1, 0, "ストリーミンク゛サイセイ"		},
+			{	1, 1, "タ゛ウンロート゛サイセイ"		},
+		}
+	},
+};
 
-// 状態遷移テーブル
-static const FSM fsm[ST_MAX][MSG_MAX] = {
-	// MSG_INIT					      MSG_START_UP						 MSG_SELECT_MODE   							 MSG_BTN_UP_LONG	   MSG_BTN_UP_SHORT	   				   MSG_BTN_DOWN_LONG	 MSG_BTN_DOWN_SHORT    				  MSG_BTN_BACK_LONG     MSG_BTN_BACK_SHORT    MSG_BTN_SELECT_LONG   MSG_BTN_SELECT_SHORT  MSG_CONNECT MSG_DISCONNECT
-	{{lcd_app_init, ST_INTIALIZED},  {NULL, ST_UNDEIFNED}, 				{NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},				   {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, 				  {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},}, // ST_UNINITIALIZED
-	{{NULL, ST_UNDEIFNED},			 {lcd_app_start_up, ST_START_UP},   {NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},				   {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, 				  {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},}, // ST_INTIALIZED
-	{{NULL, ST_UNDEIFNED},			 {NULL, ST_UNDEIFNED}, 				{lcd_app_select_mode, ST_SELECT_MODE_DISP}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},				   {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, 				  {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},}, // ST_START_UP
-	{{NULL, ST_UNDEIFNED},			 {NULL, ST_UNDEIFNED}, 				{NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {lcd_app_move_cursor, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {lcd_app_move_cursor, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},}, // ST_SELECT_MODE_DISP
+// 各状態で表示する画面
+static const DISPLAY_LIST status_disp_tbl[ST_MAX] = {
+	DISPLAY_LIST_NO_DISP,			// 表示なし
+	DISPLAY_LIST_NO_DISP,			// 表示なし
+	DISPLAY_LIST_START_UP,			// 起動画面
+	DISPLAY_LIST_SELECT_MODE,		// モードセレクト画面
+	DISPLAY_LIST_RESUME_MODE,		// 再生モードセレクト画面
+	DISPLAY_LIST_NO_DISP,			// 表示なし
 };
 
 // 内部関数
 // 起動画面表示関数
 static void lcd_app_start_up(void)
 {
-	// 起動画面表示
-	LCD_dev_clear_disp();
-	LCD_dev_write(1, 0, "オンカ゛クサイセイシステム");
-	LCD_dev_write(2, 1, VESION);
-	LCD_dev_disp();
+	DISPLAY_ALL_INFO info;
+	
+	// 表示文字列をコピー
+	memcpy(&(info.disp_info), &(disp_info[DISPLAY_LIST_START_UP]), sizeof(DISPLAY_INFO));
+	// カーソルなし
+	info.cursor_flag = 0U;
+	// 優先度設定
+	info.priority = 0U;
+	
+	// 起動仮面表示
+	LCD_fw_disp(&info);
 }
 
 // モードセレクト表示関数
 static void lcd_app_select_mode(void)
 {
-	LCD_APP_CTL *this = &lcd_ap_ctl;
+	DISPLAY_ALL_INFO info;
+	
+	// 表示文字列をコピー
+	memcpy(&(info.disp_info), &(disp_info[DISPLAY_LIST_SELECT_MODE]), sizeof(DISPLAY_INFO));
+	// カーソルあり
+	info.cursor_flag = 1U;
+	// カーソル位置は変えない
+	info.cursor_pos = CURSOR_POS_NO_CHANGE;
+	// 優先度設定
+	info.priority = 0U;
 	
 	// サイセイ/ダウンロード
-	LCD_dev_clear_disp();
-	LCD_dev_write(1,0,"サイセイ");
-	LCD_dev_write(1,1,"タ゛ウンロート゛");
-	LCD_dev_write(0,this->select_ypos,"＞");
-	LCD_dev_disp();
+	LCD_fw_disp(&info);
+}
+
+// サイセイモードセレクト表示関数
+static void lcd_app_select_resume_mode(void)
+{
+	DISPLAY_ALL_INFO info;
+	uint8_t cursor_pos;
+	
+	// 現在のカーソル位置を取得
+	cursor_pos = LCD_fw_get_cursor_pos();
+	
+	switch (cursor_pos) {
+		// サイセイ選択
+		case 0 :
+			// 表示文字列をコピー
+			memcpy(&(info.disp_info), &(disp_info[DISPLAY_LIST_RESUME_MODE]), sizeof(DISPLAY_INFO));
+			// カーソルあり
+			info.cursor_flag = 1U;
+			// カーソル位置は変えない
+			info.cursor_pos = CURSOR_POS_NO_CHANGE;
+			// 優先度設定
+			info.priority = 0U;
+			// サイセイ/ダウンロード
+			LCD_fw_disp(&info);
+			break;
+		// ダウンロード選択
+		case 1 :
+			break;
+		default :
+			break;
+	}
+	
+
 }
 
 // 上ボタンコールバック
@@ -163,8 +232,8 @@ static void lcd_app_init(void)
 {
 	LCD_APP_CTL *this = &lcd_ap_ctl;
 	
-	// LCDデバイスドライバ初期化
-	LCD_dev_init();
+	// LCDFWデバイスドライバ初期化
+	LCD_fw_init();
 	
 	//ボタンのコールバックを設定
 	BTN_dev_reg_callback_up(lcd_app_btn_up);
@@ -177,29 +246,56 @@ static void lcd_app_init(void)
 }
 
 // カーソル移動関数
-static void lcd_app_move_cursor(void)
+static void lcd_app_move_cursor_up(void)
 {
 	LCD_APP_CTL *this = &lcd_ap_ctl;
+	DISPLAY_ALL_INFO info;
 	
-	// 現在表示されている"＞"を削除
-	LCD_dev_clear(0, this->select_ypos, 1);
+	// 表示文字列をコピー
+	memcpy(&(info.disp_info), &(disp_info[status_disp_tbl[this->state]]), sizeof(DISPLAY_INFO));
+	// カーソルあり
+	info.cursor_flag = 1U;
+	// カーソル位置を進める
+	info.cursor_pos = CURSOR_POS_GO_NEXT;
 	
-	// カーソル位置を反転させる
-	this->select_ypos = ~this->select_ypos & 0x01;
-	
-	// カーソル("＞")を移動 (*)x位置が0の場所には文字がない前提
-	//LCD_dev_clear_disp();
-	LCD_dev_write(0, this->select_ypos, "＞");
-	LCD_dev_disp();
+	// サイセイ/ダウンロード
+	LCD_fw_disp(&info);
 }
+
+// カーソル移動関数
+static void lcd_app_move_cursor_down(void)
+{
+	LCD_APP_CTL *this = &lcd_ap_ctl;
+	DISPLAY_ALL_INFO info;
+	
+	// 表示文字列をコピー
+	memcpy(&(info.disp_info), &(disp_info[status_disp_tbl[this->state]]), sizeof(DISPLAY_INFO));
+	// カーソルあり
+	info.cursor_flag = 1U;
+	// カーソル位置を進める
+	info.cursor_pos = CURSOR_POS_GO_BACK;
+	
+	// サイセイ/ダウンロード
+	LCD_fw_disp(&info);
+}
+
+// 状態遷移テーブル
+static const FSM fsm[ST_MAX][MSG_MAX] = {
+	// MSG_INIT					      MSG_START_UP						 MSG_SELECT_MODE   							 MSG_BTN_UP_LONG	   MSG_BTN_UP_SHORT	   						MSG_BTN_DOWN_LONG		MSG_BTN_DOWN_SHORT    						MSG_BTN_BACK_LONG	  MSG_BTN_BACK_SHORT					MSG_BTN_SELECT_LONG   MSG_BTN_SELECT_SHORT  						MSG_CONNECT MSG_DISCONNECT
+	{{lcd_app_init, ST_INTIALIZED},  {NULL, ST_UNDEIFNED}, 				{NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},						{NULL, ST_UNDEIFNED},	{NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},					{NULL, ST_UNDEIFNED}, {NULL,						ST_UNDEIFNED},}, // ST_UNINITIALIZED
+	{{NULL, ST_UNDEIFNED},			 {lcd_app_start_up, ST_START_UP},   {NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},						{NULL, ST_UNDEIFNED},	{NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},					{NULL, ST_UNDEIFNED}, {NULL,						ST_UNDEIFNED},}, // ST_INTIALIZED
+	{{NULL, ST_UNDEIFNED},			 {NULL, ST_UNDEIFNED}, 				{lcd_app_select_mode, ST_SELECT_MODE_DISP}, {NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},						{NULL, ST_UNDEIFNED},	{NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},					{NULL, ST_UNDEIFNED}, {NULL,						ST_UNDEIFNED},}, // ST_START_UP
+	{{NULL, ST_UNDEIFNED},			 {NULL, ST_UNDEIFNED}, 				{NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {lcd_app_move_cursor_up, ST_UNDEIFNED},	{NULL, ST_UNDEIFNED},	{lcd_app_move_cursor_down, ST_UNDEIFNED},	{NULL, ST_UNDEIFNED}, {NULL, ST_UNDEIFNED},					{NULL, ST_UNDEIFNED}, {lcd_app_select_resume_mode,	ST_SELECT_RESUME_MODE_DISP},}, // ST_SELECT_MODE_DISP
+	{{NULL, ST_UNDEIFNED},			 {NULL, ST_UNDEIFNED}, 				{NULL, ST_UNDEIFNED}, 						{NULL, ST_UNDEIFNED}, {lcd_app_move_cursor_up, ST_UNDEIFNED},	{NULL, ST_UNDEIFNED},	{lcd_app_move_cursor_down, ST_UNDEIFNED},	{NULL, ST_UNDEIFNED}, {LCD_fw_disp_back, ST_UNDEIFNED},		{NULL, ST_UNDEIFNED}, {NULL,						ST_UNDEIFNED},}, // ST_SELECT_RESUME_MODE_DISP
+};
 
 // メインのタスク
 // 状態遷移テーブルに従い、処理を実行し、状態を更新する
 int LCD_app_main(int argc, char *argv[])
 {
 	LCD_APP_CTL *this = &lcd_ap_ctl;
-	uint8_t cur_state = ST_UNINITIALIZED;
-	uint8_t nxt_state = cur_state;
+	this->state = ST_UNINITIALIZED;
+	uint8_t nxt_state = this->state;
 	LCD_APP_MSG *msg;
 	int32_t size;
 	FUNC func;
@@ -217,13 +313,11 @@ int LCD_app_main(int argc, char *argv[])
 		kz_recv(this->msg_id, &size, &msg);
 		
 		// 処理/次状態を取得
-		func = fsm[cur_state][msg->msg_type].func;
-		nxt_state = fsm[cur_state][msg->msg_type].nxt_state;
+		func = fsm[this->state][msg->msg_type].func;
+		nxt_state = fsm[this->state][msg->msg_type].nxt_state;
 		
 		// メッセージを解放
 		kz_kmfree(msg);
-		
-		this->state = nxt_state;
 		
 		// 処理を実行
 		if (func != NULL) {
@@ -232,7 +326,7 @@ int LCD_app_main(int argc, char *argv[])
 		
 		// 状態遷移
 		if (nxt_state != ST_UNDEIFNED) {
-			cur_state = nxt_state;
+			this->state = nxt_state;
 		}
 	}
 

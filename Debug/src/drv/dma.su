@@ -1,0 +1,12 @@
+dma.c:124:13:dma_common_handler	32	static
+dma.c:154:6:dma1_handler	8	static
+dma.c:158:6:dma2_handler	8	static
+dma.c:162:6:dma3_handler	8	static
+dma.c:166:6:dma4_handler	8	static
+dma.c:170:6:dma5_handler	8	static
+dma.c:174:6:dma6_handler	8	static
+dma.c:178:6:dma7_handler	8	static
+dma.c:184:6:dma_init	16	static
+dma.c:204:9:dma_open	32	static
+dma.c:245:9:dma_start	24	static
+dma.c:358:9:dma_stop	24	static

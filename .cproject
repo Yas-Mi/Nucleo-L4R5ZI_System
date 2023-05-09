@@ -43,6 +43,7 @@
 								</option>
 								<option id="com.atollic.truestudio.gcc.directories.select.632462593" name="Include path" superClass="com.atollic.truestudio.gcc.directories.select" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="../src"/>
+									<listOptionValue builtIn="false" value="../src/mng"/>
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Include"/>
 									<listOptionValue builtIn="false" value="../Drivers/CMSIS/Device/ST/STM32L4xx/Include"/>
 									<listOptionValue builtIn="false" value="../Drivers/STM32L4xx_HAL_Driver/Inc"/>
@@ -106,10 +107,13 @@
 							<tool id="com.atollic.truestudio.exe.debug.toolchain.secoutput.1754554468" name="Other" superClass="com.atollic.truestudio.exe.debug.toolchain.secoutput"/>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="com.atollic.truestudio.exe.debug.1571999415.1360889926" name="pcm3060.c" rcbsApplicability="disable" resourcePath="src/dev/pcm3060.c" toolsToInvoke="com.atollic.truestudio.exe.debug.toolchain.gcc.630917349.1227216357">
+						<tool id="com.atollic.truestudio.exe.debug.toolchain.gcc.630917349.1227216357" name="C Compiler" superClass="com.atollic.truestudio.exe.debug.toolchain.gcc.630917349"/>
+					</fileInfo>
 					<fileInfo id="com.atollic.truestudio.exe.debug.1571999415.930246193" name="octspi.h" rcbsApplicability="disable" resourcePath="src/drv/octspi.h" toolsToInvoke=""/>
 					<sourceEntries>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
-						<entry excluding="drv/octspi.h|drv/octspi.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry excluding="apl/ctl_main.c|apl/lcd_app.c|drv/octspi.h|drv/octspi.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

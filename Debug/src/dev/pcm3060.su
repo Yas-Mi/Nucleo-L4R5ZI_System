@@ -1,0 +1,2 @@
+pcm3060.c:94:6:pcm3060_init	16	static
+pcm3060.c:107:9:pcm3060_open	40	static

@@ -1,0 +1,7 @@
+sai.c:192:13:sai_common_handler	40	static
+sai.c:232:6:sai1_handler	8	static
+sai.c:241:16:set_config	72	static
+sai.c:418:13:start_sai	24	static
+sai.c:431:6:sai_init	16	static
+sai.c:451:9:sai_open	24	static
+sai.c:488:9:sai_send	48	static

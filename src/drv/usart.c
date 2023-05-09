@@ -10,6 +10,12 @@
 #include "usart.h"
 #include "intr.h"
 
+// 状態
+#define ST_NOT_INTIALIZED	(0U)	// 未初期化
+#define ST_INTIALIZED		(1U)	// 初期化済
+#define ST_OPENED			(2U)	// オープン済
+#define ST_RUN				(3U)	// 実行中
+
 // マクロ
 #define USART_BUF_SIZE		(1024U)		// 1024byte
 #define USART_CLOCK			(4000000)	// 4MHz
@@ -84,7 +90,12 @@ typedef struct {
 
 /* USART制御ブロック */
 typedef struct {
-	uint8_t				ch;					// 	チャネル
+	uint8_t				status	;			// 状態
+	uint8_t				ch;					// チャネル
+	kz_thread_id_t		rcv_tsk_id;			// 受信タスクID
+	uint32_t			read_size;			// 受信サイズ
+	kz_thread_id_t		snd_tsk_id;			// 送信タスクID
+	uint32_t			send_size;			// 送信サイズ
 	RING_BUF			r_buf;				// 受信用リングバッファ
 	RING_BUF 			s_buf;				// 送信用リングバッファ
 	USART_CALLBACK		send_callback;		// 送信コールバック
@@ -118,6 +129,21 @@ static const USART_CFG usart_cfg[USART_CH_MAX] =
 #define get_handler(ch)		(usart_cfg[ch].handler)				// 割り込みハンドラ取得マクロ
 #define get_vec_no(ch)		(usart_cfg[ch].vec_no)				// 割り込み番号取得マクロ
 
+
+// fifoの空き数を取得する関数
+static uint16_t get_fifo_empty_num(uint16_t r_idx, uint16_t w_idx)
+{
+	uint16_t empty_num;
+	
+	if (r_idx > w_idx) {
+		empty_num = r_idx - w_idx;
+	} else {
+		empty_num = ((USART_BUF_SIZE - w_idx) + r_idx);
+	}
+	
+	return empty_num;
+}
+
 /* 割込み共通ハンドラ */
 static void usart_common_handler(USART_CH ch){
 	USART_CTL *this;
@@ -144,10 +170,16 @@ static void usart_common_handler(USART_CH ch){
 			buf_info->buf[buf_info->w_idx] = usart_base_addr->rdr;
 			// ライトインデックスを進める
 			buf_info->w_idx = (buf_info->w_idx + 1U) & (USART_BUF_SIZE - 1U);
-		}
-		// コールバック実行
-		if (this->recv_callback) {
-			this->recv_callback(ch, this->recv_callback_vp);
+			// 寝ているタスクがあれば起こす
+			if (this->rcv_tsk_id != 0) {
+				// 読みたいサイズ分受信した？
+				if ((buf_info->w_idx - buf_info->r_idx) >= this->read_size) {
+					// 読みたいサイズをクリア
+					this->read_size = 0;
+					// 寝ているタスクを起こす
+					kx_wakeup(this->rcv_tsk_id);
+				}
+			}
 		}
 	}
 	
@@ -161,9 +193,15 @@ static void usart_common_handler(USART_CH ch){
 			usart_base_addr->tdr = buf_info->buf[buf_info->r_idx];
 			// リードインデックスを進める
 			buf_info->r_idx = (buf_info->r_idx + 1U) & (USART_BUF_SIZE - 1U);
-			// コールバック実行
-			if (this->send_callback) {
-				this->send_callback(ch, this->send_callback_vp);
+			// 寝ているタスクがあれば起こす
+			if (this->snd_tsk_id != 0) {
+				// 送信したいサイズ分空いた？
+				if (get_fifo_empty_num(buf_info->r_idx, buf_info->w_idx) >= this->send_size) {
+					// 読みたいサイズをクリア
+					this->send_size = 0;
+					// 寝ているタスクを起こす
+					kx_wakeup(this->snd_tsk_id);
+				}
 			}
 		// 送信リングバッファにデータがない場合
 		} else {
@@ -202,6 +240,8 @@ void usart_init(void)
 		memset(this, 0, sizeof(USART_CTL));
 		// 割込みハンドラ登録
 		kz_setintr(get_vec_no(ch), get_handler(ch));
+		// 状態を更新
+		this->status = ST_INTIALIZED;
 	}
 	
 	return;
@@ -211,9 +251,15 @@ void usart_init(void)
 int32_t usart_open(USART_CH ch, uint32_t baudrate)
 {
 	volatile struct stm32l4_usart *usart_base_addr;
+	USART_CTL *this = get_myself(ch);
 	
 	// チャネル番号が範囲外の場合エラーを返して終了
 	if (ch >= USART_CH_MAX) {
+		return -1;
+	}
+	
+	// 状態が初期化済みでない場合エラーを返して終了
+	if (this->status != ST_INTIALIZED) {
 		return -1;
 	}
 	
@@ -240,7 +286,10 @@ int32_t usart_open(USART_CH ch, uint32_t baudrate)
 	/* 割り込み有効 */
     HAL_NVIC_SetPriority(get_ire_type(ch), INTERRPUT_PRIORITY_5, 0);
     HAL_NVIC_EnableIRQ(get_ire_type(ch));
-
+	
+	// 状態を更新
+	this->status = ST_OPENED;
+	
 	return 0;
 }
 
@@ -249,7 +298,6 @@ int32_t usart_send(USART_CH ch, uint8_t *data, uint32_t size)
 {
 	USART_CTL *this;
 	RING_BUF *buf_info;
-	uint32_t tmp_w_idx;
 	uint32_t i;
 	volatile struct stm32l4_usart *usart_base_addr;
 	
@@ -265,16 +313,23 @@ int32_t usart_send(USART_CH ch, uint8_t *data, uint32_t size)
 	
 	// 制御ブロック取得
 	this = get_myself(ch);
+	
+	// 状態がオープン済みでない場合、エラーを返して終了
+	if (this->status != ST_OPENED) {
+		return -1;
+	}
+	
 	// リングバッファ情報取得
 	buf_info = &(this->s_buf);
 	
 	// 送信リングバッファに空きがない場合、エラーを返して終了
-	tmp_w_idx = buf_info->w_idx;
-	for (i = 0; i < size; i++) {
-		tmp_w_idx++;
-		if (tmp_w_idx == buf_info->r_idx) {
-			return -1;
-		}
+	if (get_fifo_empty_num(buf_info->r_idx, buf_info->w_idx) < size) {
+		// 送信サイズを設定
+		this->send_size = size;
+		// タスクIDを取得
+		this->snd_tsk_id = kz_getid();
+		// 空くまで寝る
+		kz_sleep();
 	}
 	
 	// 割込み禁止
@@ -303,6 +358,7 @@ int32_t usart_recv(USART_CH ch, uint8_t *data, uint32_t size)
 	USART_CTL *this;
 	RING_BUF *buf_info;
 	uint32_t i;
+	uint32_t cnt;
 	
 	// チャネル番号が範囲外の場合エラーを返して終了
 	if (ch >= USART_CH_MAX) {
@@ -316,12 +372,29 @@ int32_t usart_recv(USART_CH ch, uint8_t *data, uint32_t size)
 	
 	// 制御ブロック取得
 	this = get_myself(ch);
+	
+	// 状態がオープン済みでない場合、エラーを返して終了
+	if (this->status != ST_OPENED) {
+		return -1;
+	}
+	
 	// リングバッファ情報取得
 	buf_info = &(this->r_buf);
 	
-	// 読みたいサイズ分データがない場合は、エラーを返して終了
-	if ((buf_info->r_idx + size) > buf_info->w_idx) {
-		return -1;
+	// FIFOに格納されているデータの数を取得
+	cnt = buf_info->w_idx - buf_info->r_idx;
+	
+	// 受信サイズをクリア
+	this->read_size = 0;
+	
+	// 読みたいサイズ分ない場合、sleepする
+	if (cnt < size) {
+		// 受信サイズを設定
+		this->read_size = size - cnt;
+		// タスクIDを取得
+		this->rcv_tsk_id = kz_getid();
+		// 読みたいサイズ分受信するまで寝る
+		kz_sleep();
 	}
 	
 	// 割込み禁止
@@ -339,45 +412,6 @@ int32_t usart_recv(USART_CH ch, uint8_t *data, uint32_t size)
 	// 割込み禁止解除
 	INTR_ENABLE;
 	
-	return 0;
+	return cnt;
 }
 
-// 受信コールバック設定関数
-int32_t usart_reg_recv_callback(USART_CH ch, USART_CALLBACK cb, void *vp)
-{
-	USART_CTL *this;
-	
-	// コールバック関数がNULLの場合、エラーを返して終了
-	if (cb == NULL) {
-		return -1;
-	}
-	
-	// 制御ブロック取得
-	this = get_myself(ch);
-	
-	// コールバック関数を登録
-	this->recv_callback = cb;
-	this->recv_callback_vp = vp;
-	
-	return 0;
-}
-
-// 送信コールバック設定関数
-int32_t usart_reg_send_callback(USART_CH ch, USART_CALLBACK cb, void *vp)
-{
-	USART_CTL *this;
-	
-	// コールバック関数がNULLの場合、エラーを返して終了
-	if (cb == NULL) {
-		return -1;
-	}
-	
-	// 制御ブロック取得
-	this = get_myself(ch);
-	
-	// コールバック関数を登録
-	this->send_callback = cb;
-	this->send_callback_vp = vp;
-	
-	return 0;
-}

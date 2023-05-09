@@ -38,7 +38,6 @@ enum MSG_Type {
 
 // 関数ポインタ
 typedef void (*INIT_TSK)(void);
-typedef void (*CTL_FUNC)(void* info);
 
 // リスト
 typedef struct lst {

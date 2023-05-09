@@ -1,2 +1,2 @@
 clock.c:9:8:Error_Handler	4	static
-clock.c:16:6:periferal_clock_init	192	static
+clock.c:16:6:periferal_clock_init	208	static

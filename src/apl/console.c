@@ -13,8 +13,7 @@
 
 // 制御ブロック
 typedef struct {
-	kz_thread_id_t		tsk_id;						// コンソールタスクのID
-	kz_thread_id_t		snd_tsk_id;					// 送信要求を出したタスクのID
+	kz_thread_id_t		tsk_id;						// タスクID
 	kz_msgbox_id_t		msg_id;						// メッセージID
 	char				buf[CONOLE_BUF_SIZE];		// コマンドラインバッファ
 	uint8_t				buf_idx;					// コマンドラインバッファインデックス
@@ -23,58 +22,17 @@ typedef struct {
 } CONSOLE_CTL;
 static CONSOLE_CTL console_ctl;
 
-// 受信コールバック
-static void console_recv_callback(USART_CH ch, void *vp)
-{
-	CONSOLE_CTL *this;
-	
-	// 制御ブロックの取得
-	this = &console_ctl;
-	
-	// コンソールタスクを起こす
-	kx_wakeup(this->tsk_id);
-}
-
-// 送信コールバック
-static void console_send_callback(USART_CH ch, void *vp)
-{
-	// 特に何もしない
-}
-
-static void console_init(void)
-{
-	CONSOLE_CTL *this;
-	int32_t ret;
-	
-	// 制御ブロックの取得
-	this = &console_ctl;
-	
-	// 制御ブロックの初期化
-	memset(this, 0, sizeof(CONSOLE_CTL));
-	
-	// 自タスクIDの取得
-	this->tsk_id = kz_getid();
-	this->msg_id = MSGBOX_ID_BTMAIN;
-	
-	// コールバックの設定
-	usart_reg_recv_callback(CONSOLE_USART_CH, console_recv_callback, this);
-	usart_reg_send_callback(CONSOLE_USART_CH, console_send_callback, this);
-	
-	// USARTのオープン
-	ret = usart_open(CONSOLE_USART_CH, CONSOLE_BAUDRATE);
-	
-	return;
-}
-
 // コンソールからの入力を受信する関数
 static uint8_t console_recv(void)
 {
 	uint8_t data;
+	int32_t size;
 	
 	// 受信できるで待つ
-	while (usart_recv(CONSOLE_USART_CH, &data, 1)) {
-		// 受信データがない場合は寝る
-		kz_sleep();
+	size = usart_recv(CONSOLE_USART_CH, &data, 1);
+	// 期待したサイズ読めた？
+	if (size != 1) {
+		; // 特に何もしない たぶん期待したサイズ読めるでしょう
 	}
 	
 	return data;
@@ -83,12 +41,9 @@ static uint8_t console_recv(void)
 // コンソールからの入力を受信する関数
 static void console_analysis(uint8_t data)
 {
-	CONSOLE_CTL *this;
+	CONSOLE_CTL *this = &console_ctl;
 	COMMAND_INFO *cmd_info;
 	uint8_t i;
-	
-	// 制御ブロックの取得
-	this = &console_ctl;
 	
 	switch (data) {
 		case '\t':	// tab
@@ -102,7 +57,7 @@ static void console_analysis(uint8_t data)
 			for (i = 0; i < this->cmd_idx; i++) {
 				cmd_info = &(this->cmd_info[i]);
 				// コマンド実行
-				if (strcmp(this->buf, cmd_info->input)) {
+				if (!strcmp(this->buf, cmd_info->input)) {
 					cmd_info->func();
 				}
 			}
@@ -119,19 +74,12 @@ static void console_analysis(uint8_t data)
 	return;
 }
 
-// 外部公開関数
 // コンソールタスク
-int console_main(int argc, char *argv[])
+static int console_main(int argc, char *argv[])
 {
-	CONSOLE_CTL *this;
+	CONSOLE_CTL *this = &console_ctl;
 	uint8_t data[2];
 	uint32_t ret;
-	
-	// 制御ブロックの取得
-	this = &console_ctl;
-	
-	// コンソールタスクの初期化
-	console_init();
 	
 	while (1) {
 		// "command>"を出力
@@ -150,6 +98,30 @@ int console_main(int argc, char *argv[])
 	}
 	
 	return 0;
+}
+
+// 外部公開関数
+void console_init(void)
+{
+	CONSOLE_CTL *this;
+	int32_t ret;
+	
+	// 制御ブロックの取得
+	this = &console_ctl;
+	
+	// 制御ブロックの初期化
+	memset(this, 0, sizeof(CONSOLE_CTL));
+	
+	// タスクの生成
+	this->tsk_id = kz_run(console_main, "console",  CONZOLE_PRI, CONSOLE_STACK, 0, NULL);
+	
+	// メッセージIDの設定
+	this->msg_id = MSGBOX_ID_CONSOLE;
+
+	// USARTのオープン
+	ret = usart_open(CONSOLE_USART_CH, CONSOLE_BAUDRATE);
+	
+	return;
 }
 
 // コンソールへ文字列を送信する関数

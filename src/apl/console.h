@@ -12,7 +12,8 @@ typedef struct {
 	COMMAND func;
 } COMMAND_INFO;
 
-extern int console_main(int argc, char *argv[]);
+extern void console_init(void);
 extern uint8_t console_str_send(uint8_t *data);
+extern int32_t console_set_command(COMMAND_INFO *cmd_info);
 
 #endif
