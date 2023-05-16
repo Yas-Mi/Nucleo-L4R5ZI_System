@@ -305,8 +305,6 @@ static void bt_dev_input_capture_callback(TIM_CH ch, void *par, uint32_t cnt)
 {
 	BT_CTL *this = (BT_CTL*)par;
 	
-	// cnt
-	
 }
 
 // 状態遷移テーブル
@@ -456,10 +454,10 @@ int32_t bt_dev_init(void)
 	//this->tsk_con_id = kz_run(bt_dev_connect_main, "bt_dev_connect_main",  BT_DEV_PRI, BT_DEV_STACK, 0, NULL);
 	
 	// タイマの設定
-	tim_open(BT_TIM_CH, &tim_open_par, bt_dev_input_capture_callback, this);
+	//tim_open(BT_TIM_CH, &tim_open_par, bt_dev_input_capture_callback, this);
 	
 	// インプットキャプチャの設定
-	tim_start_input_capture(BT_TIM_CH);
+	//tim_start_input_capture(BT_TIM_CH);
 	
 	// 状態の更新
 	this->state = ST_INITIALIZED;
