@@ -41,6 +41,7 @@ SOFTWARE.
 #include "sai_mng.h"
 #include "bt_dev.h"
 #include "pcm3060.h"
+#include "tim.h"
 
 /* Private macro */
 /* Private variables */
@@ -74,6 +75,7 @@ static int start_threads(int argc, char *argv[])
 	usart_init();
 	i2c_wrapper_init();
 	sai_init();
+	tim_init();
 	
 	// デバイスの初期化
 	bt_dev_init();

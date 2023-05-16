@@ -7,10 +7,10 @@
 /*
 	PCM30601の設計メモ
 	対応フォーマット
-		24bit左寄せ
+		24bit左
 		24bitI2S
-		24bit右寄せ
-		16bit右寄せ
+		24bit右
+		16bit右
 */
 #include "defines.h"
 #include "kozos.h"
@@ -20,7 +20,7 @@
 #include "sai.h"
 
 // 状態
-#define PCM3060_ST_NOT_INTIALIZED	(0U) // 未初期化
+#define PCM3060_ST_NOT_INTIALIZED	(0U) // 未初期状態
 #define PCM3060_ST_INITIALIZED		(1U) // 初期化済み
 #define PCM3060_ST_OPEND			(2U) // オープン済み
 
@@ -29,7 +29,7 @@
 #define PCM3060_USE_SAI_CH		SAI_CH1 // SAIのCH1を使用
 
 // PCM3060デバイスのスレーブアドレス
-#define PCM3060_SLAVE_ADDRESS	(0x8C)
+#define PCM3060_SLAVE_ADDRESS	(0x46)
 
 // アドレスの定義
 #define PCM3060_REGISTER64	(0x40)
@@ -68,7 +68,7 @@ static const fs_conv_tbl[SAI_DATA_WIDTH_MAX] = {
 // SAIのオープンパラメータ
 static const SAI_OPEN sai_open_par = {
 	SAI_MODE_MONAURAL,		// モノラル
-	SAI_FMT_MSB_JUSTIFIED,	// 右寄せ
+	SAI_FMT_MSB_JUSTIFIED,	// 右詰め
 	SAI_PACK_LSB_FIRST,		// LSB First
 	0,						// データ幅(後から設定)
 	0,						// サンプリング周波数(後から設定)
@@ -77,16 +77,16 @@ static const SAI_OPEN sai_open_par = {
 
 // PCM3060の設定パラメータ
 static const PCM3060_SETTING pcm3060_setting[] = {
-//	{PCM3060_REGISTER64, 0x00}, // デフォルトの設定でよいでしょう
-//	{PCM3060_REGISTER65, 0x00}, // デフォルトの設定でよいでしょう
-//	{PCM3060_REGISTER66, 0x00}, // デフォルトの設定でよいでしょう
+//	{PCM3060_REGISTER64, 0x00}, // デフォルト設定でいいでしょう
+//	{PCM3060_REGISTER65, 0x00}, // デフォルト設定でいいでしょう
+//	{PCM3060_REGISTER66, 0x00}, // デフォルト設定でいいでしょう
 	{PCM3060_REGISTER67, 0x03},
-//	{PCM3060_REGISTER68, 0x00}, // デフォルトの設定でよいでしょう
-//	{PCM3060_REGISTER69, 0x00}, // デフォルトの設定でよいでしょう
-//	{PCM3060_REGISTER70, 0x00}, // デフォルトの設定でよいでしょう
-//	{PCM3060_REGISTER71, 0x00}, // デフォルトの設定でよいでしょう
-//	{PCM3060_REGISTER72, 0x00}, // デフォルトの設定でよいでしょう
-//	{PCM3060_REGISTER73, 0x00}, // デフォルトの設定でよいでしょう
+//	{PCM3060_REGISTER68, 0x00}, // デフォルト設定でいいでしょう
+//	{PCM3060_REGISTER69, 0x00}, // デフォルト設定でいいでしょう
+//	{PCM3060_REGISTER70, 0x00}, // デフォルト設定でいいでしょう
+//	{PCM3060_REGISTER71, 0x00}, // デフォルト設定でいいでしょう
+//	{PCM3060_REGISTER72, 0x00}, // デフォルト設定でいいでしょう
+//	{PCM3060_REGISTER73, 0x00}, // デフォルト設定でいいでしょう
 };
 
 // 外部公開関数
@@ -147,8 +147,8 @@ int32_t pcm3060_open(uint32_t fs, uint8_t data_width)
 		i2c_wrapper_send(PCM3060_USE_I2C_CH, PCM3060_SLAVE_ADDRESS, &pcm3060_setting[i], 2);
 	}
 	
-	// 状態の更新
-	this->status = PCM3060_ST_OPEND;
+	// 状態を更新
+ 	this->status = PCM3060_ST_OPEND;
 	
 	return 0;
 }

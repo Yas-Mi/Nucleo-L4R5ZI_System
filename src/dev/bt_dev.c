@@ -16,6 +16,8 @@
 #include "kozos.h"
 #include "bt_dev.h"
 #include "console.h"
+#include "intr.h"
+#include "tim.h"
 #include <string.h>
 
 // 状態
@@ -35,10 +37,11 @@
 // マクロ
 #define BT_BAUDRATE					(115200)									// 通信速度 115200bps
 #define BT_USART_CH					USART_CH2									// 使用するUSARTのチャネル
-#define BT_BUF_NUM					(512)										// 使用するUSARTのチャネル
+#define BT_BUF_NUM					(512)										// バッファサイズ[byte]
 #define BT_STATUS_CHECK_PERIOD		(50)										// デバイスの接続状態をチェックする周期 (ms)
 #define BT_STATUS_CHECK_CHATTER_NUM	(4)											// チャタリング
 #define BT_CONNECTED				((1 << BT_STATUS_CHECK_CHATTER_NUM) - 1)	// 接続された
+#define BT_TIM_CH					TIM_CH2										// 使用するTIMのチャネル
 
 // バッファ情報
 typedef struct {
@@ -92,6 +95,11 @@ static SEND_FUNC snd_func[SEND_TYPE_MAX] =
 	cmd_name,
 	cmd_baudrate,
 	cmd_pin,
+};
+
+// TIM設定テーブル
+static const TIM_OPEN tim_open_par = {
+	TIM_MODE_INPUT_CAPTURE,
 };
 
 // 接続通知ハンドラ
@@ -292,6 +300,15 @@ static void bt_dev_cmd_name(void)
 	bt_dev_send(SEND_TYPE_CMD_NAME, name, size);
 }
 
+// インプットキャプチャのコールバック
+static void bt_dev_input_capture_callback(TIM_CH ch, void *par, uint32_t cnt)
+{
+	BT_CTL *this = (BT_CTL*)par;
+	
+	// cnt
+	
+}
+
 // 状態遷移テーブル
 static const FSM fsm[ST_MAX][EVENT_MAX] = {
 	// EVENT_CONNECT						EVENT_DISCONNECT								EVENT_SEND
@@ -368,6 +385,7 @@ static int bt_dev_sts_main(int argc, char *argv[])
 	return 0;
 }
 
+#if 0
 // 接続状態チェックタスク
 int bt_dev_connect_main(int argc, char *argv[])
 {
@@ -411,7 +429,7 @@ int bt_dev_connect_main(int argc, char *argv[])
 	
 	return 0;
 }
-
+#endif
 
 // BlueTooth初期化関数
 int32_t bt_dev_init(void)
@@ -435,7 +453,13 @@ int32_t bt_dev_init(void)
 	// タスクの生成
 	this->tsk_rcv_id = kz_run(bt_dev_rcv_main, "bt_dev_rcv_main",  BT_DEV_PRI, BT_DEV_STACK, 0, NULL);
 	this->tsk_sts_id = kz_run(bt_dev_sts_main, "bt_dev_sts_main",  BT_DEV_PRI, BT_DEV_STACK, 0, NULL);
-	this->tsk_con_id = kz_run(bt_dev_connect_main, "bt_dev_connect_main",  BT_DEV_PRI, BT_DEV_STACK, 0, NULL);
+	//this->tsk_con_id = kz_run(bt_dev_connect_main, "bt_dev_connect_main",  BT_DEV_PRI, BT_DEV_STACK, 0, NULL);
+	
+	// タイマの設定
+	tim_open(BT_TIM_CH, &tim_open_par, bt_dev_input_capture_callback, this);
+	
+	// インプットキャプチャの設定
+	tim_start_input_capture(BT_TIM_CH);
 	
 	// 状態の更新
 	this->state = ST_INITIALIZED;

@@ -34,6 +34,17 @@ typedef enum {
 	DMA_TRANSFER_UNIT_MAX,					// 最大値
 } DMA_TRANSFER_UNIT;
 
+// オープンパラメータ
+typedef struct {
+	DMA_TRANSFER_PTN	transfer_ptn;		// 転送のパターン
+	uint32_t			src_addr;			// 転送元のアドレス
+	uint8_t				src_addr_inc;		// 転送元のアドレスをインクリメントするか (*)インクリメントする場合、transfer_unit単位でインクリメントされる
+	uint32_t			dst_addr;			// 転送先のアドレス
+	uint8_t				dst_addr_inc;		// 転送先のアドレスをインクリメントするか (*)インクリメントする場合、transfer_unit単位でインクリメントされる
+	DMA_TRANSFER_UNIT	transfer_unit;		// 転送単位
+	uint32_t			transfer_count;		// 転送回数 (総転送サイズ[byte] = transfer_unit * transfer_count)
+} DMA_OPEN;
+
 // 転送パラメータ
 typedef struct {
 	DMA_TRANSFER_PTN	transfer_ptn;		// 転送のパターン

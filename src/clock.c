@@ -55,6 +55,13 @@ void periferal_clock_init(void)
 	__HAL_RCC_I2C1_CLK_ENABLE();		// I2C1のクロックを有効
 	__HAL_RCC_I2C2_CLK_ENABLE();		// I2C2のクロックを有効
 	__HAL_RCC_SAI1_CLK_ENABLE();		// SAI1のクロックを有効
+	__HAL_RCC_TIM2_CLK_ENABLE();		// TIM2のクロックを有効
+	__HAL_RCC_TIM3_CLK_ENABLE();		// TIM3のクロックを有効
+	__HAL_RCC_TIM4_CLK_ENABLE();		// TIM4のクロックを有効
+	__HAL_RCC_TIM5_CLK_ENABLE();		// TIM5のクロックを有効
+	__HAL_RCC_TIM15_CLK_ENABLE();		// TIM15のクロックを有効
+	__HAL_RCC_TIM16_CLK_ENABLE();		// TIM16のクロックを有効
+	__HAL_RCC_TIM17_CLK_ENABLE();		// TIM17のクロックを有効
 	
 	// GPIOのクロックを有効にする
 	__HAL_RCC_PWR_CLK_ENABLE();

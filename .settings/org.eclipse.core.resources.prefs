@@ -1,3 +1,4 @@
 eclipse.preferences.version=1
 encoding//Drivers/CMSIS/Device/ST/STM32L4xx/Include/stm32l4xx.h=UTF-8
+encoding//src/dev/pcm3060.c=UTF-8
 encoding//src/drv/usart.c=UTF-8
