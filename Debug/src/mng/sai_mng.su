@@ -1,3 +1,0 @@
-sai_mng.c:45:6:sai_mng_init	16	static
-sai_mng.c:61:6:sai_mng_open	16	static
-sai_mng.c:77:9:sai_mng_send	56	static

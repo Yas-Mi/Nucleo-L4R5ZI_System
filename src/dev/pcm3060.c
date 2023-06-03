@@ -17,7 +17,9 @@
 #include "i2c_wrapper.h"
 #include "lib.h"
 #include "stm32l4xx_hal_gpio.h"
+#include "pcm3060.h"
 #include "sai.h"
+#include "util.h"
 
 // 状態
 #define PCM3060_ST_NOT_INTIALIZED	(0U) // 未初期状態
@@ -42,10 +44,16 @@
 #define PCM3060_REGISTER71	(0x47)
 #define PCM3060_REGISTER72	(0x48)
 #define PCM3060_REGISTER73	(0x49)
+#define PCM3060_WAIT		(0xFF)	// レジスタの定義ではなく、wait用
+
+// リトライ
+#define PCM3060_RETRY_CNT	(5)		// 設定のリトライカウント
 
 // 制御用ブロック
 typedef struct {
-	uint8_t status;		// 状態
+	uint8_t status;				// 状態
+	PCM3060_CALLBACK callback;	// コールバック
+	void*	callback_vp;		// コールバックパラメータ
 }PCM3060_CTL;
 static PCM3060_CTL pcm3060_ctl;
 
@@ -53,6 +61,7 @@ static PCM3060_CTL pcm3060_ctl;
 typedef struct {
 	uint8_t reg;	// レジスタのアドレス
 	uint8_t data;	// データ
+	char	*reg_name;	// レジスタの名前 (デバッグ用)
 }PCM3060_SETTING;
 
 // データ幅変換テーブル
@@ -69,8 +78,9 @@ static const fs_conv_tbl[SAI_DATA_WIDTH_MAX] = {
 static const SAI_OPEN sai_open_par = {
 	SAI_MODE_MONAURAL,		// モノラル
 	SAI_FMT_MSB_JUSTIFIED,	// 右詰め
-	SAI_PACK_LSB_FIRST,		// LSB First
+	SAI_PACK_MSB_FIRST,		// MSB First
 	0,						// データ幅(後から設定)
+	SAI_BICK_TYPE_64FS,		// BICK = 64fs
 	0,						// サンプリング周波数(後から設定)
 	TRUE,					// マスタークロックを使用
 };
@@ -80,14 +90,90 @@ static const PCM3060_SETTING pcm3060_setting[] = {
 //	{PCM3060_REGISTER64, 0x00}, // デフォルト設定でいいでしょう
 //	{PCM3060_REGISTER65, 0x00}, // デフォルト設定でいいでしょう
 //	{PCM3060_REGISTER66, 0x00}, // デフォルト設定でいいでしょう
-	{PCM3060_REGISTER67, 0x03},
+	{PCM3060_REGISTER64, 0x30, "reg64"},	// MRST = 0, SRST = 0 (他はデフォルト値)
+	{PCM3060_WAIT,       0x64, "wait" },	// 100ms wait
+	{PCM3060_REGISTER64, 0xE1, "reg64"},	// DAPSV = 0, S/E = 1 (他はデフォルト値)
+	{PCM3060_WAIT,       0x64, "wait" },	// 100ms wait
+	{PCM3060_REGISTER67, 0x03, "reg67"},	// FMT21, FMT20 = 1, 1 (他はデフォルト値)
+	{PCM3060_WAIT,       0x64, "wait" },	// 100ms wait
 //	{PCM3060_REGISTER68, 0x00}, // デフォルト設定でいいでしょう
 //	{PCM3060_REGISTER69, 0x00}, // デフォルト設定でいいでしょう
 //	{PCM3060_REGISTER70, 0x00}, // デフォルト設定でいいでしょう
 //	{PCM3060_REGISTER71, 0x00}, // デフォルト設定でいいでしょう
 //	{PCM3060_REGISTER72, 0x00}, // デフォルト設定でいいでしょう
 //	{PCM3060_REGISTER73, 0x00}, // デフォルト設定でいいでしょう
+
 };
+
+// I2Cのオープンパラメータ
+static const I2C_OPEN i2c_open_par = {
+	I2C_BPS_100K,
+};
+
+// 送受信完了フラグ
+static uint8_t send_cmp_flag = FALSE;
+static uint8_t read_cmp_flag = FALSE;
+static uint8_t err_flag = FALSE;
+
+// SAIからのコールバック
+static void sai_callback(SAI_CH ch, void *vp)
+{
+	PCM3060_CTL *this = (PCM3060_CTL*)vp;
+	
+	// ちゃんと期待したチャネル？
+	if (ch != PCM3060_USE_SAI_CH) {
+		return;
+	}
+	// コールバック
+	if (this->callback) {
+		this->callback(this->callback_vp);
+	}
+}
+
+// I2Cの送信完了コールバック
+static void i2c_wrapper_snd_callback(I2C_CH ch, int32_t ercd, void *vp)
+{
+	PCM3060_CTL *this = &pcm3060_ctl;
+	
+	// 送信完了
+	send_cmp_flag = TRUE;
+	// エラーフラグ
+	if (ercd != 0) {
+		err_flag = TRUE;
+	} else {
+		err_flag = FALSE;
+	}
+}
+
+// I2Cの受信完了コールバック
+static void i2c_wrapper_rcv_callback(I2C_CH ch, int32_t ercd, uint8_t *data, uint32_t size, void *vp)
+{
+	PCM3060_CTL *this = &pcm3060_ctl;
+	
+	// 受信完了
+	read_cmp_flag = TRUE;
+	// エラーフラグ
+	if (ercd != 0) {
+		err_flag = TRUE;
+	} else {
+		err_flag = FALSE;
+	}
+}
+
+// pcm3060リセット処理
+static void pcm3060_rest(void)
+{
+	uint32_t cnt = 1000;
+	
+	// リセット
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+	// ちょっとwait
+	pcm3060_wait(cnt);
+	// リセット解除
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+	// ちょっとwait
+	pcm3060_wait(cnt);
+}
 
 // 外部公開関数
 // PCM3060初期化関数
@@ -104,15 +190,24 @@ void pcm3060_init(void)
 	return;
 }
 
-int32_t pcm3060_open(uint32_t fs, uint8_t data_width)
+// PCM3060オープン関数
+int32_t pcm3060_open(uint32_t fs, uint8_t data_width, PCM3060_CALLBACK callback, void* callback_vp)
 {
 	PCM3060_CTL *this = &pcm3060_ctl;
 	SAI_OPEN open_par;
 	uint8_t i;
+	uint8_t data;
 	int32_t ret;
+	uint32_t cnt = 0;
+	uint8_t retry_cnt = 0;
+	
+	// 未初期化の場合はエラーを返して終了
+	if (this->status != PCM3060_ST_INITIALIZED) {
+		return -1;
+	}
 	
 	// I2Cをオープンする
-	ret = i2c_wrapper_open(PCM3060_USE_I2C_CH);
+	ret = i2c_wrapper_open(PCM3060_USE_I2C_CH, &i2c_open_par, i2c_wrapper_snd_callback, i2c_wrapper_rcv_callback, this);
 	if (ret != 0) {
 		return -1;
 	}
@@ -134,17 +229,109 @@ int32_t pcm3060_open(uint32_t fs, uint8_t data_width)
 	open_par.width = i;
 	open_par.fs = fs;
 	// SAIをオープンする
-	ret = sai_open(PCM3060_USE_SAI_CH, &open_par);
+	ret = sai_open(PCM3060_USE_SAI_CH, &open_par, sai_callback, this);
 	if (ret != 0) {
 		return -1;
 	}
 	
+	// コールバック登録
+	this->callback = callback;
+	this->callback_vp = callback_vp;
+	
 	// RST解除
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+	//pcm3060_rest();
+	
+	// 5swait
+	busy_wait(5000);
 	
 	// PCM3060の設定
 	for (i = 0; i < sizeof(pcm3060_setting)/sizeof(pcm3060_setting[0]); i++) {
-		i2c_wrapper_send(PCM3060_USE_I2C_CH, PCM3060_SLAVE_ADDRESS, &pcm3060_setting[i], 2);
+		// wait
+		if (pcm3060_setting[i].reg == PCM3060_WAIT) {
+			busy_wait(pcm3060_setting[i].data);
+			continue;
+		}
+		
+		// リトライカウンタをクリア
+		retry_cnt = 0;
+		
+		// 設定
+		do {
+			// レジスタライト
+			i2c_wrapper_send(PCM3060_USE_I2C_CH, PCM3060_SLAVE_ADDRESS, &pcm3060_setting[i], 2);
+			// 送信完了するまで待つ (初期タスクで処理しているため寝られない...)
+			while (send_cmp_flag == FALSE) {};
+			// フラグをクリア
+			send_cmp_flag = FALSE;
+			// リトライカウンタを増やす
+			retry_cnt++;
+		} while ((err_flag) && (retry_cnt < PCM3060_RETRY_CNT));
+		
+		// リトライ回数やっても駄目だった
+		if (retry_cnt >= PCM3060_RETRY_CNT) {
+			console_str_send((uint8_t*)"The number of retries was sent, but communication was not possible.\n");
+			while(1) {};
+		}
+#if 0
+		// 設定できたかをチェック
+		console_str_send((uint8_t*)pcm3060_setting[i].reg_name);
+		console_str_send((uint8_t*)"\n");
+		console_str_send((uint8_t*)" send : ");
+		console_val_send(pcm3060_setting[i].data);
+		console_str_send((uint8_t*)"\n");
+		
+		// リトライカウンタをクリア
+		retry_cnt = 0;
+		
+		// レジスタライト
+		do {
+			// レジスタライト
+			i2c_wrapper_send(PCM3060_USE_I2C_CH, PCM3060_SLAVE_ADDRESS, &pcm3060_setting[i], 1);
+			// 送信完了するまで待つ
+			while (send_cmp_flag == FALSE) {};
+			// フラグをクリア
+			send_cmp_flag = FALSE;
+			// リトライカウンタを増やす
+			retry_cnt++;
+			// リセット
+			//- pcm3060_rest();
+		} while ((err_flag) && (retry_cnt < PCM3060_RETRY_CNT));
+		
+		// リトライ回数やっても駄目だった
+		if (retry_cnt >= PCM3060_RETRY_CNT) {
+			console_str_send((uint8_t*)"The number of retries was sent, but communication was not possible.\n");
+			while(1) {};
+		}
+		
+		// リトライカウンタをクリア
+		retry_cnt = 0;
+		
+		// レジスタリード
+		do {
+			// レジスタリード (ちゃんと書けたか確認) (初期タスクで処理しているため寝られない...)
+			i2c_wrapper_read(PCM3060_USE_I2C_CH, PCM3060_SLAVE_ADDRESS, &data, 1);
+			// ポーリングで受信できるのを待つ (初期タスクで処理しているため寝られない...)
+			while (read_cmp_flag == FALSE) {};
+			// フラグをクリア
+			read_cmp_flag = FALSE;
+			// リトライカウンタを増やす
+			retry_cnt++;
+			// リセット
+			//- pcm3060_rest();
+		} while ((err_flag) && (retry_cnt < PCM3060_RETRY_CNT));
+		
+		// リトライ回数やっても駄目だった
+		if (retry_cnt >= PCM3060_RETRY_CNT) {
+			console_str_send((uint8_t*)"The number of retries was sent, but communication was not possible.\n");
+			while(1) {};
+		}
+		
+		// 表示
+		console_str_send((uint8_t*)" read : ");
+		console_val_send(data);
+		console_str_send((uint8_t*)"\n");
+#endif
 	}
 	
 	// 状態を更新
@@ -153,4 +340,27 @@ int32_t pcm3060_open(uint32_t fs, uint8_t data_width)
 	return 0;
 }
 
-
+// PCM3060再生関数
+// dataはアプリ側で32bitを用意する
+// sai側で設定されたbitにキャストして送信される
+int32_t pcm3060_play(uint32_t *data, uint32_t size)
+{
+	PCM3060_CTL *this = &pcm3060_ctl;
+	int32_t ret;
+	
+	// オープンされていない場合はエラーを返して終了
+	if (this->status != PCM3060_ST_OPEND) {
+		return -1;
+	}
+	
+	// 送信
+	ret = sai_send(PCM3060_USE_SAI_CH, data, size);
+	if (ret != 0) {
+		return -1;
+	}
+	
+	// 状態を更新
+	this->status != PCM3060_ST_OPEND;
+	
+	return ret;
+}

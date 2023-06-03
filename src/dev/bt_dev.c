@@ -303,7 +303,6 @@ static void bt_dev_cmd_name(void)
 // インプットキャプチャのコールバック
 static void bt_dev_input_capture_callback(TIM_CH ch, void *par, uint32_t cnt)
 {
-	BT_CTL *this = (BT_CTL*)par;
 	
 }
 

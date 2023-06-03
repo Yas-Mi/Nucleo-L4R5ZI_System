@@ -97,6 +97,11 @@ static const CHAR_PTN char_ptn[] = {
 
 static LCD_CTL lcd_ctl; // 制御ブロックの実体
 
+// I2C オープンパラメータ
+static const I2C_OPEN i2c_open_par = {
+	I2C_BPS_400K,
+};
+
 //内部関数
 // I2Cへデータを送信する関数
 static void lcd_send_data(uint32_t type, const uint8_t *send_data, uint8_t size) 
@@ -152,7 +157,7 @@ void LCD_dev_init(void)
 	memset(&lcd_ctl, 0, sizeof(lcd_ctl));
 	
 	// I2Cをオープンする
-	i2c_wrapper_open(LCD_USE_I2C_CH);
+	i2c_wrapper_open(LCD_USE_I2C_CH, &i2c_open_par, NULL, NULL, this);
 	
 	// LCDの初期化
 	lcd_send_data(CONTROL_TYPE, init_cmd, sizeof(init_cmd)/sizeof(init_cmd[0]));

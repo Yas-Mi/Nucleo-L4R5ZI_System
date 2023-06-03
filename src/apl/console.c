@@ -22,6 +22,17 @@ typedef struct {
 } CONSOLE_CTL;
 static CONSOLE_CTL console_ctl;
 
+
+// 数値からASCIIに変換する処理
+static uint8_t val2ascii(uint8_t val)
+{
+	if (val > 9) {
+		return 0xFF;
+	}
+	
+	return 0x30+val;
+}
+
 // コンソールからの入力を受信する関数
 static uint8_t console_recv(void)
 {
@@ -47,6 +58,14 @@ static void console_analysis(uint8_t data)
 	
 	switch (data) {
 		case '\t':	// tab
+			// コマンドの一覧を表示
+			console_str_send((uint8_t*)"\n");
+			for (i = 0; i < this->cmd_idx; i++) {
+				cmd_info = &(this->cmd_info[i]);
+				console_str_send((uint8_t*)cmd_info->input);
+				console_str_send((uint8_t*)"\n");
+			}
+			console_str_send((uint8_t*)"\n");
 			break;
 		case '\b':	// back space
 			break;
@@ -135,6 +154,45 @@ uint8_t console_str_send(uint8_t *data)
 	
 	// 送信
 	ret = usart_send(CONSOLE_USART_CH, data, len);
+	
+	return ret;
+}
+
+// コンソールへ数値を送信する関数
+uint8_t console_val_send(uint8_t data)
+{
+	int32_t ret;
+	uint8_t len;
+	uint8_t hundreds, tens_place, ones_place;
+	uint8_t snd_data[4];
+	
+	// 初期化
+	memset(snd_data, '\0', sizeof(snd_data));
+	
+	// 桁数を求める
+	hundreds = data/100;
+	tens_place = (data - hundreds * 100)/10;
+	ones_place = (data - hundreds * 100 - tens_place * 10);
+	
+	// 3桁？
+	if (hundreds != 0) {
+		len = 4;
+		snd_data[0] = val2ascii(hundreds);
+		snd_data[1] = val2ascii(tens_place);
+		snd_data[2] = val2ascii(ones_place);
+	// 2桁?
+	} else if (tens_place != 0) {
+		len = 3;
+		snd_data[0] = val2ascii(tens_place);
+		snd_data[1] = val2ascii(ones_place);
+	// 1桁？
+	} else {
+		len = 2;
+		snd_data[0] = val2ascii(ones_place);
+	}
+	
+	// 送信
+	ret = console_str_send(snd_data);
 	
 	return ret;
 }

@@ -1,6 +1,8 @@
-console.c:26:16:console_recv	16	static
-console.c:42:13:console_analysis	32	static
-console.c:78:12:console_main	32	static
-console.c:104:6:console_init	24	static
-console.c:128:9:console_str_send	24	static
-console.c:143:9:console_set_command	24	static
+console.c:27:16:val2ascii	16	static
+console.c:37:16:console_recv	16	static
+console.c:53:13:console_analysis	32	static
+console.c:97:12:console_main	32	static
+console.c:123:6:console_init	24	static
+console.c:147:9:console_str_send	24	static
+console.c:162:9:console_val_send	32	static
+console.c:201:9:console_set_command	24	static

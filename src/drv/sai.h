@@ -43,11 +43,20 @@ typedef enum {
 	SAI_DATA_WIDTH_MAX,		// 最大値
 } SAI_DATA_WIDTH;
 
+// ビットクロック
+typedef enum {
+	SAI_BICK_TYPE_32FS,		// BICKはサンプリング周波数の32倍
+	SAI_BICK_TYPE_48FS,		// BICKはサンプリング周波数の48倍
+	SAI_BICK_TYPE_64FS,		// BICKはサンプリング周波数の64倍
+	SAI_BICK_TYPE_MAX,		// 最大値
+} SAI_BICK_TYPE;
+
 typedef struct {
 	SAI_MODE			mode;			// モード(ステレオ or モノラル)
 	SAI_FMT				fmt;			// オーディオシリアル信号のフォーマット
 	SAI_PACK			packing;		// データの詰め方
 	SAI_DATA_WIDTH		width;			// データ幅
+	uint32_t			bick;			// ビットクロック
 	uint32_t			fs;				// サンプリング周波数
 	uint8_t				is_mclk_used;	// マスタークロックを使用するかどうか
 } SAI_OPEN;
@@ -57,7 +66,7 @@ typedef void (*SAI_CALLBACK)(SAI_CH ch, void *vp);
 
 // 公開関数
 extern void sai_init(void);
-extern int32_t sai_open(SAI_CH ch, SAI_OPEN *par);
+extern int32_t sai_open(SAI_CH ch, SAI_OPEN *par, SAI_CALLBACK callback, void *callback_vp);
 extern int32_t sai_send(SAI_CH ch, uint32_t *data, uint32_t size);
 
 #endif /* sai_H_ */

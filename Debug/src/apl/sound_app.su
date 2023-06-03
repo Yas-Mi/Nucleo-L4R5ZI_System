@@ -1,4 +1,9 @@
-sound_app.c:46:13:sound_app_sta	16	static
-sound_app.c:51:13:sound_app_stp	16	static
-sound_app.c:66:12:sound_app_main	40	static
-sound_app.c:98:6:sound_app_init	24	static
+sound_app.c:88:13:pcm3060_callback	24	static
+sound_app.c:96:13:sound_app_sta	16	static
+sound_app.c:102:13:sound_app_sta_beep	6432	static
+sound_app.c:137:13:sound_app_stp	16	static
+sound_app.c:152:12:sound_app_main	40	static
+sound_app.c:184:6:sound_app_init	24	static
+sound_app.c:208:9:sound_app_play_beep	24	static
+sound_app.c:226:13:sound_app_cmd_beep_1000ms	8	static
+sound_app.c:233:6:sound_app_set_cmd	16	static

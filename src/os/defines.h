@@ -38,7 +38,7 @@ typedef enum {
 // タスクで使用するスタック
 #define BT_DEV_STACK	(0x1000)
 #define CONSOLE_STACK	(0x1000)
-#define SOUND_APP_STACK	(0x1000)
+#define SOUND_APP_STACK	(0x2000)
 
 // 状態遷移用定義
 typedef void (*FUNC)(void* par);

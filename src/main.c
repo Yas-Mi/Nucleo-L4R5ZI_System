@@ -38,7 +38,6 @@ SOFTWARE.
 #include "console.h"
 #include "sound_app.h"
 #include "i2c_wrapper.h"
-#include "sai_mng.h"
 #include "bt_dev.h"
 #include "pcm3060.h"
 #include "tim.h"
@@ -59,12 +58,6 @@ SOFTWARE.
 // テスト用タスク 
 static int test_tsk(int argc, char *argv[])
 {
-	sai_mng_open();
-	
-	while(1) {
-		kz_tsleep(1000);
-		sai_mng_send();
-	}
 	
 	return 0;
 }
@@ -81,15 +74,13 @@ static int start_threads(int argc, char *argv[])
 	bt_dev_init();
 	pcm3060_init();
 	
-	// マネージャの初期化
-	sai_mng_init();
-	
 	// アプリの初期化
 	console_init();
 	sound_app_init();
 	
 	// コマンドの設定
 	bt_dev_set_cmd();
+	sound_app_set_cmd();
 	
 	// タスクの起動
 	// デバイス

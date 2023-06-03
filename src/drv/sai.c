@@ -19,7 +19,8 @@
 // マクロ
 #define SAI_CLOCK		(4000000U)		// ペリフェラルクロック 4MHz
 #define SAI_FIFO_SIZE	(8U)			// FIFOサイズ 8段
-#define SAI_BUF_SIZE	(256)			// SAIの送信データサイズ
+#define SAI_BUF_SIZE	(8192)			// SAIの送信データサイズ
+#define SAI_SLOT_SIZE	(32)			// 1SLOTのサイズ [bit]
 
 //SAI ベースレジスタ
 #define SAI1_BASE_ADDR	(0x40015400)
@@ -171,6 +172,14 @@ static const uint32_t sai_conv_ds_reg[SAI_DATA_WIDTH_MAX] =
 	0x00000007UL,	// SAI_DATA_WIDTH_32
 };
 
+// ビットクロック変換テーブル
+static const uint32_t sai_conv_bick[SAI_BICK_TYPE_MAX] =
+{
+	32,		// SAI_BICK_TYPE_32FS
+	48,		// SAI_BICK_TYPE_48FS
+	64,		// SAI_BICK_TYPE_64FS
+};
+
 // 転送情報
 typedef struct {
 	SAI_MODE        mode;				// モード
@@ -178,6 +187,8 @@ typedef struct {
 	uint8_t         fifo_empty_size;	// 割込み時のFIFOの空き段数
 	RING_BUF        s_buf;				// 送信データ
 	RING_BUF        r_buf;				// 受信データ (未使用)
+	SAI_CALLBACK    callback;			// 送信完了コールバック
+	void*           callback_vp;		// 送信完了コールバックパラメータ
 } SAI_TX_INFO;
 
 // SAI制御ブロック
@@ -220,6 +231,10 @@ static void sai_common_handler(SAI_CH ch)
 			} else {
 				// 割込みを無効にする
 				sai_base_addr->aim &= ~AIM_FRQIE;
+				// コールバック
+				if (tx_info->callback) {
+					tx_info->callback(ch, tx_info->callback_vp);
+				}
 				// 状態を更新
 				this->status = ST_OPENED;
 				break;
@@ -245,7 +260,6 @@ static int32_t set_config(SAI_CH ch, SAI_OPEN *par)
 	SAI_TX_INFO *tx_info;
 	uint32_t sai_clock;
 	uint32_t mckdiv;
-	uint32_t tmp_flame_sync_active_length;
 	uint32_t flame_sync_active_length;
 	uint32_t flame_length;
 	uint32_t fboff = 0UL;
@@ -253,11 +267,11 @@ static int32_t set_config(SAI_CH ch, SAI_OPEN *par)
 	uint32_t tmp_acr2 = 0UL;
 	uint32_t tmp_afrcr = 0UL;
 	uint32_t tmp_aslotr = 0UL;
-	uint8_t i;
 	
 	// パラメータチェック
 	if ((par->mode >= SAI_MODE_MAX) || (par->fmt >= SAI_FMT_MAX) || 
-	    (par->packing >= SAI_PACK_MAX) || (par->width >= SAI_DATA_WIDTH_MAX)) {
+	    (par->packing >= SAI_PACK_MAX) || (par->width >= SAI_DATA_WIDTH_MAX) ||
+	    (par->bick >=SAI_BICK_TYPE_MAX)){
 		return -1;
 	}
 	
@@ -293,41 +307,25 @@ static int32_t set_config(SAI_CH ch, SAI_OPEN *par)
 		mckdiv = (uint32_t)((sai_clock/(par->fs * 256)) + 1U) & 0x1F;
 		tmp_acr1 |= (mckdiv << ACR1_MCKDIV_POS);
 		
-		// Flame Lengthの設定
-		// Master CLockを使用する場合、Flame Lengthが2の乗数である必要がある
-		// このため、データ幅を超える最小の2の乗数を計算
-		// 8 < Flame Length < 256
-		for (i = 3; i < 8; i++) {
-			tmp_flame_sync_active_length = 1UL << i;
-			// 2の乗数がデータ幅を超えた？
-			if (tmp_flame_sync_active_length >= sai_conv_data_width[par->width]) {
-				break;
-			}
+		// 指定したBICKとデータ幅があっていなければエラーを返して終了
+		// (*)例えば、データ幅が32bitで、bickが32fsの場合、1chが16clokとなるため32bit送信できない
+		if (sai_conv_data_width[par->width] > sai_conv_bick[par->bick]/2) {
+			return -1;
 		}
-		// 1ch分の幅を設定
-		flame_sync_active_length = tmp_flame_sync_active_length;
 		
-		// 1ch分の長さとデータ幅が違う場合
-		if (flame_sync_active_length != sai_conv_data_width[par->width]) {
+		// 1ch分の幅を設定
+		flame_sync_active_length = sai_conv_bick[par->bick]/2;
+		
+		// 1ch分の長さが32bitでない場合
+		// (*) 1chのデータ幅は32bit固定にしているため、データ幅が32bitより小さい場合は調整する必要がある
+		if (sai_conv_data_width[par->width] != SAI_SLOT_SIZE) {
 			// MSB Firstの場合
 			if (par->packing == SAI_PACK_MSB_FIRST) {
-				// 1SLOTのデータサイズを設定する
-				for (i = 0; i < SAI_DATA_WIDTH_MAX; i++) {
-					if (flame_sync_active_length == sai_conv_data_width[i]) {
-						break;
-					}
-				}
-				if (i == SAI_DATA_WIDTH_MAX) {
-					// ありえないが、一応無限ループさせておく
-					while(1) {};
-				}
-				tmp_acr1 |= (sai_conv_ds_reg[i] << ACR1_DS_POS);
-				
 				// 1SLOTの送信開始bitを決定する
-				fboff = flame_sync_active_length - sai_conv_data_width[par->width];
+				fboff = SAI_SLOT_SIZE - sai_conv_data_width[par->width];
 			} else {
 				// LSB Firstの場合は特に何もする必要なし
-				
+				;
 			}
 		} else {
 			// 1ch分の長さとデータ幅が同じ場合は特に何もする必要なし
@@ -343,7 +341,7 @@ static int32_t set_config(SAI_CH ch, SAI_OPEN *par)
 		// MCLKを無効
 		tmp_acr1 |= ACR1_NOMCK;
 		// 1ch分の幅を設定
-		flame_sync_active_length = sai_conv_data_width[par->width];
+		flame_sync_active_length = sai_conv_bick[par->bick]/2;
 		// 分周比を計算
 		mckdiv = (uint32_t)((sai_clock/(par->fs * (flame_sync_active_length * 2))) + 1U) & 0x1F;
 	}
@@ -386,20 +384,9 @@ static int32_t set_config(SAI_CH ch, SAI_OPEN *par)
 	// データサイズを設定
 	tmp_acr1 |= (sai_conv_ds_reg[par->width] << ACR1_DS_POS);
 	
-	// フォーマットによって1スロットの送信開始bitを設定
-	if (par->fmt == SAI_FMT_MSB_JUSTIFIED) {
-		if (flame_sync_active_length != sai_conv_data_width[par->width]) {
-			// 1SLOTの送信開始bitを決定する
-			fboff = flame_sync_active_length - sai_conv_data_width[par->width];
-		}
-	} else {
-		// 右寄せ以外は特に何もする必要なし
-		;
-	}
-	
-	// スロットは2つ固定 (*)Rchで1スロット、Lchで1スロット (*)SLOTの数は左右で半々になる
+	// スロットは2つ、1つあたり32bit固定 (*)Rchで1スロット、Lchで1スロット (*)SLOTの数は左右で半々になる
 	// (*)MONAURALの場合は、1つ目のスロットのデータが2つ目のデータにコピーされる
-	tmp_aslotr |= (3UL << ASLOTR_SLOTEN_POS) | (1UL << ASLOTR_NBSLOT_POS) | (fboff << ASLOTR_FBOFF_POS);
+	tmp_aslotr |= (3UL << ASLOTR_SLOTEN_POS) | (1UL << ASLOTR_NBSLOT_POS) | (2UL << ASLOTR_SLOTSZ_POS) | (fboff << ASLOTR_FBOFF_POS);
 	
 	// レジスタへ値を設定
 	sai_base_addr->acr1 = tmp_acr1;
@@ -448,7 +435,7 @@ void sai_init(void)
 }
 
 // SAIオープン関数
-int32_t sai_open(SAI_CH ch, SAI_OPEN *par)
+int32_t sai_open(SAI_CH ch, SAI_OPEN *par, SAI_CALLBACK callback, void *callback_vp)
 {
 	SAI_CTL *this;
 	
@@ -474,6 +461,10 @@ int32_t sai_open(SAI_CH ch, SAI_OPEN *par)
 	if (set_config(ch, par) != 0) {
 		return -1;
 	}
+	
+	// コールバック設定
+	this->tx_info.callback = callback;
+	this->tx_info.callback_vp = callback_vp;
 	
 	// SAI有効化
 	start_sai(ch);
