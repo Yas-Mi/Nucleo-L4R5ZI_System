@@ -17,15 +17,6 @@ typedef enum {
 	DMA_CH_MAX,
 } DMA_CH;
 
-// 転送のパターン
-typedef enum {
-	DMA_TRANSFER_PTN_M2M = 0,				// メモリーからメモリー
-	DMA_TRANSFER_PTN_P2P,					// ペリフェラルからペリフェラル
-	DMA_TRANSFER_PTN_M2P,					// メモリーからペリフェラル
-	DMA_TRANSFER_PTN_P2M,					// ペリフェラルからメモリー
-	DMA_TRANSFER_PTN_MAX,					// 最大値
-} DMA_TRANSFER_PTN;
-
 // 転送単位
 typedef enum {
 	DMA_TRANSFER_UNIT_8BIT = 0,				// 8bit単位で転送
@@ -34,20 +25,8 @@ typedef enum {
 	DMA_TRANSFER_UNIT_MAX,					// 最大値
 } DMA_TRANSFER_UNIT;
 
-// オープンパラメータ
-typedef struct {
-	DMA_TRANSFER_PTN	transfer_ptn;		// 転送のパターン
-	uint32_t			src_addr;			// 転送元のアドレス
-	uint8_t				src_addr_inc;		// 転送元のアドレスをインクリメントするか (*)インクリメントする場合、transfer_unit単位でインクリメントされる
-	uint32_t			dst_addr;			// 転送先のアドレス
-	uint8_t				dst_addr_inc;		// 転送先のアドレスをインクリメントするか (*)インクリメントする場合、transfer_unit単位でインクリメントされる
-	DMA_TRANSFER_UNIT	transfer_unit;		// 転送単位
-	uint32_t			transfer_count;		// 転送回数 (総転送サイズ[byte] = transfer_unit * transfer_count)
-} DMA_OPEN;
-
 // 転送パラメータ
 typedef struct {
-	DMA_TRANSFER_PTN	transfer_ptn;		// 転送のパターン
 	uint32_t			src_addr;			// 転送元のアドレス
 	uint8_t				src_addr_inc;		// 転送元のアドレスをインクリメントするか (*)インクリメントする場合、transfer_unit単位でインクリメントされる
 	uint32_t			dst_addr;			// 転送先のアドレス
@@ -69,7 +48,7 @@ typedef void (*DMA_CALLBACK)(DMA_CH ch, int32_t ret, void *vp);
 // 公開関数
 extern void dma_init(void);
 extern int32_t dma_open(DMA_CH ch, uint32_t resource, DMA_CALLBACK callback, void * callback_vp);
-extern int32_t dma_start(DMA_CH ch, DMA_SEND send_info);
+extern int32_t dma_start(DMA_CH ch, DMA_SEND *send_info);
 extern int32_t dma_stop(DMA_CH ch);
 extern int32_t dma_close(DMA_CH ch, USART_CALLBACK cb, void *vp);
 

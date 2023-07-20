@@ -20,6 +20,6 @@ uint32_t del_cyclic_message(CYC_MSG cyclic_message);
 // タスクにメッセージを送信するための関数
 void CTL_MSG_init(void);
 void CTL_MSG_event(void);
-void CTL_MSG_btn(BTN_TYPE btn, BTN_STATUS sts);
+//void CTL_MSG_btn(BTN_TYPE btn, BTN_STATUS sts);
 
 #endif /* CTL_MAIN_H_ */

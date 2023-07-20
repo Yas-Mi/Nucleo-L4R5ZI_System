@@ -41,6 +41,8 @@ SOFTWARE.
 #include "bt_dev.h"
 #include "pcm3060.h"
 #include "tim.h"
+#include "wav.h"
+#include "cyc.h"
 
 /* Private macro */
 /* Private variables */
@@ -55,12 +57,45 @@ SOFTWARE.
 **===================
 **===========================================================================
 */
+#if 1
 // テスト用タスク 
-static int test_tsk(int argc, char *argv[])
+uint16_t malloc_pre_call = 0;
+uint16_t malloc_after_call = 0;
+static int test_tsk1(int argc, char *argv[])
 {
+	uint32_t *p;
+	uint8_t	size = 16;
+	volatile uint8_t a, i = 0;
 	
+	while(1) {
+		// 確保
+		malloc_pre_call++;
+		p = kz_kmalloc(size);
+		malloc_after_call++;
+		for (i = 0; i < 32; i++) {
+			a++;
+		}
+		// 解放
+		kz_kmfree(p);
+	}
 	return 0;
 }
+
+static int test_tsk2(int argc, char *argv[])
+{
+	int32_t ret;
+	uint8_t data;
+	
+	usart_open(USART_CH2, 115200);
+	
+	while(1) {
+		ret = usart_recv(USART_CH2, &data, 1);
+		console_val_send(data);
+	}
+	return 0;
+}
+#endif
+
 /* システム・タスクとユーザ・タスクの起動 */
 static int start_threads(int argc, char *argv[])
 {
@@ -68,11 +103,16 @@ static int start_threads(int argc, char *argv[])
 	usart_init();
 	i2c_wrapper_init();
 	sai_init();
-	tim_init();
+//	tim_init();
+	dma_init();
 	
 	// デバイスの初期化
 	bt_dev_init();
 	pcm3060_init();
+	
+	// マネージャの初期化
+	wav_init();
+	cyc_init();
 	
 	// アプリの初期化
 	console_init();
@@ -97,7 +137,8 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(bluetoothdrv_main, "blue_tooth",  8, 0x200, 0, NULL);
 	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
 	//kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
-	//kz_run(test_tsk, "test_tsk",  3, 0x1000, 0, NULL);
+	//kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
+	//kz_run(test_tsk2, "test_tsk2",  2, 0x1000, 0, NULL);
 	
 	/* 優先順位を下げて，アイドルスレッドに移行する */
 	kz_chpri(15); 
@@ -121,7 +162,7 @@ int main(void)
 	pin_function_init();
 	
 	/* OSの動作開始 */
-	kz_start(start_threads, "idle", 0, 0x100, 0, NULL);
+	kz_start(start_threads, "idle", 0, 0x1000, 0, NULL);
 	
 	/* ここには戻ってこない */
 	

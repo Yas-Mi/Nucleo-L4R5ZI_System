@@ -68,5 +68,7 @@ typedef void (*SAI_CALLBACK)(SAI_CH ch, void *vp);
 extern void sai_init(void);
 extern int32_t sai_open(SAI_CH ch, SAI_OPEN *par, SAI_CALLBACK callback, void *callback_vp);
 extern int32_t sai_send(SAI_CH ch, uint32_t *data, uint32_t size);
+extern int32_t sai_send_dma(SAI_CH ch, uint32_t *data, uint32_t size);
+extern int32_t sai_stop_dma(SAI_CH ch);
 
 #endif /* sai_H_ */

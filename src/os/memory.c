@@ -20,11 +20,11 @@ typedef struct _kzmem_pool {
 } kzmem_pool;
 
 /* メモリ・プールの定義(個々のサイズと個数) */
-// メモリプール領域は0x30000(196,608byte)
-// 16*32 = 512byte, 32*64 = 2,048byte, 64*64 = 4,096byte, 128*16 = 2,048byte, 256*16 = 4,096byte
-// 512 + 2,048 + 4,096 + 2,048 + 4,096 = 10,752byte
+// メモリプール領域は0x8000(32,768byte)
+// 16*256 = 4,096byte, 32*512 = 16,384byte, 64*64 = 4,096byte, 128*16 = 2,048byte, 256*8 = 2048byte
+// 4,096 + 16,384 + 4,096 + 2,048 + 2,048 = 28,672byte
 static kzmem_pool pool[] = {
-  { 16, 32, NULL }, { 32, 64, NULL }, { 64, 64, NULL }, { 128, 16, NULL }, { 256, 16, NULL },
+  { 16, 256, NULL }, { 32, 256, NULL }, { 64, 64, NULL }, { 128, 64, NULL }, { 256, 8, NULL },
 };
 
 #define MEMORY_AREA_NUM (sizeof(pool) / sizeof(*pool))
@@ -67,53 +67,55 @@ int kzmem_init(void)
 /* 動的メモリの獲得 */
 void *kzmem_alloc(int size)
 {
-  int i;
-  kzmem_block *mp;
-  kzmem_pool *p;
-
-  for (i = 0; i < MEMORY_AREA_NUM; i++) {
-    p = &pool[i];
-    if (size <= p->size - sizeof(kzmem_block)) {
-      if (p->free == NULL) { /* 解放済み領域が無い(メモリ・ブロック不足) */
-		kz_sysdown();
-		return NULL;
-      }
-      /* 解放済みリンクリストから領域を取得する */
-      mp = p->free;
-      p->free = p->free->next;
-      mp->next = NULL;
-      /*
-       * 実際に利用可能な領域は，メモリ・ブロック構造体の直後の領域に
-       * なるので，直後のアドレスを返す．
-       */
-      return mp + 1;
-    }
-  }
-
-  /* 指定されたサイズの領域を格納できるメモリ・プールが無い */
-  kz_sysdown();
-  return NULL;
+	int i;
+	kzmem_block *mp;
+	kzmem_pool *p;
+	
+	for (i = 0; i < MEMORY_AREA_NUM; i++) {
+		p = &pool[i];
+		if (size <= p->size - sizeof(kzmem_block)) {
+			if (p->free == NULL) { /* 解放済み領域が無い(メモリ・ブロック不足) */
+				kz_sysdown();
+				return NULL;
+			}
+			/* 解放済みリンクリストから領域を取得する */
+			mp = p->free;
+			p->free = p->free->next;
+			mp->next = NULL;
+			
+			/*
+			* 実際に利用可能な領域は，メモリ・ブロック構造体の直後の領域に
+			* なるので，直後のアドレスを返す．
+			*/
+			return mp + 1;
+		}
+	}
+	
+	/* 指定されたサイズの領域を格納できるメモリ・プールが無い */
+	kz_sysdown();
+	return NULL;
 }
 
 /* メモリの解放 */
 void kzmem_free(void *mem)
 {
-  int i;
-  kzmem_block *mp;
-  kzmem_pool *p;
+	int i;
+	kzmem_block *mp;
+	kzmem_pool *p;
 
-  /* 領域の直前にある(はずの)メモリ・ブロック構造体を取得 */
-  mp = ((kzmem_block *)mem - 1);
+	/* 領域の直前にある(はずの)メモリ・ブロック構造体を取得 */
+	mp = ((kzmem_block *)mem - 1);
 
-  for (i = 0; i < MEMORY_AREA_NUM; i++) {
-    p = &pool[i];
-    if (mp->size == p->size) {
-      /* 領域を解放済みリンクリストに戻す */
-      mp->next = p->free;
-      p->free = mp;
-      return;
-    }
-  }
+	for (i = 0; i < MEMORY_AREA_NUM; i++) {
+		p = &pool[i];
+		if (mp->size == p->size) {
+			/* 領域を解放済みリンクリストに戻す */
+			mp->next = p->free;
+			p->free = mp;
+			
+			return;
+		}
+	}
 
   kz_sysdown();
 }

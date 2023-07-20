@@ -11,11 +11,14 @@
 #include "btn_dev.h"
 #include "stm32l4xx_hal_rcc.h"
 #include "stm32l4xx_hal_cortex.h"
+#include "usart.h"
+#include "debug.h"
 
 // マクロ
 #define THREAD_NUM			15
 #define PRIORITY_NUM		16
 #define THREAD_NAME_SIZE	15
+#define SVC_USED
 
 /* スレッド・コンテキスト */
 typedef struct _kz_context {
@@ -30,6 +33,7 @@ typedef struct _kz_thread {
 	char name[THREAD_NAME_SIZE + 1];	/* スレッド名 */
 	int priority;						/* 優先度 */
 	char *stack;						/* スタック */
+	uint32	stack_size;					/* スタックサイズ */
 	uint32 flags;						/* 各種フラグ */
 #define KZ_THREAD_FLAG_READY (1 << 0)
 	struct {							/* スレッドのスタート・アップ(thread_init())に渡すパラメータ */
@@ -163,6 +167,7 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int priority,
 	kz_thread *thp;
 	uint32 *sp;
 	extern char _task_stack_start; /* リンカ・スクリプトで定義されるスタック領域 */
+	extern char _task_stack_end;   /* リンカ・スクリプトで定義されるスタック領域 */
 	static char *thread_stack = &_task_stack_start;
 	static int init_dispatch = 0;
 	
@@ -191,6 +196,8 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int priority,
 	/* スタック領域を獲得 */
 	memset(thread_stack, 0, stacksize);
 	thread_stack += stacksize;
+	
+	thp->stack_size = stacksize;
 	
 	thp->stack = thread_stack; /* スタックを設定 */
 	
@@ -469,25 +476,25 @@ static void call_functions(kz_syscall_type_t type, kz_syscall_param_t *p)
 			/* TCBが消去されるので，戻り値を書き込んではいけない */
 			thread_exit();
 			break;
-			case KZ_SYSCALL_TYPE_WAIT: /* kz_wait() */
+		case KZ_SYSCALL_TYPE_WAIT: /* kz_wait() */
 			p->un.wait.ret = thread_wait();
 			break;
 		case KZ_SYSCALL_TYPE_SLEEP: /* kz_sleep() */
 			p->un.sleep.ret = thread_sleep();
 			break;
-			case KZ_SYSCALL_TYPE_WAKEUP: /* kz_wakeup() */
+		case KZ_SYSCALL_TYPE_WAKEUP: /* kz_wakeup() */
 			p->un.wakeup.ret = thread_wakeup(p->un.wakeup.id);
 			break;
 		case KZ_SYSCALL_TYPE_GETID: /* kz_getid() */
 			p->un.getid.ret = thread_getid();
 			break;
-			case KZ_SYSCALL_TYPE_CHPRI: /* kz_chpri() */
+		case KZ_SYSCALL_TYPE_CHPRI: /* kz_chpri() */
 			p->un.chpri.ret = thread_chpri(p->un.chpri.priority);
 			break;
 		case KZ_SYSCALL_TYPE_KMALLOC: /* kz_kmalloc() */
 			p->un.kmalloc.ret = thread_kmalloc(p->un.kmalloc.size);
 			break;
-			case KZ_SYSCALL_TYPE_KMFREE: /* kz_kmfree() */
+		case KZ_SYSCALL_TYPE_KMFREE: /* kz_kmfree() */
 			p->un.kmfree.ret = thread_kmfree(p->un.kmfree.p);
 			break;
 		case KZ_SYSCALL_TYPE_SEND: /* kz_send() */
@@ -501,7 +508,7 @@ static void call_functions(kz_syscall_type_t type, kz_syscall_param_t *p)
 		case KZ_SYSCALL_TYPE_SETINTR: /* kz_setintr() */
 			p->un.setintr.ret = thread_setintr(p->un.setintr.type,
 						       p->un.setintr.handler);
-				break;
+			break;
 		case KZ_SYSCALL_TYPE_TSLEEP:/* kz_tsleep() */
 			p->un.tsleep.ret = thread_tsleep(p->un.tsleep.time);
 			break;
@@ -577,6 +584,10 @@ void thread_intr(softvec_type_t type, unsigned long sp)
 	/* カレント・スレッドのコンテキストを保存する */
 	current->context.sp = sp;
 	
+	// debug
+	dbg_save_int_info(type, current->syscall.type, sp);
+	dbg_save_tsk_info(current->name);
+	
 	/*
 	* 割込みごとの処理を実行する．
 	* SOFTVEC_TYPE_SYSCALL, SOFTVEC_TYPE_SOFTERR の場合は
@@ -585,10 +596,13 @@ void thread_intr(softvec_type_t type, unsigned long sp)
 	* それ以外の場合は，kz_setintr()によってユーザ登録されたハンドラが
 	* 実行される．
 	*/
-	if (handlers[type])
+	if (handlers[type]) {
 		handlers[type]();
+	}
 	
 	schedule(); /* スレッドのスケジューリング */
+	
+	dbg_save_dispatch_tsk_info(current->name, current->context.sp);
 	
 	/*
 	* スレッドのディスパッチ
@@ -618,13 +632,23 @@ void kz_start(kz_func_t func, char *name, int priority, int stacksize,
 	memset(&mng_time, 0, sizeof(mng_time));
 	memset(timque, 0, sizeof(timque));
 	
+	// debug
+	dbg_init();
+	
 	/* 割込みハンドラの登録 */
+#ifdef SVC_USED
 	thread_setintr(SVCall_INTERRUPT_NO, syscall_intr); /* システム・コール */
+#else
+	thread_setintr(PENDSV_INTERRUPT_NO, syscall_intr); /* システム・コール */
+#endif
 	thread_setintr(SYSTICK_INTERRUPT_NO, SysTick_Handler);
 	
 	// 割込み優先度の設定
-	HAL_NVIC_SetPriority(SVCall_IRQn, INTERRPUT_PRIORITY_5, 0);
-	
+#ifdef SVC_USED
+	HAL_NVIC_SetPriority(SVCall_IRQn, INTERRPUT_PRIORITY_4, 0);
+#else
+	HAL_NVIC_SetPriority(PendSV_IRQn, INTERRPUT_PRIORITY_5, 0);
+#endif
 	/* システム・コール発行不可なので直接関数を呼び出してスレッド作成する */
 	current = (kz_thread *)thread_run(func, name, priority, stacksize,
 				    argc, argv);
@@ -650,8 +674,12 @@ void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param)
 {
 	current->syscall.type  = type;
 	current->syscall.param = param;
+#ifdef SVC_USED
 	__asm volatile("    SVC %0 \n" : : "I" (0));
 	__asm volatile("    NOP \n");
+#else
+	SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+#endif
 }
 
 /* サービス・コール呼び出し用ライブラリ関数 */
@@ -692,56 +720,56 @@ void SysTick_Handler(void)
 	mng_tsleep();
 }
 
-static void mng_tsleep(void){
-    int i;
-    kz_thread *current_task;
-    kz_thread *prev_task;
-
-    current_task = timque[0].head;
-    prev_task = timque[0].head;
-
-    while(NULL != current_task){
-        if(0 == current_task->time){
-            /* レディーキューへ接続*/
-            if(readyque[current_task->priority].tail) {
-            	readyque[current_task->priority].tail->next = current_task;
-            }else{
-            	readyque[current_task->priority].head = current_task;
-            }
-            readyque[current_task->priority].tail = current_task;
-            current_task->flags |= KZ_THREAD_FLAG_READY;
-            /* timqueから外す */
-            /*   前タスクのt_nextを現在のタスクのt_nextに設定する(レディーキューに接続したタスクをtimqueから外す) */
-            prev_task->t_next = current_task->t_next;
-            /*   timqueから外したタスクがtimqueの先頭の場合 */
-            if(current_task == timque[0].head){
-            	/*   外したタスクしかtimqueに接続されていなかった場合 */
-            	if(NULL == current_task->t_next){
-            		/*    timqueの先頭と末尾をNULLに設定 */
-            		timque[0].head = NULL;
-            		timque[0].tail = NULL;
-            	/*   外したタスク以外にも接続されたタスクがあった場合 */
-            	}else{
-            		/*   timqueの先頭を現タスクのt_nextに設定する */
-            		timque[0].head = current_task->t_next;
-            	}
-            /*   外したタスクがtimqueの末尾の場合 */
-            }else if(current_task == timque[0].tail){
-            	/*   timqueの末尾を前タスクに設定する */
-            	timque[0].tail = prev_task;
-            }
-            /* timqueから外したので、ディスパッチ対象のタスクのnextポインタをクリア */
-            current_task->t_next = NULL;
-            /* 次のタスクを更新 */
-            current_task = prev_task->t_next;
-
-        }else{
-        	/* 時間を1減らす */
-        	current_task->time--;
-            /* 前のタスクを更新 */
-        	prev_task = current_task;
-            /* 次のタスクを更新 */
-            current_task = current_task->t_next;
-        }
-    }
+static void mng_tsleep(void)
+{
+	int i;
+	kz_thread *current_task;
+	kz_thread *prev_task;
+	
+	current_task = timque[0].head;
+	prev_task = timque[0].head;
+	
+	while(NULL != current_task) {
+		if(0 == current_task->time){
+			/* レディーキューへ接続*/
+			if(readyque[current_task->priority].tail) {
+				readyque[current_task->priority].tail->next = current_task;
+			} else {
+				readyque[current_task->priority].head = current_task;
+			}
+			readyque[current_task->priority].tail = current_task;
+			current_task->flags |= KZ_THREAD_FLAG_READY;
+			/* timqueから外す */
+			/*   前タスクのt_nextを現在のタスクのt_nextに設定する(レディーキューに接続したタスクをtimqueから外す) */
+			prev_task->t_next = current_task->t_next;
+			/*   timqueから外したタスクがtimqueの先頭の場合 */
+			if(current_task == timque[0].head) {
+				/*   外したタスクしかtimqueに接続されていなかった場合 */
+				if(NULL == current_task->t_next) {
+					/*    timqueの先頭と末尾をNULLに設定 */
+					timque[0].head = NULL;
+					timque[0].tail = NULL;
+					/*   外したタスク以外にも接続されたタスクがあった場合 */
+				} else {
+					/*   timqueの先頭を現タスクのt_nextに設定する */
+					timque[0].head = current_task->t_next;
+				}
+				/*   外したタスクがtimqueの末尾の場合 */
+			} else if (current_task == timque[0].tail) {
+				/*   timqueの末尾を前タスクに設定する */
+				timque[0].tail = prev_task;
+			}
+			/* timqueから外したので、ディスパッチ対象のタスクのnextポインタをクリア */
+			current_task->t_next = NULL;
+			/* 次のタスクを更新 */
+			current_task = prev_task->t_next;
+		} else {
+			/* 時間を1減らす */
+			current_task->time--;
+			/* 前のタスクを更新 */
+			prev_task = current_task;
+			/* 次のタスクを更新 */
+			current_task = current_task->t_next;
+		}
+	}
 }

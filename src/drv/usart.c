@@ -116,19 +116,22 @@ typedef struct {
 	IRQn_Type irq_type;									// 割込みタイプ
 	INT_HANDLER handler;								// 割込みハンドラ
 	uint32_t	vec_no;									// 割込み番号
+	uint32_t	int_priority;							// 割込み優先度
+	uint32_t	clk;									// クロック定義
 } USART_CFG;
 
 /* USARTチャネル固有情報テーブル */
 static const USART_CFG usart_cfg[USART_CH_MAX] =
 {
-	{(volatile struct stm32l4_usart*)USART1_BASE_ADDR, USART1_IRQn, usart1_handler, USART1_GLOBAL_INTERRUPT_NO},
-	{(volatile struct stm32l4_usart*)USART2_BASE_ADDR, USART2_IRQn, usart2_handler, USART2_GLOBAL_INTERRUPT_NO},
+	{(volatile struct stm32l4_usart*)USART1_BASE_ADDR, USART1_IRQn, usart1_handler, USART1_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART1},
+	{(volatile struct stm32l4_usart*)USART2_BASE_ADDR, USART2_IRQn, usart2_handler, USART2_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART2},
 };
 #define get_reg(ch)			(usart_cfg[ch].usart_base_addr)		// レジスタ取得マクロ
 #define get_ire_type(ch)	(usart_cfg[ch].irq_type)			// 割込みタイプ取得マクロ
 #define get_handler(ch)		(usart_cfg[ch].handler)				// 割り込みハンドラ取得マクロ
 #define get_vec_no(ch)		(usart_cfg[ch].vec_no)				// 割り込み番号取得マクロ
-
+#define get_int_prio(ch)	(usart_cfg[ch].int_priority)		// 割り込み優先度取得マクロ
+#define get_clk_no(ch)		(usart_cfg[ch].clk)					// クロック定義取得マクロ
 
 // fifoの空き数を取得する関数
 static uint16_t get_fifo_empty_num(uint16_t r_idx, uint16_t w_idx)
@@ -149,6 +152,7 @@ static void usart_common_handler(USART_CH ch){
 	USART_CTL *this;
 	RING_BUF *buf_info;
 	volatile struct stm32l4_usart *usart_base_addr;
+	uint8_t data;
 	
 	// ベースレジスタ取得
 	usart_base_addr = get_reg(ch);
@@ -158,16 +162,19 @@ static void usart_common_handler(USART_CH ch){
 	// エラーをチェック
 	if (usart_base_addr->isr & (ISR_ORE | ISR_FE | ISR_PE)) {
 		// エラーが発生したらとりあえず無限ループ
-		while(1){};
+		//while(1){};
 	}
 	
 	// 受信データがある？
 	if (usart_base_addr->isr & ISR_RXFNE) {
+		// データはすぐにデータレジスタからとってくる
+		data = usart_base_addr->rdr;
+		// バッファ情報を取得
 		buf_info = &(this->r_buf);
 		// 受信用リングバッファに空きがある?
 		if (((buf_info->w_idx + 1U) & (USART_BUF_SIZE - 1U)) != buf_info->r_idx) {
 			// 受信データを受信用リングバッファに設定
-			buf_info->buf[buf_info->w_idx] = usart_base_addr->rdr;
+			buf_info->buf[buf_info->w_idx] = data;
 			// ライトインデックスを進める
 			buf_info->w_idx = (buf_info->w_idx + 1U) & (USART_BUF_SIZE - 1U);
 			// 寝ているタスクがあれば起こす
@@ -221,9 +228,14 @@ void usart2_handler(void){
 }
 
 // 指定したボーレートからレジスタ設定値を計算する関数
-static uint32_t calc_brr(uint32_t baudrate)
+static uint32_t calc_brr(USART_CH ch, uint32_t baudrate)
 {
-	return (USART_CLOCK/baudrate);
+	uint32_t clk;
+	
+	// クロック定義取得
+	clk = HAL_RCCEx_GetPeriphCLKFreq(get_clk_no(ch));
+	
+	return (clk/baudrate);
 }
 
 // 外部公開関数
@@ -266,7 +278,7 @@ int32_t usart_open(USART_CH ch, uint32_t baudrate)
 	// ベースレジスタ取得
 	usart_base_addr = get_reg(ch);
 	// ボーレート設定
-	usart_base_addr->brr = calc_brr(baudrate);
+	usart_base_addr->brr = calc_brr(ch, baudrate);
 	// FIFO有効、送受信有効
 	usart_base_addr->cr1 |= (CR1_FIFOEN | CR1_TE | CR1_RE);
 	// USART1の有効
@@ -284,11 +296,48 @@ int32_t usart_open(USART_CH ch, uint32_t baudrate)
 	usart_base_addr->cr3 |= CR3_RXFTIE;
 	
 	/* 割り込み有効 */
-    HAL_NVIC_SetPriority(get_ire_type(ch), INTERRPUT_PRIORITY_5, 0);
+    HAL_NVIC_SetPriority(get_ire_type(ch), get_int_prio(ch), 0);
     HAL_NVIC_EnableIRQ(get_ire_type(ch));
 	
 	// 状態を更新
 	this->status = ST_OPENED;
+	
+	return 0;
+}
+
+// USARTオープン関数
+int32_t usart_close(USART_CH ch)
+{
+	volatile struct stm32l4_usart *usart_base_addr;
+	USART_CTL *this = get_myself(ch);
+	
+	// チャネル番号が範囲外の場合エラーを返して終了
+	if (ch >= USART_CH_MAX) {
+		return -1;
+	}
+	
+	// 状態がオープン済みでない場合エラーを返して終了
+	if (this->status != ST_OPENED) {
+		return -1;
+	}
+	
+	// ベースレジスタ取得
+	usart_base_addr = get_reg(ch);
+	
+	// 受信割り込みを無効
+	usart_base_addr->cr3 &= ~CR3_RXFTIE;
+	// ボーレート設定
+	usart_base_addr->brr = 0x00000000;
+	// FIFO無効、送受信無効
+	usart_base_addr->cr1 &= (~(CR1_FIFOEN | CR1_TE | CR1_RE));
+	// USART1の無効
+	usart_base_addr->cr1 &= CR1_UE ;
+	
+	/* 割り込み無効 */
+    HAL_NVIC_DisableIRQ(get_ire_type(ch));
+	
+	// 状態を更新
+	this->status = ST_INTIALIZED;
 	
 	return 0;
 }
@@ -413,5 +462,41 @@ int32_t usart_recv(USART_CH ch, uint8_t *data, uint32_t size)
 	INTR_ENABLE;
 	
 	return cnt;
+}
+
+int32_t usart_send_for_int(USART_CH ch, uint8_t *data, uint32_t size)
+{
+	volatile struct stm32l4_usart *usart_base_addr;
+	USART_CTL *this;
+	uint8_t idx = 0;
+	
+	// チャネル番号が範囲外の場合エラーを返して終了
+	if (ch >= USART_CH_MAX) {
+		return -1;
+	}
+	
+	// 送信データがNULLの場合、エラーを返して終了
+	if (data == NULL) {
+		return -1;
+	}
+	
+	// 制御ブロック取得
+	this = get_myself(ch);
+	// ベースレジスタ取得
+	usart_base_addr = get_reg(ch);
+	
+	// 状態がオープン済みでない場合、エラーを返して終了
+	if (this->status != ST_OPENED) {
+		return -1;
+	}
+	
+	while(size--) {
+		// 空きがある？
+		while((usart_base_addr->isr & ISR_TXFT) == 0) ;
+		// データをセット
+		usart_base_addr->tdr = data[idx++];
+	}
+	
+	return 0;
 }
 

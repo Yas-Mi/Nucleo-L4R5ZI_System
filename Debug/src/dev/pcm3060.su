@@ -1,7 +1,8 @@
-pcm3060.c:119:13:sai_callback	24	static
-pcm3060.c:134:13:i2c_wrapper_snd_callback	32	static
-pcm3060.c:149:13:i2c_wrapper_rcv_callback	32	static
-pcm3060.c:164:13:pcm3060_rest	16	static
-pcm3060.c:180:6:pcm3060_init	16	static
-pcm3060.c:194:9:pcm3060_open	72	static
-pcm3060.c:346:9:pcm3060_play	24	static
+pcm3060.c:142:13:i2c_wrapper_snd_callback	0	static
+pcm3060.c:157:13:i2c_wrapper_rcv_callback	0	static
+pcm3060.c:123:13:sai_callback	0	static
+pcm3060.c:172:16:pcm3060_send_data.constprop	32	static
+pcm3060.c:251:6:pcm3060_init	0	static
+pcm3060.c:265:9:pcm3060_open	80	static
+pcm3060.c:349:9:pcm3060_play	8	static
+pcm3060.c:379:9:pcm3060_stop	8	static

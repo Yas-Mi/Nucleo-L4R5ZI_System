@@ -6,7 +6,6 @@
  */
 #include "defines.h"
 #include "kozos.h"
-#include "bt_main.h"
 #include "console.h"
 #include "bt_dev.h"
 #include "btn_dev.h"

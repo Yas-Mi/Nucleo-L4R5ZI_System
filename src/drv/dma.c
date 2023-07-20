@@ -9,6 +9,7 @@
 #include "stm32l4xx.h"
 #include "dma.h"
 #include "intr.h"
+#include "system_def.h"
 
 // 状態
 #define ST_NOT_INTIALIZED	(0U)	// 未初期化
@@ -71,6 +72,15 @@ struct stm32l4_dma {
 	volatile COMMON_REG commonn_reg[7];
 };
 
+// 転送のパターン
+typedef enum {
+	DMA_TRANSFER_PTN_M2M = 0,				// メモリーからメモリー
+	DMA_TRANSFER_PTN_P2P,					// ペリフェラルからペリフェラル
+	DMA_TRANSFER_PTN_M2P,					// メモリーからペリフェラル
+	DMA_TRANSFER_PTN_P2M,					// ペリフェラルからメモリー
+	DMA_TRANSFER_PTN_MAX,					// 最大値
+} DMA_TRANSFER_PTN;
+
 // DMA制御ブロック
 typedef struct {
 	uint32_t status;			// 状態
@@ -128,12 +138,11 @@ static void dma_common_handler(DMA_CH ch)
 	uint32_t err_bit_pos = ((ch * 4) + 3);
 	uint32_t comp_bit_pos = ((ch * 4) + 1);
 	
-	// 
 	// まずはエラーチェック
 	if (dma->isr & (1UL << err_bit_pos)) {
 		// エラーをクリア
 		// (*)エラー発生時ENビットが自動的に0になる
-		dma->ifcr &= ~(1UL << err_bit_pos);
+		dma->ifcr |= (1UL << ch);
 		// エラーコールバックを返して終了
 		this->callback(ch, -1, this->callback_vp);
 		return;
@@ -142,7 +151,7 @@ static void dma_common_handler(DMA_CH ch)
 	// 割込み処理
 	if (dma->isr & (1UL << comp_bit_pos)) {
 		// 割込みステータスをクリア
-		dma->ifcr &= ~(1UL << err_bit_pos);
+		dma->ifcr |= (1UL << ch);
 		// コールバック
 		this->callback(ch, 0, this->callback_vp);
 	}
@@ -211,6 +220,9 @@ int32_t dma_open(DMA_CH ch, uint32_t resource, DMA_CALLBACK callback, void * cal
 		return -1;
 	}
 	
+	// 制御ブロック取得
+	this = get_myself(ch);
+	
 	// 状態が初期化済みでない場合エラーを返して終了
 	if (this->status != ST_INTIALIZED) {
 		return -1;
@@ -242,10 +254,11 @@ int32_t dma_open(DMA_CH ch, uint32_t resource, DMA_CALLBACK callback, void * cal
 }
 
 // DMA転送関数
-int32_t dma_start(DMA_CH ch, DMA_SEND send_info)
+int32_t dma_start(DMA_CH ch, DMA_SEND *send_info)
 {
 	volatile struct stm32l4_dma *dma = (struct stm32l4_dma*)DMA1_BASE_ADDR;
 	DMA_CTL *this;
+	DMA_TRANSFER_PTN trans_ptn;
 	
 	// チャネル番号が範囲外の場合エラーを返して終了
 	if (ch >= DMA_CH_MAX) {
@@ -257,6 +270,36 @@ int32_t dma_start(DMA_CH ch, DMA_SEND send_info)
 	
 	// 状態がオープン済みでない場合、エラーを返して終了
 	if (this->status != ST_OPENED) {
+		return -1;
+	}
+	
+	// 転送パターンの設定
+	// 転送元のアドレスがRAM？
+	if (is_ram_addr(send_info->src_addr)) {
+		// 転送先のアドレスがRAM？
+		if (is_ram_addr(send_info->dst_addr)) {
+			trans_ptn = DMA_TRANSFER_PTN_M2M;
+		// 転送先のアドレスがペリフェラル？
+		} else if (is_peri_addr(send_info->dst_addr)) {
+			trans_ptn = DMA_TRANSFER_PTN_M2P;
+		// 転送先のアドレスがRAMでもペリフェラルでもない場合はエラーを返して終了
+		} else {
+			return -1;
+		}
+	// 転送元のアドレスがペリフェラル？
+	} else if (is_peri_addr(send_info->src_addr)) {
+		// 転送先のアドレスがRAM？
+		if (is_ram_addr(send_info->dst_addr)) {
+			trans_ptn = DMA_TRANSFER_PTN_P2M;
+		// 転送先のアドレスがペリフェラル？
+		} else if (is_peri_addr(send_info->dst_addr)) {
+			trans_ptn = DMA_TRANSFER_PTN_P2P;
+		// 転送先のアドレスがRAMでもペリフェラルでもない場合はエラーを返して終了
+		} else {
+			return -1;
+		}
+	// 転送元のアドレスがRAMでもペリフェラルでもない場合はエラーを返して終了
+	} else {
 		return -1;
 	}
 	
@@ -281,12 +324,24 @@ int32_t dma_start(DMA_CH ch, DMA_SEND send_info)
 			– the interrupt enable at half and/or full transfer and/or transfer error
 		5. Activate the channel by setting the EN bit in the DMA_CCRx register
 	*/
-	// 転送元のアドレス設定
-	dma->commonn_reg[ch].cpar = send_info.src_addr;
-	// 転送先のアドレス設定
-	dma->commonn_reg[ch].cmar = send_info.dst_addr;
+	
+	// 転送元/転送先のアドレス設定
+	// 転送元がメモリの場合
+	if ((trans_ptn == DMA_TRANSFER_PTN_M2M) || (trans_ptn == DMA_TRANSFER_PTN_M2P)) {
+		// 転送元のアドレス設定
+		dma->commonn_reg[ch].cmar = send_info->src_addr;
+		// 転送先のアドレス設定
+		dma->commonn_reg[ch].cpar = send_info->dst_addr;
+	// 転送元がperiferalの場合
+	} else {
+		// 転送元のアドレス設定
+		dma->commonn_reg[ch].cpar = send_info->src_addr;
+		// 転送先のアドレス設定
+		dma->commonn_reg[ch].cmar = send_info->dst_addr;
+	}
+	
 	// 転送サイズの設定
-	dma->commonn_reg[ch].cndtr = send_info.transfer_count;
+	dma->commonn_reg[ch].cndtr = send_info->transfer_count;
 	// コンフィグ
 	// MSIZEとPSIZEの関係
 	// DIR:0 memory to periferal
@@ -309,40 +364,36 @@ int32_t dma_start(DMA_CH ch, DMA_SEND send_info)
 	//                   0x07 0xDD
 	// 転送パターンの設定
 	// Memory to Memoryの場合
-	if (send_info.transfer_ptn == DMA_TRANSFER_PTN_M2M) {
+	if (trans_ptn == DMA_TRANSFER_PTN_M2M) {
 		dma->commonn_reg[ch].ccr = _CCR_MEM2MEM | _CCR_DIR;
-		if (send_info.src_addr_inc) {
-			dma->commonn_reg[ch].ccr |= _CCR_MINC;
-		}
-		if (send_info.dst_addr_inc) {
-			dma->commonn_reg[ch].ccr |= _CCR_PINC;
-		}
 	// Memory to Periferal 
-	} else if (send_info.transfer_ptn == DMA_TRANSFER_PTN_M2P) {
-		dma->commonn_reg[ch].ccr = _CCR_DIR;
+	} else if (trans_ptn == DMA_TRANSFER_PTN_M2P) {
+		dma->commonn_reg[ch].ccr |= _CCR_DIR;
 	} else {
 		;
 	}
-	// インクリメントの設定
+	// アドレスとインクリメントの設定
 	// 転送元がMemoryの場合
-	if ((send_info.transfer_ptn == DMA_TRANSFER_PTN_M2M)||(send_info.transfer_ptn == DMA_TRANSFER_PTN_M2P)) {
-		if (send_info.src_addr_inc) {
+	if ((trans_ptn == DMA_TRANSFER_PTN_M2M)||(trans_ptn == DMA_TRANSFER_PTN_M2P)) {
+		// アドレスの設定
+		
+		if (send_info->src_addr_inc) {
 			dma->commonn_reg[ch].ccr |= _CCR_MINC;
 		}
-		if (send_info.dst_addr_inc) {
+		if (send_info->dst_addr_inc) {
 			dma->commonn_reg[ch].ccr |= _CCR_PINC;
 		}
 	// 転送元がペリフェラルの場合
 	} else {
-		if (send_info.src_addr_inc) {
+		if (send_info->src_addr_inc) {
 			dma->commonn_reg[ch].ccr |= _CCR_PINC;
 		}
-		if (send_info.dst_addr_inc) {
+		if (send_info->dst_addr_inc) {
 			dma->commonn_reg[ch].ccr |= _CCR_MINC;
 		}
 	}
 	// 転送単位の設定
-	dma->commonn_reg[ch].ccr |= (_CCR_MSIZE(send_info.transfer_unit) | _CCR_PSIZE(send_info.transfer_unit));
+	dma->commonn_reg[ch].ccr |= (_CCR_MSIZE(send_info->transfer_unit) | _CCR_PSIZE(send_info->transfer_unit));
 	// 割込みの設定(エラー割込みと転送完了割り込み)
 	dma->commonn_reg[ch].ccr |= (_CCR_TEIE | _CCR_TCIE);
 	// 有効化
@@ -359,6 +410,7 @@ int32_t dma_stop(DMA_CH ch)
 {
 	volatile struct stm32l4_dma *dma = (struct stm32l4_dma*)DMA1_BASE_ADDR;
 	DMA_CTL *this;
+	uint32_t err_bit_pos = ((ch * 4) + 3);
 	
 	// チャネル番号が範囲外の場合エラーを返して終了
 	if (ch >= DMA_CH_MAX) {
@@ -373,7 +425,12 @@ int32_t dma_stop(DMA_CH ch)
 		return -1;
 	}
 	// 無効化
-	dma->commonn_reg[ch].ccr |= _CCR_EN;
+	// (*) エラーが起きてたらエラーフラグをクリアしない限りDMA無効化にできない
+	if (dma->isr & (1UL << err_bit_pos)) {
+		// エラーをクリア
+		dma->ifcr |= (1UL << ch);
+	}
+	dma->commonn_reg[ch].ccr &= ~_CCR_EN;
 	
 	// 状態を更新
 	this->status = ST_OPENED;

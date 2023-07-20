@@ -1,2 +1,4 @@
-system_stm32l4xx.c:196:6:SystemInit	4	static
-system_stm32l4xx.c:272:6:SystemCoreClockUpdate	32	static
+system_stm32l4xx.c:217:6:SystemInit	4	static
+system_stm32l4xx.c:309:6:SystemCoreClockUpdate	0	static
+system_stm32l4xx.c:371:9:is_ram_addr	0	static
+system_stm32l4xx.c:380:9:is_peri_addr	0	static

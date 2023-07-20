@@ -34,11 +34,12 @@ typedef enum {
 	BT_BAUDRATE_TYPE_MAX,
 } BT_BAUDRATE_TYPE;
 
-typedef void (*BT_RCV_CALLBACK)(uint8_t *data, uint32_t size);	// 受信コールバック
+typedef void (*BT_RCV_CALLBACK)(uint8_t *data, void *vp);	// 受信コールバック
 
 extern int32_t bt_dev_init(void);
-extern int32_t bt_dev_reg_callback(BT_RCV_CALLBACK callback, uint32_t callback_notice_size);
+extern int32_t bt_dev_reg_callback(BT_RCV_CALLBACK callback, void* callback_vp);
 extern int32_t bt_dev_send(BT_SEND_TYPE type, uint8_t *data, uint8_t size);
+extern int32_t bt_dev_check_sts(void);
 extern int32_t bt_dev_set_baudrate(BT_BAUDRATE_TYPE baudrate);
 extern void bt_dev_set_cmd(void);
 

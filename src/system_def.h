@@ -1,0 +1,34 @@
+#ifndef _SYSTEM_DEF_H_
+#define _SYSTEM_DEF_H_
+
+// メモリ情報
+// FLASH
+#define FLASH_MEMORY_START		(0x08000000)
+#define FLASH_MEMORY_END		(0x08200000)
+#define FLASH_MEMORY_SIZE		(FLASH_MEMORY_END - FLASH_MEMORY_START)
+
+// RAM
+#define RAM1_START				(0x20000000)
+#define RAM1_END				(0x20030000)
+#define RAM1_SIZE				(RAM1_END - RAM1_START)
+#define RAM2_START				RAM1_END
+#define RAM2_END				(0x20040000)
+#define RAM2_SIZE				(RAM2_END - RAM2_START)
+#define RAM3_START				RAM2_END
+#define RAM3_END				(0x200A0000)
+#define RAM3_SIZE				(RAM3_END - RAM3_START)
+
+// ペリフェラル
+#define PERFERAL_APB1_START		(0x40000000)
+#define PERFERAL_APB1_END		(0x40009800)
+#define PERFERAL_APB2_START		(0x40010000)
+#define PERFERAL_APB2_END		(0x40016400)
+#define PERFERAL_AHB1_START		(0x40020000)
+#define PERFERAL_AHB1_END		(0x40024400)
+#define PERFERAL_AHB2_START		(0x48000000)
+#define PERFERAL_AHB2_END		(0x50060C00)
+
+extern uint8_t is_ram_addr(uint32_t addr);
+extern uint8_t is_peri_addr(uint32_t addr);
+
+#endif /* _SYSTEM_DEF_H_ */

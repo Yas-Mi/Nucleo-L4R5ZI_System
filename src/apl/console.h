@@ -14,6 +14,7 @@ typedef struct {
 
 extern void console_init(void);
 extern uint8_t console_str_send(uint8_t *data);
+extern void console_output_for_int(char *str);
 extern uint8_t console_val_send(uint8_t data);
 extern int32_t console_set_command(COMMAND_INFO *cmd_info);
 

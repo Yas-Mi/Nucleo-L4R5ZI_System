@@ -59,8 +59,8 @@ static const I2C_CH_CFG i2c_cfg_tbl[I2C_CH_MAX] =
 // 通信速度情報
 static const uint32_t i2c_bps_conv_tbl[I2C_BPS_MAX] = 
 {
-	0x00000E14,		// I2C_BPS_100K
-	0x00000004,		// I2C_BPS_400K
+	0x307075B1,		// I2C_BPS_100K
+	0x00B03FDB,		// I2C_BPS_400K
 };
 
 // 内部関数

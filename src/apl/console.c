@@ -9,7 +9,7 @@
 #define CONOLE_BUF_SIZE		(128U)		// コマンドラインバッファサイズ
 #define CONOLE_CMD_NUM		(16U)		// 設定できるコマンドの数
 #define CONSOLE_USART_CH	USART_CH1	// 使用するUSARTのチャネル
-#define CONSOLE_BAUDRATE	(9600)		// コンソールのボーレート
+#define CONSOLE_BAUDRATE	(115200)	// コンソールのボーレート
 
 // 制御ブロック
 typedef struct {
@@ -221,4 +221,17 @@ int32_t console_set_command(COMMAND_INFO *cmd_info)
 	this->cmd_idx++;
 	
 	return 0;
+}
+
+// 割込みで文字列を出す関数
+void console_output_for_int(char *str)
+{
+	int32_t ret;
+	uint8_t len;
+	
+	// 文字列の長さを取得
+	len = strlen((char*)str);
+	
+	// 送信
+	ret = usart_send_for_int(CONSOLE_USART_CH, str, len);
 }

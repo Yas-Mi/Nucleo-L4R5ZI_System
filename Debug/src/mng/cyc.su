@@ -1,0 +1,4 @@
+cyc.c:46:5:cycmsg_main	16	static
+cyc.c:90:10:set_cyclic_message	16	static
+cyc.c:127:10:del_cyclic_message	4	static
+cyc.c:164:6:cyc_init	24	static

@@ -121,14 +121,6 @@ SECTIONS
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
   
-	._os_interrupt_stack :
-	{
-		. = ALIGN(4);
-		_os_interrupt_stack_start = .;
-		. = . + _OS_INTERRUPT_STACK_SIZE;
-		_os_interrupt_stack_end = .;
-	} > RAM1
-  
 	._os_stack :
 	{
 		. = ALIGN(4);

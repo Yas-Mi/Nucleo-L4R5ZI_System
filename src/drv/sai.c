@@ -8,6 +8,7 @@
 #include "stm32l4xx_hal_cortex.h"
 #include "stm32l4xx.h"
 #include "sai.h"
+#include "dma.h"
 #include "intr.h"
 
 // 状態
@@ -120,6 +121,12 @@ typedef struct {
 	uint32_t fspol;		// Frame Synchronizationの極性
 } SAI_PROTCOL;
 
+// DMA情報
+typedef struct {
+	DMA_CH ch;			// 使用するDMAのチャネル
+	uint32_t resorce;	// リソース
+} SAI_DMA_INFO;
+
 // 割込みハンドラのプロトタイプ
 void sai1_handler(void);
 
@@ -180,6 +187,12 @@ static const uint32_t sai_conv_bick[SAI_BICK_TYPE_MAX] =
 	64,		// SAI_BICK_TYPE_64FS
 };
 
+// DMA情報
+static const SAI_DMA_INFO sai_dma_info[SAI_CH_MAX] =
+{
+	{DMA_CH1,	DMA_RESOURCE_SAI1_A},		// SAI_CH1のDMA情報
+};
+
 // 転送情報
 typedef struct {
 	SAI_MODE        mode;				// モード
@@ -193,11 +206,42 @@ typedef struct {
 
 // SAI制御ブロック
 typedef struct {
+	SAI_CH				ch;				// チャネル
 	uint8_t				status;			// 状態
 	SAI_TX_INFO			tx_info;		// 転送情報
 } SAI_CTL;
 static SAI_CTL sai_ctl[SAI_CH_MAX];
 #define get_myself(n) (&sai_ctl[(n)])
+
+// DMAのコールバック
+static void sai_dma_callback(DMA_CH ch, int32_t ret, void *vp)
+{
+	volatile struct stm32l4_sai *sai_base_addr;
+	SAI_CTL *this = (SAI_CTL*)vp;
+	SAI_TX_INFO *tx_info = &(this->tx_info);
+	
+	// ベースレジスタのアドレスを取得
+	sai_base_addr = get_reg(this->ch);
+	
+	// DMA要求を無効化
+	sai_base_addr->acr1 &= ~ACR1_DMAEN;
+	
+	// DMA停止
+	dma_stop(sai_dma_info[this->ch].ch);
+	
+	// DMAの結果確認
+	if (ret != 0) {
+		// エラーだったらもう無限ループ
+		while (1) {};
+	} else {
+		// コールバック
+		if (tx_info->callback) {
+			tx_info->callback(ch, tx_info->callback_vp);
+		}
+		// 状態を更新
+		this->status = ST_OPENED;
+	}
+}
 
 // 割込み共通ハンドラ
 static void sai_common_handler(SAI_CH ch)
@@ -401,18 +445,6 @@ static int32_t set_config(SAI_CH ch, SAI_OPEN *par)
 	return 0;
 }
 
-// SAI有効化
-static void start_sai(SAI_CH ch)
-{
-	volatile struct stm32l4_sai *sai_base_addr;
-	
-	// ベースレジスタのアドレスを取得
-	sai_base_addr = get_reg(ch);
-	
-	// SAIを有効化
-	sai_base_addr->acr1 |= ACR1_SAIEN;
-}
-
 // 外部公開関数
 // SAI初期化関数
 void sai_init(void)
@@ -427,6 +459,8 @@ void sai_init(void)
 		memset(this, 0, sizeof(SAI_CTL));
 		// 割込みハンドラ登録
 		kz_setintr(get_vec_no(ch), get_handler(ch));
+		// チャネル設定
+		this->ch = ch;
 		// 状態を更新
 		this->status = ST_INTIALIZED;
 	}
@@ -435,6 +469,7 @@ void sai_init(void)
 }
 
 // SAIオープン関数
+// DMAを使わない版
 int32_t sai_open(SAI_CH ch, SAI_OPEN *par, SAI_CALLBACK callback, void *callback_vp)
 {
 	SAI_CTL *this;
@@ -466,8 +501,56 @@ int32_t sai_open(SAI_CH ch, SAI_OPEN *par, SAI_CALLBACK callback, void *callback
 	this->tx_info.callback = callback;
 	this->tx_info.callback_vp = callback_vp;
 	
-	// SAI有効化
-	start_sai(ch);
+	// 状態を更新
+	this->status = ST_OPENED;
+	
+	return 0;
+}
+
+// SAIオープン関数
+// DMAを使う版
+int32_t sai_open_dma(SAI_CH ch, SAI_OPEN *par, SAI_CALLBACK callback, void *callback_vp)
+{
+	SAI_CTL *this;
+	int32_t ret;
+	
+	// chが範囲外であれば、エラーを返して終了
+	if (ch >= SAI_CH_MAX) {
+		return -1;
+	}
+	
+	// parがNULLであれば、エラーを返して終了
+	if (par == NULL) {
+		return -1;
+	}
+	
+	// 制御ブロック取得
+	this = get_myself(ch);
+	
+	// 初期化未実施であれば、エラーを返して終了
+	if (this->status != ST_INTIALIZED) {
+		return -1;
+	}
+	
+	// レジスタ設定
+	if (set_config(ch, par) != 0) {
+		return -1;
+	}
+	
+	// DMAをオープンする
+	if (sai_dma_info[ch].ch != DMA_CH_MAX) {
+		ret = dma_open(sai_dma_info[ch].ch, sai_dma_info[ch].resorce, sai_dma_callback, this);
+		if (ret != 0) {
+			return -1;
+		}
+	// DMAを使用する設定になっていなければエラーを返して終了
+	} else {
+		return -1;
+	}
+	
+	// コールバック設定
+	this->tx_info.callback = callback;
+	this->tx_info.callback_vp = callback_vp;
 	
 	// 状態を更新
 	this->status = ST_OPENED;
@@ -521,11 +604,115 @@ int32_t sai_send(SAI_CH ch, uint32_t *data, uint32_t size)
 	// 割り込み有効
 	sai_base_addr->aim |= AIM_FRQIE;
 	
+	// SAIを有効化
+	sai_base_addr->acr1 |= ACR1_SAIEN;
+	
 	// 状態を更新
 	this->status = ST_RUN;
 	
 	// 割込み禁止解除
 	INTR_ENABLE;
+	
+	return 0;
+}
+
+// SAI送信関数
+int32_t sai_send_dma(SAI_CH ch, uint32_t *data, uint32_t size)
+{
+	volatile struct stm32l4_sai *sai_base_addr;
+	SAI_CTL *this;
+	DMA_SEND send_info;
+	int32_t ret;
+	
+	// chが範囲外であれば、エラーを返して終了
+	if (ch >= SAI_CH_MAX) {
+		return -1;
+	}
+	
+	// parがNULLであれば、エラーを返して終了
+	if (data == NULL) {
+		return -1;
+	}
+	
+	// 制御ブロック取得
+	this = get_myself(ch);
+	
+	// オープン未実施であれば、エラーを返して終了
+	if (this->status != ST_OPENED) {
+		return -1;
+	}
+	
+	// ベースレジスタのアドレスを取得
+	sai_base_addr = get_reg(ch);
+	
+	// DMA送信情報を初期化
+	memset(&send_info, 0, sizeof(DMA_SEND));
+	
+	// 送信情報を設定
+	send_info.src_addr       = (uint32_t)data;
+	send_info.src_addr_inc   = TRUE;
+	send_info.dst_addr       = (uint32_t)(&(sai_base_addr->adr));
+	send_info.dst_addr_inc   = FALSE;
+	send_info.transfer_unit  = DMA_TRANSFER_UNIT_32BIT;		// (*) とりあえず32bit固定
+	send_info.transfer_count = size/4;
+	
+	// DMAを使用して送信の設定
+	if (sai_dma_info[ch].ch != DMA_CH_MAX) {
+		ret = dma_start(sai_dma_info[ch].ch, &send_info);
+		if (ret != 0) {
+			return -1;
+		}
+	// DMAを使用する設定になっていなければエラーを返して終了
+	} else {
+		return -1;
+	}
+	
+	// DMA要求を有効化
+	sai_base_addr->acr1 |= ACR1_DMAEN;
+	
+	// SAIを有効化
+	sai_base_addr->acr1 |= ACR1_SAIEN;
+	
+	// 状態を更新
+	this->status = ST_RUN;
+	
+	return 0;
+}
+
+// SAI送信停止関数
+int32_t sai_stop_dma(SAI_CH ch)
+{
+	volatile struct stm32l4_sai *sai_base_addr;
+	SAI_CTL *this;
+	int32_t ret;
+	
+	// chが範囲外であれば、エラーを返して終了
+	if (ch >= SAI_CH_MAX) {
+		return -1;
+	}
+	
+	// 制御ブロック取得
+	this = get_myself(ch);
+	
+	// 動作中でなければ、エラーを返して終了
+	if (this->status != ST_RUN) {
+		return -1;
+	}
+	
+	// ベースレジスタのアドレスを取得
+	sai_base_addr = get_reg(ch);
+	
+	// DMA要求を無効化
+	sai_base_addr->acr1 &= ~ACR1_DMAEN;
+	
+	// SAIを無効化
+	sai_base_addr->acr1 &= ~ACR1_SAIEN;
+	
+	// DMA無効化
+	dma_stop(sai_dma_info[ch].ch);
+	
+	// 状態を更新
+	this->status = ST_OPENED;
 	
 	return 0;
 }

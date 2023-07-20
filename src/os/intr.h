@@ -44,6 +44,8 @@
 #define OCTOSPI2_GLOBAL_INTERRUPT_NO			(76 + INTERRUPT_NO_OFFSET)
 
 // 割込み優先度の定義
+#define INTERRPUT_PRIORITY_3	(3)
+#define INTERRPUT_PRIORITY_4	(4)
 #define INTERRPUT_PRIORITY_5	(5)
 
 /* 割込みハンドラの定義 */

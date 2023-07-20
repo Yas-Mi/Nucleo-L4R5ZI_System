@@ -16,6 +16,7 @@
 #include "kozos.h"
 #include "bt_dev.h"
 #include "console.h"
+#include "ctl_main.h"
 #include "intr.h"
 #include "tim.h"
 #include <string.h>
@@ -32,14 +33,16 @@
 #define EVENT_CONNECT		(0)
 #define EVENT_DISCONNECT	(1)
 #define EVENT_SEND			(2)
-#define EVENT_MAX			(3)
+#define EVENT_CHECK_STS		(3)
+#define EVENT_MAX			(4)
 
 // マクロ
-#define BT_BAUDRATE					(115200)									// 通信速度 115200bps
+#define BT_BAUDRATE_9600			(9600)										// 通信速度 9600bps
+#define BT_BAUDRATE_115200			(115200)									// 通信速度 115200bps
 #define BT_USART_CH					USART_CH2									// 使用するUSARTのチャネル
 #define BT_BUF_NUM					(512)										// バッファサイズ[byte]
-#define BT_STATUS_CHECK_PERIOD		(50)										// デバイスの接続状態をチェックする周期 (ms)
-#define BT_STATUS_CHECK_CHATTER_NUM	(4)											// チャタリング
+#define BT_STATUS_CHECK_PERIOD		(10)										// デバイスの接続状態をチェックする周期 (ms)
+#define BT_STATUS_CHECK_CHATTER_NUM	(16)										// チャタリング
 #define BT_CONNECTED				((1 << BT_STATUS_CHECK_CHATTER_NUM) - 1)	// 接続された
 #define BT_TIM_CH					TIM_CH2										// 使用するTIMのチャネル
 
@@ -52,15 +55,17 @@ typedef struct {
 // 制御用ブロック
 typedef struct {
 	uint32_t			state;					// 状態
+	uint32_t			baudrate;				// ボーレート
 	kz_thread_id_t		tsk_rcv_id;				// BlueToot受信タスクID
 	kz_thread_id_t		tsk_sts_id;				// BlueToot状態管理タスクID
 	kz_thread_id_t		tsk_con_id;				// 接続状態状態管理タスクID
 	kz_msgbox_id_t		msg_id;					// メッセージID
-	BUF_INFO			rcv_buf;				// 受信バッファ
+	//- BUF_INFO			rcv_buf;				// 受信バッファ
 	BUF_INFO			snd_buf;				// 送信バッファ
-	uint8_t				con_sts;				// 接続状態
+	uint32_t			con_sts_bmp;			// 接続状態
+	uint8_t				check_sts_cnt;			// 接続状態確認カウント
 	BT_RCV_CALLBACK		callback;				// コールバック
-	uint32_t			callback_notice_size;	// コールバックを上げる受信サイズ
+	void				*callback_vp;			// コールバックパラメータ
 } BT_CTL;
 static BT_CTL bt_ctl;
 
@@ -100,6 +105,17 @@ static SEND_FUNC snd_func[SEND_TYPE_MAX] =
 // TIM設定テーブル
 static const TIM_OPEN tim_open_par = {
 	TIM_MODE_INPUT_CAPTURE,
+};
+
+// デバッグ用
+typedef struct {
+	uint32_t	baudrate;	// ボーレート
+	char*		str;		// 表示文字列
+}BAUDRATE_STR;
+static const BAUDRATE_STR baudrate_str[BT_BAUDRATE_TYPE_MAX] =
+{
+	{BT_BAUDRATE_9600,   "baudrate = 9600\n"},
+	{BT_BAUDRATE_115200, "baudrate = 11520\n"},
 };
 
 // 接続通知ハンドラ
@@ -143,6 +159,49 @@ static void bt_dev_unconnected(void)
 	memset(&(msg->msg_data), 0, sizeof(BT_SEND_INFO));
 	
 	kz_send(this->msg_id, sizeof(BT_MSG), msg);
+}
+
+// 状態チェック関数
+static void bt_dev_msg_check_sts(int argc, char *argv[])
+{
+	BT_CTL *this = &bt_ctl;
+	GPIO_PinState status = 0U;
+	
+	// 接続状態を確認
+	status = HAL_GPIO_ReadPin(GPIOG, GPIO_PIN_3);
+	
+	// 接続状態を覚えておく
+	this->con_sts_bmp |= (status << this->check_sts_cnt);
+	
+	// 接続状態の取得回数をインクリメント
+	this->check_sts_cnt++;
+	
+	if (this->check_sts_cnt < BT_STATUS_CHECK_CHATTER_NUM) {
+		return;
+	}
+	
+	// 接続状態の取得回数をクリア
+	this->check_sts_cnt = 0;
+	
+	// 接続されている？
+	if (this->con_sts_bmp == BT_CONNECTED) {
+		// 接続状態でない？
+		if (this->state != ST_CONNECTED) {
+			// 接続したことを通知
+			bt_dev_connected();
+		}
+	// 接続されていない？
+	} else {
+		// 非接続状態でない？
+		if (this->state != ST_DISCONNECTED) {
+			// 接続が切れたことを通知
+			bt_dev_unconnected();
+		}
+	}
+	
+	// 接続状態をクリア
+	this->con_sts_bmp = 0U;
+
 }
 
 // データを送信
@@ -199,7 +258,7 @@ static int32_t cmd_name(uint8_t *data, uint8_t size)
 static int32_t cmd_baudrate(uint8_t *data, uint8_t size)
 {
 	int32_t ret;
-	char *cmd = "AT+BAUD";
+	char cmd[8];
 	
 	// siziが1でない場合はエラーを返して終了
 	if (size != 1) {
@@ -211,11 +270,14 @@ static int32_t cmd_baudrate(uint8_t *data, uint8_t size)
 		return -1;
 	}
 	
+	// コマンドをコピー
+	memcpy(cmd, "AT+BAUD", 7);
+	
+	// ボーレートをコピー
+	cmd[7] = *data + 0x30;
+	
 	// 送信
-	ret = usart_send(BT_USART_CH, (uint8_t*)cmd, 7);
-	if (ret != -1) {
-		ret = usart_send(BT_USART_CH, data, size);
-	}
+	ret = usart_send(BT_USART_CH, (uint8_t*)cmd, 8);
 	
 	return ret;
 }
@@ -300,20 +362,79 @@ static void bt_dev_cmd_name(void)
 	bt_dev_send(SEND_TYPE_CMD_NAME, name, size);
 }
 
+// ボーレート変更 115200
+static void bt_dev_cmd_baudrate_115200(void)
+{
+	uint8_t baudrate = BT_BAUDRATE_TYPE_115200;
+	// 送信
+	bt_dev_send(SEND_TYPE_CMD_BAUD, &baudrate, 1);
+}
+
+// ボーレート変更 9600
+static void bt_dev_cmd_baudrate_9600(void)
+{
+	uint8_t baudrate = BT_BAUDRATE_TYPE_9600;
+	// 送信
+	bt_dev_send(SEND_TYPE_CMD_BAUD, &baudrate, 1);
+}
+
+// マイコン側のボーレート変更 
+static void bt_dev_cmd_change_baudrate(void)
+{
+	BT_CTL *this = &bt_ctl;
+	int32_t ret;
+	uint8_t i;
+	
+	// usartクローズ
+	ret = usart_close(BT_USART_CH);
+	// usartをクローズできなかったらエラーを返して終了
+	if (ret != 0) {
+		console_str_send((uint8_t*)"uart close failed!\n");
+		return -1;
+	}
+	console_str_send((uint8_t*)"uart closed!\n");
+	
+	// ボーレート設定
+	// 現在のボーレートが9600?
+	if (this->baudrate == BT_BAUDRATE_9600) {
+		// ボーレートを115200に設定
+		this->baudrate = BT_BAUDRATE_115200;
+	// 現在のボーレートが115200?
+	} else {
+		// ボーレートを9600に設定
+		this->baudrate = BT_BAUDRATE_9600;
+	}
+	
+	// usart再オープン
+	ret = usart_open(BT_USART_CH, this->baudrate);
+	// usartをオープンできなかったらエラーを返して終了
+	if (ret != 0) {
+		console_str_send((uint8_t*)"uart reopen failed!\n");
+		return -1;
+	}
+	console_str_send((uint8_t*)"uart reopend!\n");
+	for (i = 0; i < sizeof(baudrate_str)/sizeof(baudrate_str[0]); i++) {
+		if (this->baudrate == baudrate_str[i].baudrate) {
+			console_str_send((uint8_t*)baudrate_str[i].str);
+			break;
+		}
+	}
+}
+
 // インプットキャプチャのコールバック
 static void bt_dev_input_capture_callback(TIM_CH ch, void *par, uint32_t cnt)
 {
-	
+	// 未使用
 }
 
 // 状態遷移テーブル
 static const FSM fsm[ST_MAX][EVENT_MAX] = {
-	// EVENT_CONNECT						EVENT_DISCONNECT								EVENT_SEND
-	{{NULL,					ST_UNDEIFNED},	{NULL,						ST_UNDEIFNED},		{NULL,				ST_UNDEIFNED}},		// ST_UNINITIALIZED
-	{{bt_dev_msg_connected,	ST_CONNECTED},	{bt_dev_msg_unconnected,	ST_DISCONNECTED},	{NULL,				ST_UNDEIFNED}},		// ST_INITIALIZED
-	{{NULL,					ST_UNDEIFNED},	{bt_dev_msg_unconnected,	ST_DISCONNECTED},	{bt_dev_msg_send,	ST_UNDEIFNED}},		// ST_CONNECTED
-	{{bt_dev_msg_connected,	ST_CONNECTED},	{NULL,						ST_UNDEIFNED},		{bt_dev_msg_send,	ST_UNDEIFNED}},		// ST_DISCONNECTED
-	{{NULL,					ST_UNDEIFNED},	{NULL,						ST_UNDEIFNED},		{NULL,				ST_UNDEIFNED}},		// ST_UNDEIFNED
+	// EVENT_CONNECT						EVENT_DISCONNECT								EVENT_SEND								EVENT_CHECK_STS
+	{{NULL,					ST_UNDEIFNED},	{NULL,						ST_UNDEIFNED},		{NULL,				ST_UNDEIFNED},		{NULL,					ST_UNDEIFNED}},		// ST_UNINITIALIZED
+	{{bt_dev_msg_connected,	ST_CONNECTED},	{bt_dev_msg_unconnected,	ST_DISCONNECTED},	{NULL,				ST_UNDEIFNED},		{bt_dev_msg_check_sts,	ST_UNDEIFNED}},		// ST_INITIALIZED
+	{{NULL,					ST_UNDEIFNED},	{bt_dev_msg_unconnected,	ST_DISCONNECTED},	{bt_dev_msg_send,	ST_UNDEIFNED},		{bt_dev_msg_check_sts,	ST_UNDEIFNED}},		// ST_CONNECTED
+	{{bt_dev_msg_connected,	ST_CONNECTED},	{NULL,						ST_UNDEIFNED},		{bt_dev_msg_send,	ST_UNDEIFNED},		{bt_dev_msg_check_sts,	ST_UNDEIFNED}},		// ST_DISCONNECTED
+	{{NULL,					ST_UNDEIFNED},	{NULL,						ST_UNDEIFNED},		{NULL,				ST_UNDEIFNED},		{NULL,					ST_UNDEIFNED}},		// ST_UNDEIFNED
 };
 
 // BlueTooth受信タスク
@@ -332,12 +453,19 @@ static int bt_dev_rcv_main(int argc, char *argv[])
 		}
 		// 接続されている場合
 		if (this->state == ST_CONNECTED) {
+#if 0
 			// 受信データを格納
 			this->rcv_buf.data[this->rcv_buf.size++] = data;;
 			// 指定されたサイズ受信した場合
 			if ((this->callback_notice_size <= this->rcv_buf.size) && (this->callback != NULL)) {
 				// コールバック
 				this->callback(this->rcv_buf.data, this->rcv_buf.size);
+			}
+#endif
+			//console_str_send(&data);
+			// コールバック
+			if (this->callback != NULL) {
+				this->callback(data, this->callback_vp);
 			}
 		// 接続されていない場合
 		} else {
@@ -349,7 +477,14 @@ static int bt_dev_rcv_main(int argc, char *argv[])
 	
 	return 0;
 }
-
+// debug
+#define DEBUG_INFO_NUM (16)
+typedef struct {
+	uint32_t addr[DEBUG_INFO_NUM];
+	uint8_t rcv_idx;
+} DEBUG;
+static DEBUG debug;
+//debug
 // BlueToothデバイス状態管理タスク
 static int bt_dev_sts_main(int argc, char *argv[])
 {
@@ -357,25 +492,30 @@ static int bt_dev_sts_main(int argc, char *argv[])
 	BT_MSG *msg;
 	BT_MSG tmp_msg;
 	int32_t size;
+	int32_t addr;
+	volatile uint32_t a = 0;
 	
 	while(1){
 		// メッセージ受信
 		kz_recv(this->msg_id, &size, &msg);
-		
+		// 割込み禁止
+		INTR_DISABLE;
+		debug.addr[debug.rcv_idx] = (uint32_t)msg;
+		debug.rcv_idx++;
+		debug.rcv_idx = debug.rcv_idx&(DEBUG_INFO_NUM-1);
+		// 割込み禁止解除
+		INTR_ENABLE;
 		// いったんメッセージをローカル変数にコピー
 		memcpy(&tmp_msg, msg, sizeof(BT_MSG));
-		
 		// メッセージを解放
 		kz_kmfree(msg);
-		
 		// 処理を実行
-		if (fsm[this->state][msg->msg_type].func != NULL) {
-			fsm[this->state][msg->msg_type].func(&(tmp_msg.msg_data));
+		if (fsm[this->state][tmp_msg.msg_type].func != NULL) {
+			fsm[this->state][tmp_msg.msg_type].func(&(tmp_msg.msg_data));
 		}
-		
 		// 状態遷移
-		if (fsm[this->state][msg->msg_type].nxt_state != ST_UNDEIFNED) {
-			this->state = fsm[this->state][msg->msg_type].nxt_state;
+		if (fsm[this->state][tmp_msg.msg_type].nxt_state != ST_UNDEIFNED) {
+			this->state = fsm[this->state][tmp_msg.msg_type].nxt_state;
 		}
 	}
 	
@@ -434,18 +574,24 @@ int32_t bt_dev_init(void)
 	BT_CTL *this = &bt_ctl;
 	int32_t ret;
 	
+	// 制御ブロックの初期化
+	memset(this, 0, sizeof(BT_CTL));
+	
+	// 初期ボーレート設定
+	this->baudrate = BT_BAUDRATE_115200;
+	
 	// usartオープン
-	ret = usart_open(BT_USART_CH, BT_BAUDRATE);
+	ret = usart_open(BT_USART_CH, this->baudrate);
 	// usartをオープンできなかったらエラーを返して終了
 	if (ret != 0) {
 		return -1;
 	}
 	
-	// 制御ブロックの初期化
-	memset(this, 0, sizeof(BT_CTL));
-	
 	// メッセージIDの設定
 	this->msg_id = MSGBOX_ID_BTMAIN;
+	
+	// 周期メッセージの作成
+	set_cyclic_message(bt_dev_check_sts, BT_STATUS_CHECK_PERIOD);
 	
 	// タスクの生成
 	this->tsk_rcv_id = kz_run(bt_dev_rcv_main, "bt_dev_rcv_main",  BT_DEV_PRI, BT_DEV_STACK, 0, NULL);
@@ -465,15 +611,20 @@ int32_t bt_dev_init(void)
 }
 
 // コールバック登録関数
-int32_t bt_dev_reg_callback(BT_RCV_CALLBACK callback, uint32_t callback_notice_size)
+int32_t bt_dev_reg_callback(BT_RCV_CALLBACK callback, void *callback_vp)
 {
 	BT_CTL *this = &bt_ctl;
 	
-	// コールバックが登録されていない場合は登録
-	if (this->callback == NULL) {
-		this->callback = callback;
-		this->callback_notice_size = callback_notice_size;
+	// コールバックがすでに登録されている？
+	if (this->callback != NULL) {
+		return -1;
 	}
+	
+	// コールバック登録
+	this->callback = callback;
+	this->callback_vp = callback_vp;
+	
+	return 0;
 }
 
 // BlueTooth送信通知関数
@@ -520,6 +671,20 @@ int32_t bt_dev_send(BT_SEND_TYPE type, uint8_t *data, uint8_t size)
 	
 	kz_send(this->msg_id, sizeof(BT_MSG), msg);
 }
+
+// 状態チェック関数
+int32_t bt_dev_check_sts(void)
+{
+	BT_CTL *this = &bt_ctl;
+	BT_MSG *msg;
+	BT_MSG *tmp_msg;
+	uint32_t i;
+	
+	msg = kz_kmalloc(sizeof(BT_MSG));
+	msg->msg_type = EVENT_CHECK_STS;
+	msg->msg_data.data = NULL;
+	kz_send(this->msg_id,18, msg);
+}
 	
 // ボーレート設定関数
 int32_t bt_dev_set_baudrate(BT_BAUDRATE_TYPE baudrate)
@@ -551,5 +716,14 @@ void bt_dev_set_cmd(void)
 	console_set_command(&cmd);
 	cmd.input = "bt_dev name";
 	cmd.func = bt_dev_cmd_name;
+	console_set_command(&cmd);
+	cmd.input = "bt_dev baudrate 115200";
+	cmd.func = bt_dev_cmd_baudrate_115200;
+	console_set_command(&cmd);
+	cmd.input = "bt_dev baudrate 9600";
+	cmd.func = bt_dev_cmd_baudrate_9600;
+	console_set_command(&cmd);
+	cmd.input = "bt_dev change baudrate";
+	cmd.func = bt_dev_cmd_change_baudrate;
 	console_set_command(&cmd);
 }

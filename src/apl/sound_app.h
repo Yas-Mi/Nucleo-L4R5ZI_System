@@ -15,6 +15,7 @@
 
 // タスクにメッセージを送信するための関数
 extern void sound_app_init(void);
+extern int32_t sound_app_play(void);
 extern void sound_app_set_cmd(void);
 
 #endif /* APL_SOUND_APP_H_ */

@@ -19,6 +19,7 @@ extern void usart_init(void);
 extern int32_t usart_open(USART_CH ch, uint32_t baudrate);
 extern int32_t usart_send(USART_CH ch, uint8_t *data, uint32_t size);
 extern int32_t usart_recv(USART_CH ch, uint8_t *data, uint32_t size);
+extern int32_t usart_send_for_int(USART_CH ch, uint8_t *data, uint32_t size);
 extern int32_t usart_reg_recv_callback(USART_CH ch, USART_CALLBACK cb, void *vp);
 extern int32_t usart_reg_send_callback(USART_CH ch, USART_CALLBACK cb, void *vp);
 

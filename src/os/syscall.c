@@ -82,12 +82,15 @@ int kz_chpri(int priority)
 
 void *kz_kmalloc(int size)
 {
-  kz_syscall_param_t param;
-  param.un.kmalloc.size = size;
-  kz_syscall(KZ_SYSCALL_TYPE_KMALLOC, &param);
-  //consdrv_send_write("malloc ");
-  //consdrv_send_write_wrapper(param.un.kmalloc.ret);
-  return param.un.kmalloc.ret;
+	kz_syscall_param_t param;
+	uint32_t result;
+	
+	__asm volatile ("MRS %0, basepri" : "=r" (result) );
+	param.un.kmalloc.size = size;
+	param.un.kmalloc.ret = 0xAAAAAAAA;
+	
+	kz_syscall(KZ_SYSCALL_TYPE_KMALLOC, &param);
+	return param.un.kmalloc.ret;
 }
 
 int kz_kmfree(void *p)
@@ -95,19 +98,19 @@ int kz_kmfree(void *p)
   kz_syscall_param_t param;
   param.un.kmfree.p = p;
   kz_syscall(KZ_SYSCALL_TYPE_KMFREE, &param);
-  //consdrv_send_write("free ");
-  //consdrv_send_write_wrapper(p);
   return param.un.kmfree.ret;
 }
 
 int kz_send(kz_msgbox_id_t id, int size, char *p)
 {
-  kz_syscall_param_t param;
-  param.un.send.id = id;
-  param.un.send.size = size;
-  param.un.send.p = p;
-  kz_syscall(KZ_SYSCALL_TYPE_SEND, &param);
-  return param.un.send.ret;
+	kz_syscall_param_t param;
+	
+	param.un.send.id = id;
+	param.un.send.size = size;
+	param.un.send.p = p;
+	
+	kz_syscall(KZ_SYSCALL_TYPE_SEND, &param);
+	return param.un.send.ret;
 }
 
 kz_thread_id_t kz_recv(kz_msgbox_id_t id, int *sizep, char **pp)
