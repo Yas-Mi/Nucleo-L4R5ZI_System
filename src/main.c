@@ -121,6 +121,7 @@ static int start_threads(int argc, char *argv[])
 	// コマンドの設定
 	bt_dev_set_cmd();
 	sound_app_set_cmd();
+	pcm3060_set_cmd();
 	
 	// タスクの起動
 	// デバイス

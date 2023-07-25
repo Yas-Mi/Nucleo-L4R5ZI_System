@@ -20,6 +20,7 @@
 #include "pcm3060.h"
 #include "sai.h"
 #include "util.h"
+#include "console.h"
 
 // 状態
 #define PCM3060_ST_NOT_INTIALIZED	(0U) // 未初期状態
@@ -47,8 +48,13 @@
 #define PCM3060_REGISTER73	(0x49)
 #define PCM3060_WAIT		(0xFF)	// レジスタの定義ではなく、wait用
 
+// 設定値
+#define PCM3060_REGISTER68_MUT		(0x03)
+
 // リトライ
 #define PCM3060_RETRY_CNT	(5)		// 設定のリトライカウント
+
+
 
 // DMAを使用するかしないか
 #define DMA_USE	(1)
@@ -399,4 +405,69 @@ int32_t pcm3060_stop(void)
 	this->status != PCM3060_ST_OPEND;
 	
 	return ret;
+}
+
+// PCM3060 ミュート設定関数
+int32_t pcm3060_mute(uint8_t enable)
+{
+	PCM3060_CTL *this = &pcm3060_ctl;
+	int32_t ret;
+	uint8_t snd_data[2];
+	uint8_t rcv_data;
+	
+	// オープンされていない場合はエラーを返して終了
+	if (this->status != PCM3060_ST_OPEND) {
+		return -1;
+	}
+	
+	// 現在設定されている値を取得
+	snd_data[0] = PCM3060_REGISTER68;
+	pcm3060_send_data(snd_data, 1, 5);
+	pcm3060_read_data(&rcv_data, 5);
+	
+	console_str_send((uint8_t*)"cur : ");
+	console_val_send(rcv_data);
+	console_str_send((uint8_t*)"\n");
+	
+	// ミュート設定
+	if (enable) {
+		snd_data[1] = rcv_data | PCM3060_REGISTER68_MUT;
+	} else {
+		snd_data[1] = rcv_data & ~PCM3060_REGISTER68_MUT;
+	}
+	pcm3060_send_data(snd_data, 2, 5);
+	
+	// 現在設定されている値を取得
+	snd_data[0] = PCM3060_REGISTER68;
+	pcm3060_send_data(snd_data, 1, 5);
+	pcm3060_read_data(&rcv_data, 5);
+	
+	console_str_send((uint8_t*)"cur : ");
+	console_val_send(rcv_data);
+	console_str_send((uint8_t*)"\n");
+}
+
+// コマンド
+static void pcm3060_cmd_mute_enable(void)
+{
+	pcm3060_mute(TRUE);
+}
+
+static void pcm3060_cmd_mute_disable(void)
+{
+	pcm3060_mute(FALSE);
+}
+
+// コマンド設定関数
+void pcm3060_set_cmd(void)
+{
+	COMMAND_INFO cmd;
+	
+	// コマンドの設定
+	cmd.input = "pcm3060 mute enable";
+	cmd.func = pcm3060_cmd_mute_enable;
+	console_set_command(&cmd);
+	cmd.input = "pcm3060 mute disable";
+	cmd.func = pcm3060_cmd_mute_disable;
+	console_set_command(&cmd);
 }

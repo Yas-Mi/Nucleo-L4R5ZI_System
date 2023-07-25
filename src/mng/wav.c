@@ -44,6 +44,7 @@ typedef union {
 // 制御用ブロック
 typedef struct {
 	uint8_t status;					// 状態
+	WAV_STA_CALLBACK sta_callback;	// 開始コールバック
 	WAV_RCV_CALLBACK rcv_callback;	// 受信コールバック
 	WAV_END_CALLBACK end_callback;	// 終了コールバック
 	void *callback_vp;				// コールバックパラメータ
@@ -53,8 +54,42 @@ typedef struct {
 	uint16_t sample_data_size;		// 1データサイズ[byte]
 	uint32_t sample_data_cnt;		// 現在受信したwaveのデータサイズ[byte]
 	int32_t	sample_data;			// サンプルデータ	(*) とりあえず4byte
+	WAV_INFO wav_info;				// 開始コールバック用の情報
 } WAV_CTL;
 static WAV_CTL wav_ctl;
+
+static const uint16_t wav_ch_info[WAV_CH_MAX] = {
+	0x0001,		// WAV_CH_MONO
+	0x0002,		// WAV_CH_STE
+};
+
+// サンプリング周波数(リトルエンディアン)
+static const uint32_t wav_sample_rate_info[WAV_SAMPLE_RATE_MAX] = {
+	0x00001F40,		// WAV_SAMPLE_RATE_8kHz
+	0x00003E80,		// WAV_SAMPLE_RATE_16kHz
+	0x0000AC44,		// WAV_SAMPLE_RATE_44.1kHz
+};
+
+// ビット/サンプル(リトルエンディアン)
+static const uint16_t wave_bps_info[WAV_BPS_MAX] = {
+	0x0008,		// WAV_BPS_8BIT
+	0x0010,		// WAV_BPS_16BIT
+};
+
+// 内部情報のクリア
+static void wav_local_init(void)
+{
+	WAV_CTL *this = &wav_ctl;
+	
+	// 初期化
+	memset(&(this->rcv_buf), 0, sizeof(WAV_HEADER));
+	this->rcv_cnt = 0;
+	this->wave_data_size = 0;
+	this->sample_data_size = 0;
+	this->sample_data_cnt = 0;
+	this->sample_data = 0;
+	memset(&(this->wav_info), 0, sizeof(WAV_INFO));
+}
 
 // データ解析
 static int32_t data_analysis(uint8_t data)
@@ -68,7 +103,8 @@ static int32_t data_analysis(uint8_t data)
 	if (this->rcv_cnt == 4) {
 		// RIFF?
 		if (memcmp(this->rcv_buf.info.riff_str, "RIFF", 4)) {
-			this->rcv_cnt = 0;
+			// 初期化
+			wav_local_init();
 			return WAVE_FOMART_ERR;
 		}
 	// 8byte受信時
@@ -78,18 +114,21 @@ static int32_t data_analysis(uint8_t data)
 								(this->rcv_buf.info.size1[1] << 8) |
 								(this->rcv_buf.info.size1[2] << 16 ) |
 								(this->rcv_buf.info.size1[3] << 24 )) + 8 - sizeof(WAV_HEADER);
+		this->wav_info.size = this->wave_data_size;
 	// 12byte受信時
 	} else if (this->rcv_cnt == 12) {
 		// WAVE?
 		if (memcmp(this->rcv_buf.info.wave_str, "WAVE", 4)) {
-			this->rcv_cnt = 0;
+			// 初期化
+			wav_local_init();
 			return WAVE_FOMART_ERR;
 		}
 	// 16byte受信時
 	} else if (this->rcv_cnt == 16) {
 		// fmt ?
 		if (memcmp(this->rcv_buf.info.fmt_str, "fmt ", 4)) {
-			this->rcv_cnt = 0;
+			// 初期化
+			wav_local_init();
 			return WAVE_FOMART_ERR;
 		}
 	// 20byte受信時
@@ -102,12 +141,39 @@ static int32_t data_analysis(uint8_t data)
 		// 非圧縮のPCMフォーマットは1
 	// 24byte受信時
 	} else if (this->rcv_cnt == 24) {
+		uint32_t ch_num;
 		// チャネル数
+		for (ch_num = 0; ch_num < WAV_CH_MAX; ch_num++) {
+			// フォーマット通り？
+			if (*((uint16_t*)(this->rcv_buf.info.ch_num)) == wav_ch_info[ch_num]) {
+				this->wav_info.ch_num = ch_num;
+				break;
+			}
+		}
+		// フォーマットエラー
+		if (ch_num == WAV_CH_MAX) {
+			// 初期化
+			wav_local_init();
+			return WAVE_FOMART_ERR;
+		}
 		// モノラルは1、ステレオは2
 	// 28byte受信時
 	} else if (this->rcv_cnt == 28) {
+		uint32_t sample_rate;
 		// サンプリングレート
-		// 44.1kHzの場合なら44100
+		for (sample_rate = 0; sample_rate < WAV_SAMPLE_RATE_MAX; sample_rate++) {
+			// フォーマット通り？
+			if (*((uint32_t*)(this->rcv_buf.info.sampling_rate)) == wav_sample_rate_info[sample_rate]) {
+				this->wav_info.sample_rate = sample_rate;
+				break;
+			}
+		}
+		// フォーマットエラー
+		if (sample_rate == WAV_SAMPLE_RATE_MAX) {
+			// 初期化
+			wav_local_init();
+			return WAVE_FOMART_ERR;
+		}
 	// 32byte受信時
 	} else if (this->rcv_cnt == 32) {
 		// バイト／秒
@@ -118,14 +184,29 @@ static int32_t data_analysis(uint8_t data)
 		// ステレオ16bitなら、16bit*2 = 32bit = 4byte
 	// 36byte受信時
 	} else if (this->rcv_cnt == 36) {
+		uint32_t bps;
 		// ビット／サンプル
+		for (bps = 0; bps < WAV_BPS_MAX; bps++) {
+			// フォーマット通り？
+			if (*((uint16_t*)(this->rcv_buf.info.bit_par_sample)) == wave_bps_info[bps]) {
+				this->wav_info.bps = bps;
+				break;
+			}
+		}
+		// フォーマットエラー
+		if (bps == WAV_BPS_MAX) {
+			// 初期化
+			wav_local_init();
+			return WAVE_FOMART_ERR;
+		}
 		// １サンプルに必要なビット数
-		this->sample_data_size = ((this->rcv_buf.info.bit_par_sample[1] << 8)|(this->rcv_buf.info.bit_par_sample[0] << 0))/8;
+		this->sample_data_size = (*((uint16_t*)(this->rcv_buf.info.bit_par_sample)))/8;
 	// 40byte受信時
 	} else if (this->rcv_cnt == 40) {
 		// data?
 		if (memcmp(this->rcv_buf.info.data_str, "data ", 4)) {
-			this->rcv_cnt = 0;
+			// 初期化
+			wav_local_init();
 			return WAVE_FOMART_ERR;
 		}
 	} else if (this->rcv_cnt == 44) {
@@ -175,6 +256,14 @@ static void bt_dev_callback(uint8_t data, void *vp)
 		return;
 	}
 	
+	// 音声データ受信開始
+	if (this->sample_data_cnt == 0) {
+		// コールバック
+		if (this->sta_callback != NULL) {
+			this->sta_callback(&(this->wav_info), this->callback_vp);
+		}
+	}
+	
 	// データを格納
 	byte_pos = (this->sample_data_cnt++) % this->sample_data_size;
 	this->sample_data |= (data << (byte_pos * 8));
@@ -196,11 +285,7 @@ static void bt_dev_callback(uint8_t data, void *vp)
 			this->end_callback(this->callback_vp);
 		}
 		// 内部情報のクリア
-		memset(&(this->rcv_buf), 0, sizeof(WAV_HEADER));
-		this->rcv_cnt = 0;
-		this->wave_data_size = 0;
-		this->sample_data_size = 0;
-		this->sample_data_cnt = 0;
+		wav_local_init();
 		// 状態を更新
 		this->status = ST_OPEND;
 	}
@@ -224,7 +309,7 @@ void wav_init(void)
 }
 
 // オープン処理
-int32_t wav_open(WAV_RCV_CALLBACK rcv_callback, WAV_END_CALLBACK end_callback, void *callback_vp)
+int32_t wav_open(WAV_STA_CALLBACK sta_callback, WAV_RCV_CALLBACK rcv_callback, WAV_END_CALLBACK end_callback, void *callback_vp)
 {
 	WAV_CTL *this = &wav_ctl;
 	int32_t ret;
@@ -236,6 +321,7 @@ int32_t wav_open(WAV_RCV_CALLBACK rcv_callback, WAV_END_CALLBACK end_callback, v
 	}
 	
 	// コールバック登録
+	this->sta_callback = sta_callback;
 	this->rcv_callback = rcv_callback;
 	this->end_callback = end_callback;
 	this->callback_vp = callback_vp;

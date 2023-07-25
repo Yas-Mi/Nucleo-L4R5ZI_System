@@ -27,7 +27,7 @@
 
 // マクロ
 #define SOUND_TIME_PER_FRAME		(100)												// 1回の送信で何ms間音楽再生するか[ms]    : 1フレーム 100ms
-#define SOUND_DATA_STORE_TIME		(3*1000)											// 何ms分の音楽データを保持しておくか[ms] : 10秒間の音声データを格納
+#define SOUND_DATA_STORE_TIME		(3*1000)											// 何ms分の音楽データを保持しておくか[ms] : 3秒間の音声データを格納
 #define SOUND_DATA_NUM_PAR_FRAME	((SAMPLING_FREQUENCY/1000)*SOUND_TIME_PER_FRAME)	// 1フレームの音楽データ数                : 16000/1000=16個(=1msに必要なデータ数) 16*100=1600(=SOUND_TIME_PER_FRAME[ms]に必要なデータ数)
 #define SOUND_FRAME_NUM				(SOUND_DATA_STORE_TIME/SOUND_TIME_PER_FRAME)		// SOUND_DATA_STORE_TIME[s]保存するためには何フレーム必要か 3*1000 = 3000ms 3000ms / 100ms = 30フレーム
 #define SOUND_FIRST_SEND_FRAME_NUM	(20)												// 最初にどれだけのフレームがたまったら送信するか
@@ -47,7 +47,10 @@
 */
 
 // ビープ
-#define BEEP_SEND_TIME_UNIT			(100)		// 1回の送信で何msbeep音を流すか[ms]
+#define BEEP_PLAY_TIME_3000ms	(3000 << 0)		// 3秒
+#define BEEP_PLAY_TIME_1000ms	(1000 << 0)		// 1秒
+#define BEEP_PLAY_0KHZ			(   0 << 16)	// 0kHz
+#define BEEP_PLAY_1KHZ			(   1 << 16)	// 1kHz
 
 // 制御用ブロック
 typedef struct {
@@ -61,6 +64,8 @@ typedef struct {
 	uint16_t			req_frame_r_idx;									// 現在送信中の送信開始フレームインデックス
 	uint16_t			cur_frame_idx;										// 現在送信中のフレームインデックス
 	uint8_t				first_send_flag;									// 初回送信フラグ
+	uint8_t				is_expected;										// 期待する音楽データの種類かどうか
+	WAV_INFO			wav_info;											// 受信情報
 } SOUND_APP_CTL;
 static SOUND_APP_CTL sound_app_ctl;
 
@@ -76,8 +81,28 @@ typedef struct {
 	uint32_t     msg_data;
 } SOUND_APP_MSG;
 
-// ビープ音 1ms分
-static const int32_t beep_1ms[] = {
+// ビープ音(0Hz) 1ms分
+static const int32_t beep_0kHz_1ms[] = {
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+};
+
+// ビープ音(1kHz) 1ms分
+static const int32_t beep_1kHz_1ms[] = {
 	0,
 	12539,
 	23170,
@@ -96,8 +121,10 @@ static const int32_t beep_1ms[] = {
 	-12539,
 };
 
-static const int32_t debug_music[] = {
-	#include "debug_music.hex"
+// ビープデータテーブル
+static const int32_t *beep_data[] = {
+	beep_0kHz_1ms,
+	beep_1kHz_1ms,
 };
 
 // フレーム計算
@@ -115,17 +142,70 @@ static uint16_t sound_app_get_frame_num(uint16_t frame_w_idx, uint16_t frame_r_i
 	return frame_num;
 }
 
+// 音声鳴動要求
+static void sound_app_req_pray(SOUND_APP_CTL *this, uint16_t frame_w_idx, uint16_t frame_r_idx)
+{
+	SOUND_APP_MSG *msg;
+	
+	// 送信要求フレームインデックスを更新
+	this->req_frame_w_idx = frame_w_idx;
+	this->req_frame_r_idx = frame_r_idx;
+	// データがたまったことを通知
+	msg = kz_kmalloc(sizeof(SOUND_APP_MSG));
+	msg->msg_type = EVENT_SOUND_STA;
+	msg->msg_data = (frame_w_idx << 16) | (frame_r_idx << 0);
+	kz_send(this->msg_id, sizeof(SOUND_APP_MSG), msg);
+}
+
+// 音楽データ開始コールバック (*) タスクコンテキスト
+static void wav_sta_callback(WAV_INFO *wav_info, void *vp)
+{
+	SOUND_APP_CTL *this = (SOUND_APP_CTL*)vp;
+	
+	// 状態の初期値を設定
+	this->is_expected = FALSE;
+	
+	// チャンネル数は期待通り？
+	if (wav_info->ch_num != WAV_CH_MONO) {
+		return;
+	}
+	
+	// サンプリング周波数は期待通り？
+	if (wav_info->sample_rate != WAV_SAMPLE_RATE_16kHz) {
+		return;
+	}
+	
+	// ビット/サンプルは期待通り？
+	if (wav_info->bps != WAV_BPS_16BIT) {
+		return;
+	}
+	
+	// 状態を更新
+	this->is_expected = TRUE;
+	
+	// 状態を取得
+	memcpy(&(this->wav_info), wav_info, sizeof(WAV_INFO));
+}
+
 // 音楽データ受信コールバック (*) タスクコンテキスト
 static void wav_rcv_callback(int32_t data, void *vp)
 {
 	SOUND_APP_CTL *this = (SOUND_APP_CTL*)vp;
-	SOUND_APP_MSG *msg;
 	uint16_t frame_w_idx, frame_r_idx;
 	uint16_t data_idx;
 	uint16_t stored_frame_num;
 	uint16_t tmp_w_idx, tmp_r_idx;
 	uint16_t tmp_cur_frame_idx;
 	
+	// 期待する音楽データではない場合は即リターン
+	if (this->is_expected == FALSE) {
+		return;
+	}
+	
+	// (*) 下記は、pcm3060_callback()で書き換えられているので割込み禁止で参照する必要がある。
+	//      this->w_idx
+	//      this->r_idx
+	//      this->cur_frame_idx
 	// 割込み禁止
 	INTR_DISABLE;
 	// ライトインデックスを進める
@@ -153,30 +233,18 @@ static void wav_rcv_callback(int32_t data, void *vp)
 		frame_r_idx = (uint16_t)(tmp_r_idx / SOUND_DATA_NUM_PAR_FRAME);
 		// たまったフレームを計算
 		stored_frame_num = sound_app_get_frame_num(frame_w_idx, frame_r_idx);
-		// 最初は一定フレーム数たまるまで待つ
+		// 1回目は一定フレーム数たまるまで待つ
 		if ((this->first_send_flag == FALSE) && (stored_frame_num >= SOUND_FIRST_SEND_FRAME_NUM)) {
 			// 初回送信フラグを更新
 			this->first_send_flag = TRUE;
-			// 送信要求フレームインデックスを更新
-			this->req_frame_w_idx = frame_w_idx;
-			this->req_frame_r_idx = frame_r_idx;
-			// データがたまったことを通知
-			msg = kz_kmalloc(sizeof(SOUND_APP_MSG));
-			msg->msg_type = EVENT_SOUND_STA;
-			msg->msg_data = (frame_w_idx << 16) | (frame_r_idx << 0);
-			kz_send(this->msg_id, sizeof(SOUND_APP_MSG), msg);
+			// 音声鳴動要求
+			sound_app_req_pray(this, frame_w_idx, frame_r_idx);
 		// 2回目以降
 		} else if ((stored_frame_num >= SOUND_SEND_FRAME_NUM) &&		// 10フレームたまった?
 				   (this->req_frame_w_idx == tmp_cur_frame_idx) &&		// 要求したフレームまで送信した?
 				   (this->first_send_flag == TRUE)) {					// 2回目以降の送信
-			// 送信要求フレームインデックスを更新
-			this->req_frame_w_idx = frame_w_idx;
-			this->req_frame_r_idx = frame_r_idx;
-			// データがたまったことを通知
-			msg = kz_kmalloc(sizeof(SOUND_APP_MSG));
-			msg->msg_type = EVENT_SOUND_STA;
-			msg->msg_data = (frame_w_idx << 16) | (frame_r_idx << 0);
-			kz_send(this->msg_id, sizeof(SOUND_APP_MSG), msg);
+			// 音声鳴動要求
+			sound_app_req_pray(this, frame_w_idx, frame_r_idx);
 		}
 	// バッファがいっぱい？
 	} else {
@@ -192,27 +260,11 @@ static void wav_end_callback(void *vp)
 	SOUND_APP_CTL *this = &sound_app_ctl;
 	SOUND_APP_MSG *msg;
 	
-	// 割込み禁止
-	//INTR_DISABLE;
-	
-	// バッファクリア
-	memset(this->data[0], 0, sizeof(this->data));
-	// インデックス初期化
-	this->w_idx = 0;
-	this->r_idx = 0;
-	this->req_frame_w_idx = 0;
-	this->req_frame_r_idx = 0;
-	this->cur_frame_idx = 0;
-	this->first_send_flag = 0;
-	
 	// 停止通知
 	msg = kz_kmalloc(sizeof(SOUND_APP_MSG));
 	msg->msg_type = EVENT_SOUND_STP;
 	msg->msg_data = 0;
 	kz_send(this->msg_id, sizeof(SOUND_APP_MSG), msg);
-	
-	// 割込み禁止解除
-	//INTR_ENABLE;
 }
 
 // 送信完了コールバック (*) 割込みコンテキスト
@@ -270,41 +322,25 @@ static void sound_app_sta(uint32_t par)
 static void sound_app_sta_beep(uint32_t par)
 {
 	SOUND_APP_CTL *this = &sound_app_ctl;
-	uint32_t play_time = par;
-	//int32_t play_data[16*SOUND_TIME_PER_FRAME];
+	uint32_t play_time = (par & 0x0000FFFF) >> 0;
+	uint32_t play_type = (par & 0xFFFF0000) >> 16;
+	const int32_t *data;
 	uint32_t i, j;
 	uint32_t frame_cnt;
 	
-	// 開始を表示
+	// 開始
 	console_str_send((uint8_t*)"beep start\n");
-#if 0
-	// DMA使用せずに送信するコード
-	// 100ms単位で考える
-	for (i = 0; i < BEEP_SEND_TIME_UNIT; i++) {
-		memcpy(&play_data[16*i], beep_1ms,  sizeof(beep_1ms));
-	}
 	
-	frame_cnt = play_time / BEEP_SEND_TIME_UNIT;
+	// 音声データを取得
+	data = beep_data[play_type];
 	
-	// 再生する
-	while(frame_cnt > 0) {
-		// 送信
-		pcm3060_play(play_data, sizeof(play_data)/4);
-		// 寝る
-		kz_sleep();
-		// コンソール表示
-		console_str_send((uint8_t*)"beep 1frame end\n");
-		// フレーム回数を減らす
-		frame_cnt--;
-	}
-#endif 
 	// フレーム数を計算
 	frame_cnt = play_time / SOUND_TIME_PER_FRAME;
 	
 	// 音声データを格納
 	for (i = 0; i < frame_cnt; i++) {
 		for (j = 0; j < SOUND_TIME_PER_FRAME; j++) {
-			memcpy(&(this->data[i][j*16]), beep_1ms, sizeof(beep_1ms));
+			memcpy(&(this->data[i][j*16]), data, sizeof(beep_1kHz_1ms));
 		}
 	}
 	
@@ -312,17 +348,20 @@ static void sound_app_sta_beep(uint32_t par)
 	pcm3060_play(this->data[0], frame_cnt*SOUND_DATA_NUM_PAR_FRAME*4);
 }
 
-uint32_t debug_music_cnt = 0;
-// 音楽再生停止ハンドラ(beep音)
+// 音楽再生停止ハンドラ
 static void sound_app_stp(uint32_t par)
 {
-	int32_t ret;
+	SOUND_APP_CTL *this = &sound_app_ctl;
 	
-	debug_music_cnt++;
-	
-	// ストップ
-	ret = pcm3060_stop();
-	console_str_send((uint8_t*)"music end ");
+	// バッファクリア
+	memset(this->data[0], 0, sizeof(this->data));
+	// インデックス初期化
+	this->w_idx = 0;
+	this->r_idx = 0;
+	this->req_frame_w_idx = 0;
+	this->req_frame_r_idx = 0;
+	this->cur_frame_idx = 0;
+	this->first_send_flag = 0;
 }
 
 // 状態遷移テーブル
@@ -375,7 +414,7 @@ void sound_app_init(void)
 	this->msg_id = MSGBOX_ID_SOUND_APP;
 	
 	// wavマネージャをオープン
-	ret = wav_open(wav_rcv_callback, wav_end_callback, this);
+	ret = wav_open(wav_sta_callback, wav_rcv_callback, wav_end_callback, this);
 	
 	// オーディオコーデックのデバイスドライバをオープン
 	ret = pcm3060_open(SAMPLING_FREQUENCY, SOUND_DATA_WIDTH, pcm3060_callback, this);
@@ -390,29 +429,28 @@ void sound_app_init(void)
 }
 
 // ビープ音通知関数
-int32_t sound_app_play_beep(uint32_t play_time)
+int32_t sound_app_play_beep(uint32_t play_info)
 {
 	SOUND_APP_CTL *this = &sound_app_ctl;
 	SOUND_APP_MSG *msg;
 	
-	// アイドル出ない場合はエラーを返して終了
-	if (this->state != ST_IDLE) {
+	// 初期かれていない場合はエラーを返して終了
+	if (this->state == ST_UNINITIALIZED) {
 		return -1;
 	}
 	
 	msg = kz_kmalloc(sizeof(SOUND_APP_MSG));
 	msg->msg_type = EVENT_SOUND_STA_BEEP;
-	msg->msg_data = play_time;
+	msg->msg_data = play_info;
 	
 	return kz_send(this->msg_id, sizeof(SOUND_APP_MSG), msg);
 }
 
-// ビープ音通知関数
+// 音楽データ通知関数
 int32_t sound_app_play(void)
 {
 	SOUND_APP_CTL *this = &sound_app_ctl;
 	SOUND_APP_MSG *msg;
-	uint8_t i;
 	
 	msg = kz_kmalloc(sizeof(SOUND_APP_MSG));
 	msg->msg_type = EVENT_SOUND_STA;
@@ -425,14 +463,44 @@ int32_t sound_app_play(void)
 static void sound_app_cmd_beep_1000ms(void)
 {
 	// 1000msbeep音を流す
-	sound_app_play_beep(1000);
+	sound_app_play_beep(BEEP_PLAY_TIME_1000ms | BEEP_PLAY_1KHZ);
 }
 
 // コマンド
 static void sound_app_cmd_beep_3000ms(void)
 {
 	// 3000msbeep音を流す
-	sound_app_play_beep(3000);
+	sound_app_play_beep(BEEP_PLAY_TIME_3000ms | BEEP_PLAY_1KHZ);
+}
+
+// コマンド
+static void sound_app_cmd_beep_0kHz(void)
+{
+	// 3000msbeep音を流す
+	sound_app_play_beep(BEEP_PLAY_TIME_1000ms | BEEP_PLAY_0KHZ);
+}
+
+// コマンド
+static void sound_app_cmd_stop(void)
+{
+	SOUND_APP_CTL *this = &sound_app_ctl;
+	SOUND_APP_MSG *msg;
+	
+	// バッファクリア
+	memset(this->data[0], 0, sizeof(this->data));
+	// インデックス初期化
+	this->w_idx = 0;
+	this->r_idx = 0;
+	this->req_frame_w_idx = 0;
+	this->req_frame_r_idx = 0;
+	this->cur_frame_idx = 0;
+	this->first_send_flag = 0;
+	
+	// 停止通知
+	msg = kz_kmalloc(sizeof(SOUND_APP_MSG));
+	msg->msg_type = EVENT_SOUND_STP;
+	msg->msg_data = 0;
+	kz_send(this->msg_id, sizeof(SOUND_APP_MSG), msg);
 }
 
 // コマンド設定関数
@@ -446,5 +514,11 @@ void sound_app_set_cmd(void)
 	console_set_command(&cmd);
 	cmd.input = "sound beep 3000ms";
 	cmd.func = sound_app_cmd_beep_3000ms;
+	console_set_command(&cmd);
+	cmd.input = "sound 0kHz";
+	cmd.func = sound_app_cmd_beep_0kHz;
+	console_set_command(&cmd);
+	cmd.input = "sound stop";
+	cmd.func = sound_app_cmd_stop;
 	console_set_command(&cmd);
 }
