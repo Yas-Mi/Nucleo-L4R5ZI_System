@@ -1,5 +1,5 @@
 /*
- * wave.c
+ * wav.c
  *
  *  Created on: 2022/12/12
  *      Author: User
@@ -16,10 +16,14 @@
 #define ST_FMT_ANLYSING		(3U) // フォーマット解析中
 #define ST_DATA_RECEIVING	(4U) // 音楽データ受信中
 
-// マクロ
+// 解析状態
 #define WAVE_FOMART_ERR			(-1)	// フォーマットエラー
 #define WAVE_FOMART_OK			(0)		// フォーマットOK
 #define WAVE_FOMART_ANALYSING	(1)		// フォーマット解析中
+
+// WAVファイル
+#define WAVE_SAMPLE_RATE_INFO_MAX	(3)
+#define WAVE_BPS_INFO_MAX			(2)
 
 // WAVEファイルヘッダ情報
 typedef union {
@@ -64,16 +68,16 @@ static const uint16_t wav_ch_info[WAV_CH_MAX] = {
 };
 
 // サンプリング周波数(リトルエンディアン)
-static const uint32_t wav_sample_rate_info[WAV_SAMPLE_RATE_MAX] = {
-	0x00001F40,		// WAV_SAMPLE_RATE_8kHz
-	0x00003E80,		// WAV_SAMPLE_RATE_16kHz
-	0x0000AC44,		// WAV_SAMPLE_RATE_44.1kHz
+static const uint32_t wav_sample_rate_info[WAVE_SAMPLE_RATE_INFO_MAX] = {
+	0x00001F40,		// 8kHz
+	0x00003E80,		// 16kHz
+	0x0000AC44,		// 44.1kHz
 };
 
 // ビット/サンプル(リトルエンディアン)
-static const uint16_t wave_bps_info[WAV_BPS_MAX] = {
-	0x0008,		// WAV_BPS_8BIT
-	0x0010,		// WAV_BPS_16BIT
+static const uint16_t wave_bps_info[WAVE_BPS_INFO_MAX] = {
+	0x0008,		// 8BIT
+	0x0010,		// 16BIT
 };
 
 // 内部情報のクリア
@@ -161,15 +165,15 @@ static int32_t data_analysis(uint8_t data)
 	} else if (this->rcv_cnt == 28) {
 		uint32_t sample_rate;
 		// サンプリングレート
-		for (sample_rate = 0; sample_rate < WAV_SAMPLE_RATE_MAX; sample_rate++) {
+		for (sample_rate = 0; sample_rate < WAVE_SAMPLE_RATE_INFO_MAX; sample_rate++) {
 			// フォーマット通り？
 			if (*((uint32_t*)(this->rcv_buf.info.sampling_rate)) == wav_sample_rate_info[sample_rate]) {
-				this->wav_info.sample_rate = sample_rate;
+				this->wav_info.sample_rate = wav_sample_rate_info[sample_rate];
 				break;
 			}
 		}
 		// フォーマットエラー
-		if (sample_rate == WAV_SAMPLE_RATE_MAX) {
+		if (sample_rate == WAVE_SAMPLE_RATE_INFO_MAX) {
 			// 初期化
 			wav_local_init();
 			return WAVE_FOMART_ERR;
@@ -186,15 +190,15 @@ static int32_t data_analysis(uint8_t data)
 	} else if (this->rcv_cnt == 36) {
 		uint32_t bps;
 		// ビット／サンプル
-		for (bps = 0; bps < WAV_BPS_MAX; bps++) {
+		for (bps = 0; bps < WAVE_BPS_INFO_MAX; bps++) {
 			// フォーマット通り？
 			if (*((uint16_t*)(this->rcv_buf.info.bit_par_sample)) == wave_bps_info[bps]) {
-				this->wav_info.bps = bps;
+				this->wav_info.bps = wave_bps_info[bps];
 				break;
 			}
 		}
 		// フォーマットエラー
-		if (bps == WAV_BPS_MAX) {
+		if (bps == WAVE_BPS_INFO_MAX) {
 			// 初期化
 			wav_local_init();
 			return WAVE_FOMART_ERR;

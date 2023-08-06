@@ -158,7 +158,7 @@ uint8_t console_str_send(uint8_t *data)
 	return ret;
 }
 
-// コンソールへ数値を送信する関数
+// コンソールへ数値を送信する関数(8bit版)
 uint8_t console_val_send(uint8_t data)
 {
 	int32_t ret;
@@ -191,6 +191,51 @@ uint8_t console_val_send(uint8_t data)
 		snd_data[0] = val2ascii(ones_place);
 	}
 	
+	// 送信
+	ret = console_str_send(snd_data);
+	
+	return ret;
+}
+
+// コンソールへ数値を送信する関数(16bit版)
+uint8_t console_val_send_u16(uint16_t data)
+{
+	const uint8_t digit_max = 5;		// 桁数の最大値 (*) 16bitの最大値は66535で5桁
+	uint8_t snd_data[6];
+	uint8_t digit = 0;
+	uint16_t mul = 1;
+	uint16_t val = 1;
+	uint8_t idx = 0;
+	int8_t i;
+	int32_t ret;
+	
+	// 初期化
+	memset(snd_data, '\0', sizeof(snd_data));
+	
+	// 桁数取得のための値を計算
+	i = digit_max - 1;
+	while (i != 0) {
+		mul = mul * 10;
+		i--;
+	}
+	
+	// 各数値をアスキーにする
+	for (i = (digit_max - 1); i >= 0; i--) {
+		// 各桁の数値を取得
+		val = data / mul;
+		// 桁確定
+		if ((val != 0) && (digit == 0)) {
+			digit = i + 1;
+		}
+		// 桁確定した？
+		if ((digit != 0) || (i == 0)) {
+			snd_data[idx] = val2ascii(val);
+			data -= val * mul;
+			idx++;
+		}
+		// 10で割る
+		mul /= 10;
+	}
 	// 送信
 	ret = console_str_send(snd_data);
 	

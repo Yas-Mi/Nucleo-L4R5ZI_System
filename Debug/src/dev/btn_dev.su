@@ -1,7 +1,5 @@
-btn_dev.c:59:13:btn_dev_init	16	static
-btn_dev.c:80:13:btn_dev_check	32	static
-btn_dev.c:158:5:BTN_dev_reg_callback_up	24	static
-btn_dev.c:175:5:BTN_dev_reg_callback_down	24	static
-btn_dev.c:192:5:BTN_dev_reg_callback_back	24	static
-btn_dev.c:209:5:BTN_dev_reg_callback_select	24	static
-btn_dev.c:225:5:BTN_dev_main	16	static
+btn_dev.c:158:5:BTN_dev_reg_callback_up	0	static
+btn_dev.c:175:5:BTN_dev_reg_callback_down	0	static
+btn_dev.c:192:5:BTN_dev_reg_callback_back	0	static
+btn_dev.c:209:5:BTN_dev_reg_callback_select	0	static
+btn_dev.c:225:5:BTN_dev_main	8	static

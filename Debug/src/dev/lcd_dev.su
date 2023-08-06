@@ -1,7 +1,6 @@
-lcd_dev.c:107:13:lcd_send_data	32	static
-lcd_dev.c:134:16:lcd_get_ptn	24	static
-lcd_dev.c:152:6:LCD_dev_init	24	static
-lcd_dev.c:172:8:LCD_dev_write	32	static
-lcd_dev.c:238:8:LCD_dev_clear	24	static
-lcd_dev.c:267:8:LCD_dev_clear_disp	16	static
-lcd_dev.c:284:8:LCD_dev_disp	16	static
+lcd_dev.c:107:13:lcd_send_data	24	static
+lcd_dev.c:152:6:LCD_dev_init	16	static
+lcd_dev.c:172:8:LCD_dev_write	24	static
+lcd_dev.c:238:8:LCD_dev_clear	4	static
+lcd_dev.c:267:8:LCD_dev_clear_disp	8	static
+lcd_dev.c:284:8:LCD_dev_disp	24	static

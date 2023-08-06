@@ -1,5 +1,5 @@
 /*
- * lcd_fw.h
+ * wav.h
  *
  *  Created on: 2022/12/12
  *      Author: User
@@ -15,26 +15,11 @@ typedef enum {
 	WAV_CH_MAX
 } WAV_CH;
 
-// サンプリング周波数
-typedef enum {
-	WAV_SAMPLE_RATE_8kHz = 0,	// 8kHz
-	WAV_SAMPLE_RATE_16kHz,		// 16kHz
-	WAV_SAMPLE_RATE_44kHz,		// 44kHz
-	WAV_SAMPLE_RATE_MAX
-} WAV_SAMPLE_RATE;
-
-// ビット/サンプル
-typedef enum {
-	WAV_BPS_8BIT = 0,	// 8bit
-	WAV_BPS_16BIT,		// 16bit
-	WAV_BPS_MAX
-} WAV_BPS;
-
 typedef struct {
 	uint32_t size;
 	WAV_CH ch_num; 
-	WAV_SAMPLE_RATE sample_rate;
-	WAV_BPS bps;
+	uint32_t sample_rate;
+	uint16_t bps;
 } WAV_INFO;
 
 typedef void (*WAV_STA_CALLBACK)(WAV_INFO *wav_info, void *vp);	// 開始コールバック

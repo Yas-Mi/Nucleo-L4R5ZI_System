@@ -216,18 +216,12 @@ static SAI_CTL sai_ctl[SAI_CH_MAX];
 // DMAのコールバック
 static void sai_dma_callback(DMA_CH ch, int32_t ret, void *vp)
 {
-	volatile struct stm32l4_sai *sai_base_addr;
 	SAI_CTL *this = (SAI_CTL*)vp;
 	SAI_TX_INFO *tx_info = &(this->tx_info);
 	
-	// ベースレジスタのアドレスを取得
-	sai_base_addr = get_reg(this->ch);
-	
-	// DMA要求を無効化
-	sai_base_addr->acr1 &= ~ACR1_DMAEN;
-	
-	// DMA停止
-	dma_stop(sai_dma_info[this->ch].ch);
+	// saiを停止
+	// (*) 送信後に停止させないと常に何かしらの音声を出力させちゃう
+	sai_stop_dma(this->ch);
 	
 	// DMAの結果確認
 	if (ret != 0) {
@@ -684,7 +678,6 @@ int32_t sai_stop_dma(SAI_CH ch)
 {
 	volatile struct stm32l4_sai *sai_base_addr;
 	SAI_CTL *this;
-	int32_t ret;
 	
 	// chが範囲外であれば、エラーを返して終了
 	if (ch >= SAI_CH_MAX) {
