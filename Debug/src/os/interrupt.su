@@ -1,3 +1,3 @@
-interrupt.c:6:5:softvec_init	0	static
-interrupt.c:15:5:softvec_setintr	0	static
-interrupt.c:25:6:interrupt	0	static
+interrupt.c:6:5:softvec_init	16	static
+interrupt.c:15:5:softvec_setintr	16	static
+interrupt.c:25:6:interrupt	24	static

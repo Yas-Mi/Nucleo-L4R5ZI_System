@@ -4,68 +4,94 @@
  *  Created on: 2022/08/19
  *      Author: User
  */
-#if 0
 #ifndef DRV_OCTSPI_H_
 #define DRV_OCTSPI_H_
 
-#define OCTSPI1 (0)
-#define OCTSPI2 (1)
-#define OCTSPI_NUM (2)
+// チャンネル情報
+typedef enum {
+	OCTOSPI_CH_1 = 0,
+	OCTOSPI_CH_2,
+	OCTOSPI_CH_MAX,
+} OCTOSPI_CH;
 
-/* functional_mode */
-#define REGULAR_COMMAND_PROTOCOL (0x00000000)
-#define HYPERBUS_PROTOCOL        (0x00000000)
-/* operating_mode */
-#define INDIRECT_MODE_READ (0x10000000)
-#define INDIRECT_MODE_WRITE (0x00000000)
-#define AUTMATIC_STATUSPOLLING_MODE (0x20000000)
-#define MEMORYMAPPDE_MODE (0x30000000)
+// アクセス方法
+typedef enum {
+	OCTOSPI_OPE_MODE_INDIRECT = 0,
+	// OCTOSPI_OPE_MODE_STATUS_POLLING,		// ★未サポート
+	OCTOSPI_OPE_MODE_MEMORY_MAPPED,
+	OCTOSPI_OPE_MODE_MAX,
+} OCTOSPI_OPE_MODE;
 
-/* interface */
-#define SINGLE_SPI_MODE (1)
-#define DUAL_SPI_MODE   (2)
-#define QUAD_SPI_MODE   (3)
-#define OCTAL_SPI_MODE  (4)
-/* address_size */
-#define ADDRES_SIZE_8  (0)
-#define ADDRES_SIZE_16 (1)
-#define ADDRES_SIZE_24 (2)
-#define ADDRES_SIZE_32 (3)
+// インタフェース
+typedef enum {
+	OCTOSPI_IF_SINGLE = 0,
+	OCTOSPI_IF_DUAL,
+	OCTOSPI_IF_QUAD,
+	OCTOSPI_IF_OCTO,
+	OCTOSPI_IF_MAX,
+} OCTOSPI_IF;
 
-typedef struct{
-	uint32_t ch;
-	uint32_t functional_mode;
-	uint32_t operating_mode;
-	uint32_t interface;
-	uint32_t bps;
-	uint32_t devsize;
-	uint32_t chip_select_high_time;
-	uint32_t delay_block_bypass;
-	uint32_t clock_mode;
-	uint32_t sample_shift_en;
-}OCTSPI_OPEN_CFG;
+// メモリタイプ
+typedef enum {
+	OCTOSPI_MEM_MICRON = 0,			// D0/D1 DTR8bitモード 
+	OCTOSPI_MEM_MACRONIX,			// D1/D0 DTR8bitモード
+	OCTOSPI_MEM_STANDARD,			// standard
+	OCTOSPI_MEM_MACRONIX_RAM,		// D1/D0 DTR8bitモード
+	OCTOSPI_MEM_HYPERBUS_MEMORY,	// HyperBus
+	OCTOSPI_MEM_HYPERBUS_REGISTER,	// 
+	OCTOSPI_MEM_MAX,
+} OCTOSPI_MEM;
 
-typedef struct{
-	uint32_t instruction;
-	uint32_t instruction_size;
-	uint8_t  instruction_en;
-	uint32_t data_size;
-	uint8_t  data_en;
-	uint32_t address;
-	uint32_t address_size;
-	uint8_t  address_en;
-	uint32_t alternate;
-	uint32_t alternate_size;
-	uint8_t  alternate_en;
-	uint32_t dummy_cycle;
-	uint8_t  dummy_cycle_en;
-	uint8_t  *p_data;
-}OCTSPI_COMMAND;
+// クロック動作設定
+typedef enum {
+	OCTOSPI_CLKMODE_LOW,		// CLK must stay low while NCS is high
+	OCTOSPI_CLKMODE_HIGH,		// CLK must stay high while NCS is high
+	OCTOSPI_CLKMODE_MAX,
+} OCTOSPI_CLKMODE;
 
-typedef void (*OCTSPI_RECV_CALLBACK)(uint32_t ch, uint8_t *data, uint8_t size);
-typedef void (*OCTSPI_SEND_CALLBACK)(uint32_t ch);
+// オープンパラメータ
+typedef struct {
+	uint32_t clk;				// 通信速度
+	OCTOSPI_OPE_MODE ope_mode;	// アクセス方法
+	OCTOSPI_IF interface;		// メモリインタフェース
+	OCTOSPI_MEM mem_type;		// メモリタイプ
+	uint32_t size;				// サイズ
+	uint8_t dual_mode;			// デュアルモードかどうか 1:デュアルモード 0:デュアルモードでない
+	uint8_t dqs_used;			// DQSを使用するかどうか 1:dqsを使用する 0:dqsを使用しない
+	uint8_t nclk_used;			// NCLK(CLKの反転)を使用するかどうか 1:NCLKを使用する 0:NCLKを使用しない
+	OCTOSPI_CLKMODE clk_mode;	// NCSがhighのときCLKをどうするか
+	uint8_t sioo_used;			// Send instruction only once mode
+} OCTOSPI_OPEN;
 
-void octspi1_open(OCTSPI_OPEN_CFG *cfg);
+// サイズ
+typedef enum {
+	OCTOSPI_SZ_8BIT,
+	OCTOSPI_SZ_16BIT,
+	OCTOSPI_SZ_24BIT,
+	OCTOSPI_SZ_32BIT,
+	OCTOSPI_SZ_MAX,
+} OCTOSPI_SZ;
 
-#endif /* DRV_OCTSPI_H_ */
+// 通信パラメータ
+typedef struct {
+	uint32_t	inst;				// 命令
+	OCTOSPI_SZ	inst_size;			// 命令サイズ
+	OCTOSPI_IF	inst_if;			// 命令インタフェース
+	uint32_t	addr;				// アドレス
+	OCTOSPI_SZ	addr_size;			// アドレスサイズ
+	OCTOSPI_IF	addr_if;			// アドレスインタフェース
+	uint32_t	dummy_cycle;		// ダミーサイクル
+	OCTOSPI_SZ	data_size;			// データサイズ
+	OCTOSPI_IF	data_if;			// データインタフェース
+	uint8_t		*data;				// データ
+	OCTOSPI_SZ	alternate_size;		// オルタナティブサイズ
+	OCTOSPI_IF	alternate_if;		// オルタナティブインタフェース
+} OCTOSPI_COM_CFG;
+
+// 公開関数
+extern void octospi_init(void);
+extern int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par);
+extern uint32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg);
+extern uint32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg);
+
 #endif

@@ -43,6 +43,7 @@ SOFTWARE.
 #include "tim.h"
 #include "wav.h"
 #include "cyc.h"
+#include "octspi.h"
 
 /* Private macro */
 /* Private variables */
@@ -57,44 +58,28 @@ SOFTWARE.
 **===================
 **===========================================================================
 */
-#if 1
 // テスト用タスク 
-uint16_t malloc_pre_call = 0;
-uint16_t malloc_after_call = 0;
 static int test_tsk1(int argc, char *argv[])
-{
-	uint32_t *p;
-	uint8_t	size = 16;
-	volatile uint8_t a, i = 0;
+{	
+	OCTOSPI_OPEN open_par;
+	
+	open_par.clk = 2*1000*1000;							// 2MHz
+	open_par.ope_mode = OCTOSPI_OPE_MODE_INDIRECT;		// インダイレクトモード
+	open_par.interface = OCTOSPI_IF_QUAD;				// クアッド
+	open_par.mem_type = OCTOSPI_MEM_STANDARD;			// スタンダード
+	open_par.size = 256*1024;							// 256KB(2Mbit)
+	open_par.dual_mode = FALSE;							// デュアルモードは使用しない
+	open_par.dqs_used = FALSE;							// DQSは使用しない
+	open_par.nclk_used = FALSE;							// NCLKは使用しない
+	open_par.clk_mode = OCTOSPI_CLKMODE_LOW;			// チップセレクトがネゲートの時クロックはlow
 	
 	while(1) {
-		// 確保
-		malloc_pre_call++;
-		p = kz_kmalloc(size);
-		malloc_after_call++;
-		for (i = 0; i < 32; i++) {
-			a++;
-		}
-		// 解放
-		kz_kmfree(p);
+		octospi_init();
+		octospi_open(OCTOSPI_CH_1, &open_par);
+		//octspi_send(OCTOSPI_CH_1, );
 	}
 	return 0;
 }
-
-static int test_tsk2(int argc, char *argv[])
-{
-	int32_t ret;
-	uint8_t data;
-	
-	usart_open(USART_CH2, 115200);
-	
-	while(1) {
-		ret = usart_recv(USART_CH2, &data, 1);
-		console_val_send(data);
-	}
-	return 0;
-}
-#endif
 
 /* システム・タスクとユーザ・タスクの起動 */
 static int start_threads(int argc, char *argv[])
@@ -138,8 +123,7 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(bluetoothdrv_main, "blue_tooth",  8, 0x200, 0, NULL);
 	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
 	//kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
-	//kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
-	//kz_run(test_tsk2, "test_tsk2",  2, 0x1000, 0, NULL);
+	kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
 	
 	/* 優先順位を下げて，アイドルスレッドに移行する */
 	kz_chpri(15); 

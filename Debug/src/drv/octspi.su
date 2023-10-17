@@ -1,0 +1,8 @@
+octspi.c:318:6:opctspi_common_handler	24	static
+octspi.c:324:13:opctspi1_handler	8	static
+octspi.c:328:13:opctspi2_handler	8	static
+octspi.c:332:16:get_expornent	32	static
+octspi.c:352:13:set_clk	32	static
+octspi.c:370:13:pin_config	48	static
+octspi.c:405:6:octospi_init	16	static
+octspi.c:423:9:octospi_open	32	static

@@ -477,14 +477,7 @@ static int bt_dev_rcv_main(int argc, char *argv[])
 	
 	return 0;
 }
-// debug
-#define DEBUG_INFO_NUM (16)
-typedef struct {
-	uint32_t addr[DEBUG_INFO_NUM];
-	uint8_t rcv_idx;
-} DEBUG;
-static DEBUG debug;
-//debug
+
 // BlueToothデバイス状態管理タスク
 static int bt_dev_sts_main(int argc, char *argv[])
 {
@@ -498,13 +491,6 @@ static int bt_dev_sts_main(int argc, char *argv[])
 	while(1){
 		// メッセージ受信
 		kz_recv(this->msg_id, &size, &msg);
-		// 割込み禁止
-		INTR_DISABLE;
-		debug.addr[debug.rcv_idx] = (uint32_t)msg;
-		debug.rcv_idx++;
-		debug.rcv_idx = debug.rcv_idx&(DEBUG_INFO_NUM-1);
-		// 割込み禁止解除
-		INTR_ENABLE;
 		// いったんメッセージをローカル変数にコピー
 		memcpy(&tmp_msg, msg, sizeof(BT_MSG));
 		// メッセージを解放

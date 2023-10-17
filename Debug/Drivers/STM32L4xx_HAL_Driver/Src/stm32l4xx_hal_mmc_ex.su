@@ -1,8 +1,8 @@
-stm32l4xx_hal_mmc_ex.c:85:19:HAL_MMCEx_ConfigDMAMultiBuffer	4	static
-stm32l4xx_hal_mmc_ex.c:109:19:HAL_MMCEx_ReadBlocksDMAMultiBuffer	48	static
-stm32l4xx_hal_mmc_ex.c:189:19:HAL_MMCEx_WriteBlocksDMAMultiBuffer	48	static
-stm32l4xx_hal_mmc_ex.c:271:19:HAL_MMCEx_ChangeDMABuffer	0	static
-stm32l4xx_hal_mmc_ex.c:292:13:HAL_MMCEx_Read_DMADoubleBuffer0CpltCallback	0	static
-stm32l4xx_hal_mmc_ex.c:307:13:HAL_MMCEx_Read_DMADoubleBuffer1CpltCallback	0	static
-stm32l4xx_hal_mmc_ex.c:322:13:HAL_MMCEx_Write_DMADoubleBuffer0CpltCallback	0	static
-stm32l4xx_hal_mmc_ex.c:337:13:HAL_MMCEx_Write_DMADoubleBuffer1CpltCallback	0	static
+stm32l4xx_hal_mmc_ex.c:85:19:HAL_MMCEx_ConfigDMAMultiBuffer	24	static
+stm32l4xx_hal_mmc_ex.c:109:19:HAL_MMCEx_ReadBlocksDMAMultiBuffer	64	static
+stm32l4xx_hal_mmc_ex.c:189:19:HAL_MMCEx_WriteBlocksDMAMultiBuffer	64	static
+stm32l4xx_hal_mmc_ex.c:271:19:HAL_MMCEx_ChangeDMABuffer	24	static
+stm32l4xx_hal_mmc_ex.c:292:13:HAL_MMCEx_Read_DMADoubleBuffer0CpltCallback	16	static
+stm32l4xx_hal_mmc_ex.c:307:13:HAL_MMCEx_Read_DMADoubleBuffer1CpltCallback	16	static
+stm32l4xx_hal_mmc_ex.c:322:13:HAL_MMCEx_Write_DMADoubleBuffer0CpltCallback	16	static
+stm32l4xx_hal_mmc_ex.c:337:13:HAL_MMCEx_Write_DMADoubleBuffer1CpltCallback	16	static

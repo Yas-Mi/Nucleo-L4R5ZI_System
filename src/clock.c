@@ -20,7 +20,7 @@ static void SystemClock_Config(void)
 	*/
 	if (HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST) != HAL_OK)
 	{
-	Error_Handler();
+		Error_Handler();
 	}
 
 	/** Initializes the RCC Oscillators according to the specified parameters
@@ -98,6 +98,14 @@ void periferal_clock_init(void)
 		Error_Handler();
 	}
 	
+	// OCTOSPIクロックの設定
+	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_OSPI;
+	PeriphClkInit.OspiClockSelection = RCC_OSPICLKSOURCE_SYSCLK;
+	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	
 	// 各ペリフェラルのクロックを有効にする
 	__HAL_RCC_USART1_CLK_ENABLE();		// USART1のクロックを有効
 	__HAL_RCC_USART2_CLK_ENABLE();		// USART2のクロックを有効
@@ -105,6 +113,9 @@ void periferal_clock_init(void)
 	__HAL_RCC_I2C1_CLK_ENABLE();		// I2C1のクロックを有効
 	__HAL_RCC_I2C2_CLK_ENABLE();		// I2C2のクロックを有効
 	__HAL_RCC_SAI1_CLK_ENABLE();		// SAI1のクロックを有効
+	__HAL_RCC_OSPIM_CLK_ENABLE();		// OCTOSPIMクロックの設定
+	__HAL_RCC_OSPI1_CLK_ENABLE();		// OCTOSPI1クロックの設定
+	__HAL_RCC_OSPI2_CLK_ENABLE();		// OCTOSPI1クロックの設定
 	__HAL_RCC_TIM2_CLK_ENABLE();		// TIM2のクロックを有効
 	__HAL_RCC_TIM3_CLK_ENABLE();		// TIM3のクロックを有効
 	__HAL_RCC_TIM4_CLK_ENABLE();		// TIM4のクロックを有効
@@ -120,7 +131,10 @@ void periferal_clock_init(void)
 	__HAL_RCC_GPIOA_CLK_ENABLE();
 	__HAL_RCC_GPIOB_CLK_ENABLE();
 	__HAL_RCC_GPIOC_CLK_ENABLE();
-	__HAL_RCC_GPIOG_CLK_ENABLE();
+	__HAL_RCC_GPIOD_CLK_ENABLE();
 	__HAL_RCC_GPIOE_CLK_ENABLE();
+	__HAL_RCC_GPIOF_CLK_ENABLE();
+	__HAL_RCC_GPIOG_CLK_ENABLE();
+	
 	HAL_PWREx_EnableVddIO2();
 }
