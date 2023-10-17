@@ -15,7 +15,11 @@
 #include "octspi.h"
 #include "buf.h"
 
+<<<<<<< HEAD
 /* USARTãƒ¬ã‚¸ã‚¹ã‚¿æƒ…å ± */
+=======
+/* USARTƒŒƒWƒXƒ^î•ñ */
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 struct stm32l4_octspi {
 	volatile uint32_t cr;           /* ofs:0x0000 */
 	volatile uint32_t reserved1;    /* ofs:0x0004 */
@@ -146,16 +150,24 @@ struct stm32l4_octspi {
 	volatile uint32_t HLCR;         /* ofs:0x0200 */
 };
 
+<<<<<<< HEAD
 // ã‚ªãƒ¼ãƒ—ãƒ³ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿
 /*
 	ã‚¤ãƒ³ãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆãƒ¢ãƒ¼ãƒ‰ã€ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ãƒãƒ¼ãƒªãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰ã€ãƒ¡ãƒ¢ãƒªãƒžãƒƒãƒ—åº¦ãƒ¢ãƒ¼ãƒ‰ã®é¸æŠž
 	SIOOã®è¨­å®š
+=======
+// ƒI[ƒvƒ“ƒpƒ‰ƒ[ƒ^
+/*
+	ƒCƒ“ƒ_ƒCƒŒƒNƒgƒ‚[ƒhAƒXƒe[ƒ^ƒXƒ|[ƒŠƒ“ƒOƒ‚[ƒhAƒƒ‚ƒŠƒ}ƒbƒv“xƒ‚[ƒh‚Ì‘I‘ð
+	SIOO‚ÌÝ’è
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 	
 
 */
 
 
 typedef struct {
+<<<<<<< HEAD
 	uint32_t inst;				// å‘½ä»¤
 	uint32_t inst_size;			// å‘½ä»¤ã‚µã‚¤ã‚º
 	uint32_t inst_if;			// å‘½ä»¤ã‚¤ãƒ³ã‚¿ãƒ•ã‚§ãƒ¼ã‚¹
@@ -168,6 +180,20 @@ typedef struct {
 	uint8_t *data;				// ãƒ‡ãƒ¼ã‚¿
 	uint32_t alternate_size;	// ã‚ªãƒ«ã‚¿ãƒŠãƒ†ã‚£ãƒ–ã‚µã‚¤ã‚º
 	uint32_t alternate_if;		// ã‚ªãƒ«ã‚¿ãƒŠãƒ†ã‚£ãƒ–ã‚¤ãƒ³ã‚¿ãƒ•ã‚§ãƒ¼ã‚¹
+=======
+	uint32_t inst;				// –½—ß
+	uint32_t inst_size;			// –½—ßƒTƒCƒY
+	uint32_t inst_if;			// –½—ßƒCƒ“ƒ^ƒtƒF[ƒX
+	uint32_t addr;				// ƒAƒhƒŒƒX
+	uint32_t addr_size;			// ƒAƒhƒŒƒXƒTƒCƒY
+	uint32_t addr_if;			// ƒAƒhƒŒƒXƒCƒ“ƒ^ƒtƒF[ƒX
+	uint32_t dummy_cycle;		// ƒ_ƒ~[ƒTƒCƒNƒ‹
+	uint32_t data_size;			// ƒf[ƒ^ƒTƒCƒY
+	uint32_t data_if;			// ƒf[ƒ^ƒCƒ“ƒ^ƒtƒF[ƒX
+	uint8_t *data;				// ƒf[ƒ^
+	uint32_t alternate_size;	// ƒIƒ‹ƒ^ƒiƒeƒBƒuƒTƒCƒY
+	uint32_t alternate_if;		// ƒIƒ‹ƒ^ƒiƒeƒBƒuƒCƒ“ƒ^ƒtƒF[ƒX
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 } OCTOSPI_COM_CFG;
 
 typedef struct {
@@ -179,19 +205,32 @@ typedef struct {
 uint32_t octspi_open(uint32_t ch, OCTOSPI_OPEN *par)
 {
 	/*
+<<<<<<< HEAD
 	SIOOè¨­å®š
+=======
+	SIOOÝ’è
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 	
 	*/
 }
 
 
 /*
+<<<<<<< HEAD
 	ã‚¤ãƒ³ãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆãƒ¢ãƒ¼ãƒ‰
 		å¾“æ¥ã®SPIã‚¤ãƒ³ã‚¿ãƒ•ã‚§ãƒ¼ã‚¹ã¨ã—ã¦å‹•ä½œã—ã€ã™ã¹ã¦ã®å‹•ä½œã¯ãƒ¬ã‚¸ã‚¹ã‚¿ã‚’é€šã˜ã¦å®Ÿè¡Œã•ã‚Œã‚‹
 	ã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ãƒãƒ¼ãƒªãƒ³ã‚°ãƒ¢ãƒ¼ãƒ‰
 		Flashã‚¹ãƒ†ãƒ¼ã‚¿ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿ãŒå‘¨æœŸçš„ã«èª­ã¿ã ã•ã‚Œå‰²ã‚Šè¾¼ã¿ãŒç”Ÿæˆã•ã‚Œã‚‹
 	ãƒ¡ãƒ¢ãƒªãƒžãƒƒãƒ—åº¦ãƒ¢ãƒ¼ãƒ‰
 		å¤–éƒ¨Flashãƒ¡ãƒ¢ãƒªã‚’å†…éƒ¨ãƒ¡ãƒ¢ãƒªã®æ§˜ã«èª­ã¿å‡ºã™ã“ã¨ãŒã§ãã¾ã™
+=======
+	ƒCƒ“ƒ_ƒCƒŒƒNƒgƒ‚[ƒh
+		]—ˆ‚ÌSPIƒCƒ“ƒ^ƒtƒF[ƒX‚Æ‚µ‚Ä“®ì‚µA‚·‚×‚Ä‚Ì“®ì‚ÍƒŒƒWƒXƒ^‚ð’Ê‚¶‚ÄŽÀs‚³‚ê‚é
+	ƒXƒe[ƒ^ƒXƒ|[ƒŠƒ“ƒOƒ‚[ƒh
+		FlashƒXƒe[ƒ^ƒXƒŒƒWƒXƒ^‚ªŽüŠú“I‚É“Ç‚Ý‚¾‚³‚êŠ„‚èž‚Ý‚ª¶¬‚³‚ê‚é
+	ƒƒ‚ƒŠƒ}ƒbƒv“xƒ‚[ƒh
+		ŠO•”Flashƒƒ‚ƒŠ‚ð“à•”ƒƒ‚ƒŠ‚Ì—l‚É“Ç‚Ýo‚·‚±‚Æ‚ª‚Å‚«‚Ü‚·
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 */
     /* Instruction phase : */
 	/*  INSTRUCTION[31:0] of OCTOSPI_IR */
@@ -204,7 +243,11 @@ uint32_t octspi_open(uint32_t ch, OCTOSPI_OPEN *par)
     /* Alternate-bytes phase : */
 	/*  ABSIZE[1:0] of OCTOSPI_CCR -> data to be sent */
 	/*  ABMODE[2:0] of OCTOSPI_CCR */
+<<<<<<< HEAD
 	/*  ABDTR of OCTOSPI_CCR -> DTRãƒ¢ãƒ¼ãƒ‰ */
+=======
+	/*  ABDTR of OCTOSPI_CCR -> DTRƒ‚[ƒh */
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
     /* Dummy-cycle phase : */
 	/*  DCYC[4:0] of OCTOSPI_TCR : number of clocks */
     /* Data phase : */
@@ -214,6 +257,7 @@ uint32_t octspi_open(uint32_t ch, OCTOSPI_OPEN *par)
 	/*   QSE of OCTOSPI_CCR  */
 
 /*
+<<<<<<< HEAD
 	é€ä¿¡ã‚¿ã‚¤ãƒŸãƒ³ã‚°ã¯3ã¤
 		ã‚¢ãƒ‰ãƒ¬ã‚¹ãŒãªã„ã€ãƒ‡ãƒ¼ã‚¿ãŒãªã„ã¨ãã¯ã€IRãƒ¬ã‚¸ã‚¹ã‚¿ã«æ›¸ã„ãŸã‚‰é€ä¿¡
 		ã‚¢ãƒ‰ãƒ¬ã‚¹ãŒã‚ã‚‹ã€ãƒ‡ãƒ¼ã‚¿ãŒãªã„ã¨ãã¯ã€ARãƒ¬ã‚¸ã‚¹ã‚¿ã«æ›¸ã„ãŸã‚‰é€ä¿¡
@@ -221,10 +265,20 @@ uint32_t octspi_open(uint32_t ch, OCTOSPI_OPEN *par)
 		â€» ABRã¯ãƒˆãƒªã‚¬ãƒ¼ã«ãªã‚Šå¾—ãªã„
 
 	ã‚µãƒ³ãƒ—ãƒ«ã®æµã‚Œ
+=======
+	‘—Mƒ^ƒCƒ~ƒ“ƒO‚Í3‚Â
+		ƒAƒhƒŒƒX‚ª‚È‚¢Aƒf[ƒ^‚ª‚È‚¢‚Æ‚«‚ÍAIRƒŒƒWƒXƒ^‚É‘‚¢‚½‚ç‘—M
+		ƒAƒhƒŒƒX‚ª‚ ‚éAƒf[ƒ^‚ª‚È‚¢‚Æ‚«‚ÍAARƒŒƒWƒXƒ^‚É‘‚¢‚½‚ç‘—M
+		ƒAƒhƒŒƒX‚ª‚ ‚éAƒf[ƒ^‚à‚ ‚é‚Æ‚«‚ÍADRƒŒƒWƒXƒ^‚É‘‚¢‚½‚ç‘—M
+		¦ ABR‚ÍƒgƒŠƒK[‚É‚È‚è“¾‚È‚¢
+
+	ƒTƒ“ƒvƒ‹‚Ì—¬‚ê
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 		HAL_OSPI_Init
 			DCR1
 			DCR3
 			DCR4
+<<<<<<< HEAD
 			CR   : FIFOã®è¨­å®š
 			DCR2 : ã‚¯ãƒ­ãƒƒã‚¯ã®è¨­å®š
 			CR   : ãƒ‡ãƒ¥ã‚¢ãƒ«ã‚¯ã‚¢ãƒƒãƒ‰ãƒ¢ãƒ¼ãƒ‰ã®è¨­å®š
@@ -234,6 +288,17 @@ uint32_t octspi_open(uint32_t ch, OCTOSPI_OPEN *par)
 			DQSã€SSIOè¨­å®š
 			ã‚ªãƒ«ã‚¿ãƒŠãƒ†ã‚£ãƒ–è¨­å®š ABR
 			ãƒ€ãƒŸãƒ¼ã‚µã‚¤ã‚¯ãƒ«è¨­å®š TCR
+=======
+			CR   : FIFO‚ÌÝ’è
+			DCR2 : ƒNƒƒbƒN‚ÌÝ’è
+			CR   : ƒfƒ…ƒAƒ‹ƒNƒAƒbƒhƒ‚[ƒh‚ÌÝ’è
+			TCR  : SSFIFTA’x‰„‚ÌÝ’è
+			Enable OCTOSPI
+		HAL_OSPI_Command
+			DQSASSIOÝ’è
+			ƒIƒ‹ƒ^ƒiƒeƒBƒuÝ’è ABR
+			ƒ_ƒ~[ƒTƒCƒNƒ‹Ý’è TCR
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 			DLR
 			
 	BSP_OSPI_NOR_Write
@@ -246,6 +311,7 @@ uint32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 	OCTSPI_CTL *this = get_myself(cfg->ch);
 	uint32_t i;
 	
+<<<<<<< HEAD
 	// ãƒ™ãƒ¼ã‚¹ãƒ¬ã‚¸ã‚¹ã‚¿å–å¾—
 	octspi_base_addr = &octspi_reg_table[ch];
 	
@@ -253,6 +319,15 @@ uint32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 	// ãƒ¢ãƒ¼ãƒ‰ã‚’ã‚¯ãƒªã‚¢
 	octspi_base_addr->cr &= ~CR_FMODE_MASK;
 	// ã‚¤ãƒ³ãƒ€ã‚¤ãƒ¬ã‚¯ãƒˆãƒ¢ãƒ¼ãƒ‰ã®è¨­å®š
+=======
+	// ƒx[ƒXƒŒƒWƒXƒ^Žæ“¾
+	octspi_base_addr = &octspi_reg_table[ch];
+	
+	// ƒCƒ“ƒ_ƒCƒŒƒNƒgƒ‚[ƒh
+	// ƒ‚[ƒh‚ðƒNƒŠƒA
+	octspi_base_addr->cr &= ~CR_FMODE_MASK;
+	// ƒCƒ“ƒ_ƒCƒŒƒNƒgƒ‚[ƒh‚ÌÝ’è
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 	
 	/*
 		1. Specify a number of data bytes to read or write in OCTOSPI_DLR.
@@ -267,6 +342,7 @@ uint32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 		If neither the address register (OCTOSPI_AR) nor the data register (OCTOSPI_DR) need
 	*/
 	
+<<<<<<< HEAD
 	// ã‚µã‚¤ã‚ºã®è¨­å®š
 	octspi_base_addr->dlr = cfg->data_size;
 	// ã‚ªãƒ«ã‚¿ãƒŠãƒ†ã‚£ãƒ–ãƒ‡ãƒ¼ã‚¿ã®è¨­å®š
@@ -299,13 +375,51 @@ uint32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 		// ãƒ‡ãƒ¼ã‚¿ã‚µã‚¤ã‚ºã‚’è¨­å®š
 		this->data_size = cfg->data_size
 		// ãƒ‡ãƒ¼ã‚¿ã®è¨­å®šã®è¨­å®š
+=======
+	// ƒTƒCƒY‚ÌÝ’è
+	octspi_base_addr->dlr = cfg->data_size;
+	// ƒIƒ‹ƒ^ƒiƒeƒBƒuƒf[ƒ^‚ÌÝ’è
+	octspi_base_addr->abr = cfg->alternate_size;
+	octspi_base_addr->ccr = 
+	// ƒ_ƒ~[ƒTƒCƒNƒ‹‚ÌÝ’è
+	octspi_base_addr->tcr |= cfg->dummy_cycle;
+	// ƒtƒH[ƒ}ƒbƒg‚ÌÝ’è
+	octspi_base_addr->ccr = 
+	// –½—ß‚ÌÝ’è
+	octspi_base_addr->ir = cfg->inst;
+	
+	// ƒAƒhƒŒƒXAƒf[ƒ^‚Ç‚¿‚ç‚à‚È‚¢
+	// (*) –½—ßƒŒƒWƒXƒ^‚É–½—ß‚ð‘‚¢‚½ƒ^ƒCƒ~ƒ“ƒO‚Å‘—M‚³‚ê‚é
+	if ((cfg->addr_size == 0) && (cfg->data_size == 0)) {
+		;
+	// ƒAƒhƒŒƒX‚Í‚ ‚é‚ªAƒf[ƒ^‚ª‚È‚¢
+	// (*) ƒAƒhƒŒƒXƒŒƒWƒXƒ^‚ÉƒAƒhƒŒƒX‚ð‘‚¢‚½ƒ^ƒCƒ~ƒ“ƒO‚Å‘—M‚³‚ê‚é
+	} else if ((cfg->addr_size > 0) && (cfg->data_size == 0)) {
+		// ƒAƒhƒŒƒX‚ÌÝ’è
+		octspi_base_addr->ar = cfg->addr;
+		
+	// ƒAƒhƒŒƒXAƒf[ƒ^‚Ç‚¿‚ç‚à‚ ‚é
+	// (*) ƒf[ƒ^ƒŒƒWƒXƒ^‚Éƒf[ƒ^‚ð‘‚¢‚½ƒ^ƒCƒ~ƒ“ƒO‚Å‘—M‚³‚ê‚é
+	} else if ((cfg->addr_size > 0) && (cfg->data_size > 0)) {
+		// ƒAƒhƒŒƒX‚ÌÝ’è
+		octspi_base_addr->ar = cfg->addr;
+		// ƒf[ƒ^ƒ|ƒCƒ“ƒ^‚ðÝ’è
+		this->data = cfg->data
+		// ƒf[ƒ^ƒTƒCƒY‚ðÝ’è
+		this->data_size = cfg->data_size
+		// ƒf[ƒ^‚ÌÝ’è‚ÌÝ’è
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 		octspi_base_addr->dr = *(this->data);
 		
 	} else {
 		;
 	}
 	
+<<<<<<< HEAD
 	/* å‰²ã‚Šè¾¼ã¿æœ‰åŠ¹ */
+=======
+	/* Š„‚èž‚Ý—LŒø */
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
 	octspi_base_addr->cr |= CR_TCIE_ENABLE;
 }
 
@@ -327,7 +441,11 @@ uint32_t octspi_recv(uint32_t ch, uint8_t *data, uint32_t size)
     /* Alternate-bytes phase : */
 	/*  ABSIZE[1:0] of OCTOSPI_CCR -> data to be sent */
 	/*  ABMODE[2:0] of OCTOSPI_CCR */
+<<<<<<< HEAD
 	/*  ABDTR of OCTOSPI_CCR -> DTRãƒ¢ãƒ¼ãƒ‰ */
+=======
+	/*  ABDTR of OCTOSPI_CCR -> DTRƒ‚[ƒh */
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
     /* Dummy-cycle phase : */
 	/*  DCYC[4:0] of OCTOSPI_TCR : number of clocks */
     /* Data phase : */
@@ -377,4 +495,8 @@ uint32_t octspi_recv(uint32_t ch, uint8_t *data, uint32_t size)
 	//for(i=0;i<BUF_SIZE;i++){
 
 	//}
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> d9d46175d1b56cbb3661cb48ee3fe9fab9f5c719
