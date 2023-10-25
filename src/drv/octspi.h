@@ -24,7 +24,8 @@ typedef enum {
 
 // インタフェース
 typedef enum {
-	OCTOSPI_IF_SINGLE = 0,
+	OCTOSPI_IF_NONE = 0,
+	OCTOSPI_IF_SINGLE,
 	OCTOSPI_IF_DUAL,
 	OCTOSPI_IF_QUAD,
 	OCTOSPI_IF_OCTO,
@@ -60,8 +61,11 @@ typedef struct {
 	uint8_t dqs_used;			// DQSを使用するかどうか 1:dqsを使用する 0:dqsを使用しない
 	uint8_t nclk_used;			// NCLK(CLKの反転)を使用するかどうか 1:NCLKを使用する 0:NCLKを使用しない
 	OCTOSPI_CLKMODE clk_mode;	// NCSがhighのときCLKをどうするか
-	uint8_t sioo_used;			// Send instruction only once mode
+	uint8_t ssio_used;			// Send instruction only once mode
 } OCTOSPI_OPEN;
+
+// コールバック関数定義
+typedef void (*OCTOSPI_CALLBACK)(OCTOSPI_CH ch, void *vp);
 
 // サイズ
 typedef enum {
@@ -81,17 +85,18 @@ typedef struct {
 	OCTOSPI_SZ	addr_size;			// アドレスサイズ
 	OCTOSPI_IF	addr_if;			// アドレスインタフェース
 	uint32_t	dummy_cycle;		// ダミーサイクル
-	OCTOSPI_SZ	data_size;			// データサイズ
+	uint32_t	data_size;			// データサイズ
 	OCTOSPI_IF	data_if;			// データインタフェース
 	uint8_t		*data;				// データ
 	OCTOSPI_SZ	alternate_size;		// オルタナティブサイズ
 	OCTOSPI_IF	alternate_if;		// オルタナティブインタフェース
+	uint32_t	alternate_all_size;	// オルタナティブサイズ
 } OCTOSPI_COM_CFG;
 
 // 公開関数
 extern void octospi_init(void);
-extern int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par);
-extern uint32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg);
-extern uint32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg);
+extern int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par, OCTOSPI_CALLBACK callback_fp, void *callback_vp);
+extern int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg);
+extern int32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg);
 
 #endif

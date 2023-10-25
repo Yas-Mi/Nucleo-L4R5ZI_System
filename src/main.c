@@ -44,6 +44,7 @@ SOFTWARE.
 #include "wav.h"
 #include "cyc.h"
 #include "octspi.h"
+#include "flash_mng.h"
 
 /* Private macro */
 /* Private variables */
@@ -58,25 +59,20 @@ SOFTWARE.
 **===================
 **===========================================================================
 */
+static uint8_t test_data[16*1024];
 // テスト用タスク 
 static int test_tsk1(int argc, char *argv[])
 {	
-	OCTOSPI_OPEN open_par;
+	uint32_t addr = 0x00000000;
 	
-	open_par.clk = 2*1000*1000;							// 2MHz
-	open_par.ope_mode = OCTOSPI_OPE_MODE_INDIRECT;		// インダイレクトモード
-	open_par.interface = OCTOSPI_IF_QUAD;				// クアッド
-	open_par.mem_type = OCTOSPI_MEM_STANDARD;			// スタンダード
-	open_par.size = 256*1024;							// 256KB(2Mbit)
-	open_par.dual_mode = FALSE;							// デュアルモードは使用しない
-	open_par.dqs_used = FALSE;							// DQSは使用しない
-	open_par.nclk_used = FALSE;							// NCLKは使用しない
-	open_par.clk_mode = OCTOSPI_CLKMODE_LOW;			// チップセレクトがネゲートの時クロックはlow
+	// テストデータに値を設定
+	memset(test_data, 0x5A, sizeof(test_data));
 	
 	while(1) {
-		octospi_init();
-		octospi_open(OCTOSPI_CH_1, &open_par);
-		//octspi_send(OCTOSPI_CH_1, );
+		// 初期化
+		flash_mng_init();
+		// 書き込み
+		flash_mng_write(addr, test_data, sizeof(test_data));
 	}
 	return 0;
 }

@@ -1,0 +1,4 @@
+w25q20ew.c:119:13:octospi_callback	24	static
+w25q20ew.c:125:9:w25q20ew_init	16	static
+w25q20ew.c:139:9:w25q20ew_open	24	static
+w25q20ew.c:161:9:w25q20ew_write_enable	24	static
