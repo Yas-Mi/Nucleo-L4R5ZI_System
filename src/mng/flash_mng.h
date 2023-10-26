@@ -8,8 +8,11 @@
 #ifndef MNG_FLASH_MNG_H_
 #define MNG_FLASH_MNG_H_
 
+#define FLASH_MNG_KIND_W25Q20EW	(0)	// w25q20ew(Flash)
+#define FLASH_MNG_KIND_MAX		(1)	// 最大値
+
 extern int32_t flash_mng_init(void);
-extern int32_t flash_mng_write(uint32_t addr, uint8_t *data, uint32_t size);
-extern int32_t flash_mng_read(uint32_t addr, uint8_t *data, uint32_t size);
+extern int32_t flash_mng_write(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t size);
+extern int32_t flash_mng_read(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t size);
 
 #endif /* MNG_FLASH_MNG_H_ */

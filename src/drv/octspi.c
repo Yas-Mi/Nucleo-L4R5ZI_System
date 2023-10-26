@@ -128,8 +128,9 @@ struct stm32l4_octspi {
 	volatile uint32_t reserved19;   /* ofs:0x0070 */
 	volatile uint32_t reserved20;   /* ofs:0x0074 */
 	volatile uint32_t reserved21;   /* ofs:0x0078 */
+	volatile uint32_t reserved22;   /* ofs:0x007C */
 	volatile uint32_t psmkr;        /* ofs:0x0080 */
-	volatile uint32_t reserved22;   /* ofs:0x0084 */
+	volatile uint32_t reserved22_1; /* ofs:0x0084 */
 	volatile uint32_t psmar;        /* ofs:0x0088 */
 	volatile uint32_t reserved23_1; /* ofs:0x008C */
 	volatile uint32_t pir;          /* ofs:0x0090 */
@@ -268,7 +269,7 @@ typedef enum {
 static const OCTSPI_CFG octspi_cfg[OCTOSPI_CH_MAX] =
 {
 	{(volatile struct stm32l4_octspi*)OCTSPI1_BASE_ADDR,	OCTOSPI1_IRQn,		opctspi1_handler,	OCTOSPI1_GLOBAL_INTERRUPT_NO,	0,	 INTERRPUT_PRIORITY_5,	RCC_PERIPHCLK_OSPI},
-	{(volatile struct stm32l4_octspi*)OCTSPI2_BASE_ADDR,	OCTOSPI1_IRQn,		opctspi2_handler,	OCTOSPI2_GLOBAL_INTERRUPT_NO,	0,	 INTERRPUT_PRIORITY_5,	RCC_PERIPHCLK_OSPI},
+	{(volatile struct stm32l4_octspi*)OCTSPI2_BASE_ADDR,	OCTOSPI2_IRQn,		opctspi2_handler,	OCTOSPI2_GLOBAL_INTERRUPT_NO,	0,	 INTERRPUT_PRIORITY_5,	RCC_PERIPHCLK_OSPI},
 };
 #define get_reg(ch)			(octspi_cfg[ch].octspi_base_addr)		// レジスタ取得マクロ
 #define get_ire_type(ch)	(octspi_cfg[ch].irq_type)				// 割込みタイプ取得マクロ
@@ -573,7 +574,7 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par, OCTOSPI_CALLBACK callback
 	octspi_base_addr->cr |= CR_EN;
 	
     // 割り込み設定
-	HAL_NVIC_SetPriority(get_ire_type(ch), 0, 0);
+	HAL_NVIC_SetPriority(get_ire_type(ch), get_int_prio(ch), 0);
 	HAL_NVIC_EnableIRQ(get_ire_type(ch));
 	
 	// コールバック設定
@@ -648,6 +649,9 @@ int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 	if ((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) {
 		tmp_ccr |= CCR_ADSIZE(cfg->addr_size) | CCR_ADMODE(cfg->addr_if);
 	}
+	
+	// 命令
+	tmp_ccr |= CCR_ISIZE(cfg->inst_size) | CCR_IMODE(cfg->inst_if);
 	
 	// CCRの設定
 	octspi_base_addr->ccr = tmp_ccr;
