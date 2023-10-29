@@ -68,12 +68,14 @@ static int test_tsk1(int argc, char *argv[])
 	// テストデータに値を設定
 	memset(test_data, 0x5A, sizeof(test_data));
 	
+	// オープン
+	flash_mng_open(FLASH_MNG_KIND_W25Q20EW);
+	
 	while(1) {
-		// 初期化
-		flash_mng_init();
 		// 書き込み
-		flash_mng_write(addr, test_data, sizeof(test_data));
+		flash_mng_write(FLASH_MNG_KIND_W25Q20EW, addr, test_data, sizeof(test_data));
 	}
+	
 	return 0;
 }
 
@@ -86,6 +88,7 @@ static int start_threads(int argc, char *argv[])
 	sai_init();
 //	tim_init();
 	dma_init();
+	octospi_init();
 	
 	// デバイスの初期化
 	bt_dev_init();
@@ -94,6 +97,7 @@ static int start_threads(int argc, char *argv[])
 	// マネージャの初期化
 	wav_init();
 	cyc_init();
+	flash_mng_init();
 	
 	// アプリの初期化
 	console_init();

@@ -1,4 +1,11 @@
 w25q20ew.c:119:13:octospi_callback	24	static
 w25q20ew.c:125:9:w25q20ew_init	16	static
-w25q20ew.c:139:9:w25q20ew_open	24	static
-w25q20ew.c:161:9:w25q20ew_write_enable	24	static
+w25q20ew.c:138:9:w25q20ew_open	16	static
+w25q20ew.c:156:9:w25q20ew_write_enable	24	static
+w25q20ew.c:182:9:w25q20ew_write	32	static
+w25q20ew.c:202:9:w25q20ew_erase	24	static
+w25q20ew.c:217:9:w25q20ew_read	32	static
+w25q20ew.c:237:9:w25q20ew_get_devise_id	16	static
+w25q20ew.c:252:9:w25q20ew_write_disable	16	static
+w25q20ew.c:269:13:w25q20ew_cmd_get_device_id	8	static
+w25q20ew.c:275:6:w25q20ew_set_cmd	16	static

@@ -85,9 +85,7 @@ typedef struct {
 	OCTOSPI_SZ	addr_size;			// アドレスサイズ
 	OCTOSPI_IF	addr_if;			// アドレスインタフェース
 	uint32_t	dummy_cycle;		// ダミーサイクル
-	uint32_t	data_size;			// データサイズ
 	OCTOSPI_IF	data_if;			// データインタフェース
-	uint8_t		*data;				// データ
 	OCTOSPI_SZ	alternate_size;		// オルタナティブサイズ
 	OCTOSPI_IF	alternate_if;		// オルタナティブインタフェース
 	uint32_t	alternate_all_size;	// オルタナティブサイズ
@@ -95,8 +93,8 @@ typedef struct {
 
 // 公開関数
 extern void octospi_init(void);
-extern int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par, OCTOSPI_CALLBACK callback_fp, void *callback_vp);
-extern int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg);
-extern int32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg);
+extern int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par);
+extern int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size);
+extern int32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size);
 
 #endif

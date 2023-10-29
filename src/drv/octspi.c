@@ -21,6 +21,7 @@
 // 共通マクロ
 #define BUF_SIZE	(256)
 #define FIFO_SIZE	(32)
+#define TIMEOUT		(1000)	// 1000サイクル
 
 // 状態
 #define ST_NOT_INTIALIZED	(0U)	// 未初期化
@@ -36,15 +37,14 @@
 // レジスタ定義
 // OCTOSPI
 // CR
-#define CR_DMM			(1UL << 6)
-#define CR_EN			(1UL << 0)
-#define CR_FTHRES(v)	(((v) & 0x1F) << 8)
-#define CR_TCIE			(1UL << 17)
-#define CR_TEIE			(1UL << 16)
-#define CR_FTHRES(v)	(((v) & 0x1F) << 8)
-#define CR_FTHRES(v)	(((v) & 0x1F) << 8)
-#define CR_FMODE(v)		(((v) & 0x3) << 28)
-
+#define CR_DMM				(1UL << 6)
+#define CR_EN				(1UL << 0)
+#define CR_FTHRES(v)		(((v) & 0x1F) << 8)
+#define CR_TCIE				(1UL << 17)
+#define CR_TEIE				(1UL << 16)
+#define CR_FTHRES(v)		(((v) & 0x1F) << 8)
+#define CR_FTHRES(v)		(((v) & 0x1F) << 8)
+#define CR_FMODE(v)			(((v) & 0x3) << 28)
 // DCR1
 #define DCR1_MTYP(v)		(((v) & 0x7) << 24)
 #define DCR1_DEVSIZE(v)		(((v) & 0x1F) << 16)
@@ -52,29 +52,39 @@
 #define DCR1_DLYBYP			(1UL << 3)
 #define DCR1_FRCK			(1UL << 1)
 #define DCR1_CKMODE			(1UL << 0)
-
 // DCR2
-#define DCR2_PRESCALER(v)		(((v) & 0xFF) << 0)
-
+#define DCR2_PRESCALER(v)	(((v) & 0xFF) << 0)
 // CCR
-#define CCR_SIOO				(1UL << 31)
-#define CCR_DQSE				(1UL << 29)
-#define CCR_DDTR				(1UL << 27)
-#define CCR_DMODE(v)			(((v) & 0x07) << 24)
-#define CCR_ABSIZE(v)			(((v) & 0x03) << 20)
-#define CCR_ABDTR				(1UL << 19)
-#define CCR_ABMODE(v)			(((v) & 0x07) << 16)
-#define CCR_ADSIZE(v)			(((v) & 0x03) << 12)
-#define CCR_ADDTRE				(1UL << 11)
-#define CCR_ADMODE(v)			(((v) & 0x07) << 8)
-#define CCR_ISIZE(v)			(((v) & 0x03) << 4)
-#define CCR_IDTRE				(1UL << 3)
-#define CCR_IMODE(v)			(((v) & 0x07) << 0)
-
+#define CCR_SIOO			(1UL << 31)
+#define CCR_DQSE			(1UL << 29)
+#define CCR_DDTR			(1UL << 27)
+#define CCR_DMODE(v)		(((v) & 0x07) << 24)
+#define CCR_ABSIZE(v)		(((v) & 0x03) << 20)
+#define CCR_ABDTR			(1UL << 19)
+#define CCR_ABMODE(v)		(((v) & 0x07) << 16)
+#define CCR_ADSIZE(v)		(((v) & 0x03) << 12)
+#define CCR_ADDTRE			(1UL << 11)
+#define CCR_ADMODE(v)		(((v) & 0x07) << 8)
+#define CCR_ISIZE(v)		(((v) & 0x03) << 4)
+#define CCR_IDTRE			(1UL << 3)
+#define CCR_IMODE(v)		(((v) & 0x07) << 0)
 // TCR
-#define TCR_SSHIFT				(1UL << 30)
-#define TCR_DHQC				(1UL << 28)
-#define TCR_DCYC(v)				(((v) & 0x1F) << 0)
+#define TCR_SSHIFT			(1UL << 30)
+#define TCR_DHQC			(1UL << 28)
+#define TCR_DCYC(v)			(((v) & 0x1F) << 0)
+// SR
+#define SR_FLEVELS(v)		(((v) & 0x3F) << 8)
+#define SR_BUSY				(1UL << 5)
+#define SR_TOF				(1UL << 4)
+#define SR_SMF				(1UL << 3)
+#define SR_FTF				(1UL << 2)
+#define SR_TCF				(1UL << 1)
+#define SR_TEF				(1UL << 0)
+// FCR
+#define FCR_CTOF			(1UL << 4)
+#define FCR_CSMF			(1UL << 3)
+#define FCR_CTCF			(1UL << 1)
+#define FCR_CTEF			(1UL << 0)
 
 // OCTOSPIM
 // PCR
@@ -268,8 +278,8 @@ typedef enum {
 /* チャネル固有情報テーブル */
 static const OCTSPI_CFG octspi_cfg[OCTOSPI_CH_MAX] =
 {
-	{(volatile struct stm32l4_octspi*)OCTSPI1_BASE_ADDR,	OCTOSPI1_IRQn,		opctspi1_handler,	OCTOSPI1_GLOBAL_INTERRUPT_NO,	0,	 INTERRPUT_PRIORITY_5,	RCC_PERIPHCLK_OSPI},
-	{(volatile struct stm32l4_octspi*)OCTSPI2_BASE_ADDR,	OCTOSPI2_IRQn,		opctspi2_handler,	OCTOSPI2_GLOBAL_INTERRUPT_NO,	0,	 INTERRPUT_PRIORITY_5,	RCC_PERIPHCLK_OSPI},
+	{(volatile struct stm32l4_octspi*)OCTSPI1_BASE_ADDR,	OCTOSPI1_IRQn,		opctspi1_handler,	OCTOSPI1_GLOBAL_INTERRUPT_NO,	INTERRPUT_PRIORITY_5,	RCC_PERIPHCLK_OSPI},
+	{(volatile struct stm32l4_octspi*)OCTSPI2_BASE_ADDR,	OCTOSPI2_IRQn,		opctspi2_handler,	OCTOSPI2_GLOBAL_INTERRUPT_NO,	INTERRPUT_PRIORITY_5,	RCC_PERIPHCLK_OSPI},
 };
 #define get_reg(ch)			(octspi_cfg[ch].octspi_base_addr)		// レジスタ取得マクロ
 #define get_ire_type(ch)	(octspi_cfg[ch].irq_type)				// 割込みタイプ取得マクロ
@@ -278,76 +288,11 @@ static const OCTSPI_CFG octspi_cfg[OCTOSPI_CH_MAX] =
 #define get_int_prio(ch)	(octspi_cfg[ch].int_priority)			// 割り込み優先度取得マクロ
 #define get_clk_no(ch)		(octspi_cfg[ch].clk)					// クロック定義取得マクロ
 
-/* pin情報テーブル */
-static const PIN_FUNC_INFO octospi_pin_cfg[OCTOSPI_CH_MAX][OCTOSPI_PIN_TYPE_MAX] = 
-{
-	// CH1
-	{
-		// OCTOSPI_PIN_TYPE_NCS
-		{	GPIOA, { GPIO_PIN_4,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF3_OCTOSPIM_P1	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_CLK
-		{	GPIOF, { GPIO_PIN_10,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF3_OCTOSPIM_P1	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_NCLK
-		{	0	},
-		// OCTOSPI_PIN_TYPE_DQS	(*) 今のところ使用しない
-		{	0	},
-		// OCTOSPI_PIN_TYPE_IO0
-		{	GPIOF, { GPIO_PIN_8,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF10_OCTOSPIM_P1	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_IO1
-		{	GPIOF, { GPIO_PIN_9,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF10_OCTOSPIM_P1	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_IO2
-		{	GPIOF, { GPIO_PIN_7,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF10_OCTOSPIM_P1	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_IO3
-		{	GPIOE, { GPIO_PIN_15,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF10_OCTOSPIM_P1	}, GPIO_PIN_RESET},
-#if 0
-		// OCTOSPI_PIN_TYPE_IO4
-		{},
-		// OCTOSPI_PIN_TYPE_IO5
-		{},
-		// OCTOSPI_PIN_TYPE_IO6
-		{},
-		// OCTOSPI_PIN_TYPE_IO7
-		{},
-#endif
-	},
-	// CH2 (*) 今のところ使用しない
-	{
-		// OCTOSPI_PIN_TYPE_NCS
-		{	GPIOD, { GPIO_PIN_3,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF5_OCTOSPIM_P2	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_CLK
-		{	GPIOF, { GPIO_PIN_4,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF5_OCTOSPIM_P2	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_NCLK	(*) 今のところ使用しない
-		{	0	},
-		// OCTOSPI_PIN_TYPE_DQS		(*) 今のところ使用しない
-		{	0	},
-		// OCTOSPI_PIN_TYPE_IO0
-		{	GPIOF, { GPIO_PIN_0,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF5_OCTOSPIM_P2	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_IO1
-		{	GPIOF, { GPIO_PIN_1,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF5_OCTOSPIM_P2	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_IO2
-		{	GPIOF, { GPIO_PIN_2,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF5_OCTOSPIM_P2	}, GPIO_PIN_RESET},
-		// OCTOSPI_PIN_TYPE_IO3
-		{	GPIOF, { GPIO_PIN_3,	GPIO_MODE_AF_PP,	GPIO_NOPULL,	GPIO_SPEED_FREQ_VERY_HIGH,	GPIO_AF5_OCTOSPIM_P2	}, GPIO_PIN_RESET},
-#if 0
-		// OCTOSPI_PIN_TYPE_IO4
-		{},
-		// OCTOSPI_PIN_TYPE_IO5
-		{},
-		// OCTOSPI_PIN_TYPE_IO6
-		{},
-		// OCTOSPI_PIN_TYPE_IO7
-		{},
-#endif
-	}
-};
-
 /* OCTSPI制御ブロック */
 typedef struct {
 	OCTOSPI_CH			ch;				// チャンネル
 	uint32_t			status;			// 状態
 	OCTOSPI_OPEN		open_par;		// オープンパラメータ
-	OCTOSPI_CALLBACK	callback_fp;	// コールバック
-	void				*callback_vp;	// コールバックパラメータ
 	uint8_t				*data;			// データ
 	uint32_t			data_size;		// データサイズ
 } OCTSPI_CTL;
@@ -411,24 +356,11 @@ static void set_clk(OCTOSPI_CH ch, uint32_t clk)
 static void pin_config(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 {
 	volatile struct stm32l4_octspim *octspim_base_addr = (volatile struct stm32l4_octspim*)OCTSPIM_BASE_ADDR;
-	const PIN_FUNC_INFO *pin_func = (PIN_FUNC_INFO*)(&(octospi_pin_cfg[ch]));
 	const uint32_t pcr_tbl[OCTOSPI_CH_MAX] = {
 		(uint32_t)(&(octspim_base_addr->p1cr)),
 		(uint32_t)(&(octspim_base_addr->p2cr)),
 	};
-	uint8_t pin_idx;
 	uint32_t *pcr_reg;
-	
-	// pin設定
-	for (pin_idx = 0; pin_idx < OCTOSPI_PIN_TYPE_MAX; pin_idx++) {
-		// 各ピンの機能を使用するかしないかをチェック
-		if (((pin_idx == OCTOSPI_PIN_TYPE_DQS) && (par->dqs_used == FALSE)) ||	// DQS使用する？
-		((pin_idx == OCTOSPI_PIN_TYPE_NCLK) && (par->nclk_used == FALSE))) {	// NCLK使用する？
-			continue;
-		}
-		// pin function設定
-		HAL_GPIO_Init(pin_func[pin_idx].pin_group, &(pin_func[pin_idx].pin_cfg));
-	}
 	
 	// OCTOSPIMの設定
 	// マルチプレックスモードは使用しない
@@ -439,6 +371,24 @@ static void pin_config(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 	
 	// とりあえず全ポート有効
 	*pcr_reg |= (PCR_IOHEN | PCR_IOLEN | PCR_NCSEN | PCR_CLKEN);
+}
+
+// 指定ステータスまで待つ
+static int32_t wait_status(CTOSPI_CH ch, uint32_t flag, uint32_t timeout)
+{
+	volatile struct stm32l4_octspi *octspi_base_addr;
+	
+	// ベースレジスタ取得
+	octspi_base_addr = get_reg(ch);
+	
+	while((octspi_base_addr->sr & flag) == 0) {
+		// タイムアウト発生
+		if (timeout-- == 0) {
+			return -1;
+		}
+	}
+	
+	return 0
 }
 
 // 初期化関数
@@ -460,7 +410,7 @@ void octospi_init(void)
 }
 
 // オープン関数
-int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par, OCTOSPI_CALLBACK callback_fp, void *callback_vp)
+int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
@@ -482,6 +432,11 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par, OCTOSPI_CALLBACK callback
 	
 	// コンテキストを取得
 	this = get_myself(ch);
+	
+	// 初期化済みでなければ終了
+	if (this->status != ST_INTIALIZED) {
+		return -1;
+	}
 	
 	// オープンパラメータをコピー
 	memcpy(&(this->open_par), par, sizeof(OCTOSPI_OPEN));
@@ -538,9 +493,6 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par, OCTOSPI_CALLBACK callback
 		8. OCTOSPI_WABRにアドレス後に送信されるalternateデータを指定する
 	*/
 	
-	// ピン設定
-	pin_config(ch, par);
-	
 	// DCR1の設定
 	octspi_base_addr->dcr1 = DCR1_MTYP(par->mem_type) | DCR1_DEVSIZE(get_expornent(par->size) - 1) | (par->clk_mode & DCR1_CKMODE);
 	
@@ -577,17 +529,13 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par, OCTOSPI_CALLBACK callback
 	HAL_NVIC_SetPriority(get_ire_type(ch), get_int_prio(ch), 0);
 	HAL_NVIC_EnableIRQ(get_ire_type(ch));
 	
-	// コールバック設定
-	this->callback_fp = callback_fp;
-	this->callback_vp = callback_vp;
-	
 	// 状態を更新
 	this->status = ST_OPENED;
 	
 	return 0;
 }
 
-int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
+int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
@@ -602,6 +550,11 @@ int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 	// コンテキストを取得
 	this = get_myself(ch);
 	open_par = &(this->open_par);
+	
+	// オープン済みでなければ終了
+	if (this->status != ST_OPENED) {
+		return -1;
+	}
 	
 	// インダイレクトモードでなければ終了
 	// ★まずはindirect mode
@@ -635,9 +588,9 @@ int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 	octspi_base_addr->tcr |= cfg->dummy_cycle;
 	// フォーマットの設定
 	// データ
-	if (cfg->data_size > 0) {
+	if (size > 0) {
 		// サイズの設定
-		octspi_base_addr->dlr = cfg->data_size;
+		octspi_base_addr->dlr = size;
 		tmp_ccr |= CCR_DMODE(cfg->data_if);
 	}
 	// オルタナティブデータ
@@ -675,9 +628,9 @@ int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 		// アドレスの設定
 		octspi_base_addr->ar = cfg->addr;
 		// データポインタを設定
-		this->data = cfg->data;
+		this->data = data;
 		// データサイズを設定
-		this->data_size = cfg->data_size;
+		this->data_size = size;
 		// データの設定の設定
 		octspi_base_addr->dr = *(this->data);
 		
@@ -685,13 +638,19 @@ int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 		;
 	}
 	
-	/* 割り込み有効 */
-	octspi_base_addr->cr |= (CR_TCIE | CR_TEIE);
+	// 割り込み有効は使用しない
+	//octspi_base_addr->cr |= (CR_TCIE | CR_TEIE);
+	// 送信完了まで待つ
+	if (wait_status(ch, SR_TCF, TIMEOUT) != 0) {
+		return -1;
+	}
+	// 送信完了フラグをクリア
+	octspi_base_addr->fcr |= FCR_CTCF;
 	
 	return 0;
 }
 
-int32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg)
+int32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
@@ -705,6 +664,13 @@ int32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg)
 	// コンテキストを取得
 	this = get_myself(ch);
 	open_par = &(this->open_par);
+	
+	// オープン済みでなければ終了
+	if (this->status != ST_OPENED) {
+		return -1;
+	}
+	
+	
 	
 	return 0;
 }

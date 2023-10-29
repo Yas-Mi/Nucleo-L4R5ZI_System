@@ -8,6 +8,9 @@
 #include "kozos.h"
 #include "console.h"
 #include "intr.h"
+#include "w25q20ew.h"
+
+#include "flash_mng.h"
 
 // 状態
 #define ST_UNINITIALIZED	(0)		// 未初期化
@@ -29,7 +32,7 @@ typedef int32_t (*FLASH_MNG_WRITE_ENABLE)(void);
 typedef int32_t (*FLASH_MNG_WRITE)(uint32_t addr, uint8_t *data, uint8_t size);
 typedef int32_t (*FLASH_MNG_ERASE)(uint32_t addr);
 typedef int32_t (*FLASH_MNG_READ)(uint32_t addr, uint8_t *data, uint8_t size);
-typedef int32_t (*FLASH_MNG_WRITE_DISABLE)(USART_CH ch, void *vp);
+typedef int32_t (*FLASH_MNG_WRITE_DISABLE)(void);
 typedef struct {
 	FLASH_MNG_INIT			init;			// 初期化
 	FLASH_MNG_OPEN			open;			// オープン
@@ -38,10 +41,10 @@ typedef struct {
 	FLASH_MNG_ERASE			erase;			// イレース
 	FLASH_MNG_READ			read;			// リード
 	FLASH_MNG_WRITE_DISABLE	write_disable;	// ライトディセーブル
-} FLASH_MNG_FUNC_TBL;
+} FLASH_MNG_FUNC;
 
 // フラッシュ関数情報テーブル
-static const FLASH_MNG_FUNC_TBL fls_mng_func_tbl[FLASH_MNG_KIND_MAX] =
+static const FLASH_MNG_FUNC fls_mng_func_tbl[FLASH_MNG_KIND_MAX] =
 {
 	// FLASH_MNG_KIND_W25Q20EW
 	{
@@ -60,7 +63,7 @@ static const FLASH_MNG_FUNC_TBL fls_mng_func_tbl[FLASH_MNG_KIND_MAX] =
 int32_t flash_mng_init(void)
 {
 	FLASH_MNG_CTL *this;
-	FLASH_MNG_FUNC_TBL *func;
+	const FLASH_MNG_FUNC *func;
 	uint8_t i;
 	int32_t ret;
 	
@@ -90,7 +93,8 @@ int32_t flash_mng_init(void)
 int32_t flash_mng_open(uint32_t kind)
 {
 	FLASH_MNG_CTL *this;
-	FLASH_MNG_FUNC_TBL *func;
+	const FLASH_MNG_FUNC *func;
+	int32_t ret;
 	
 	// パラメータチェック
 	if (kind >= FLASH_MNG_KIND_MAX) {
@@ -124,6 +128,7 @@ int32_t flash_mng_open(uint32_t kind)
 int32_t flash_mng_write(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t size)
 {
 	FLASH_MNG_CTL *this = &fls_mng_ctl[kind];
+	const FLASH_MNG_FUNC *func;
 	int32_t ret;
 	
 	// NULLの場合はエラーを返して終了
@@ -178,7 +183,7 @@ int32_t flash_mng_write(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t si
 }
 
 // BlueTooth送信通知関数
-int32_t flash_mng_read(uint32_t addr, uint8_t *data, uint32_t size)
+int32_t flash_mng_read(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t size)
 {
 	FLASH_MNG_CTL *this = &fls_mng_ctl;
 	

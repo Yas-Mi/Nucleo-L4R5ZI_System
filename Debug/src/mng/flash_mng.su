@@ -1,5 +1,5 @@
-flash_mng.c:29:13:w25q20ew_callback	24	static
-flash_mng.c:36:9:flash_mng_init	16	static
-flash_mng.c:63:9:flash_mng_write	32	static
-flash_mng.c:119:9:flash_mng_read	32	static
-flash_mng.c:126:6:flash_mng_set_cmd	4	static
+flash_mng.c:63:9:flash_mng_init	24	static
+flash_mng.c:93:9:flash_mng_open	32	static
+flash_mng.c:128:9:flash_mng_write	40	static
+flash_mng.c:186:9:flash_mng_read	32	static
+flash_mng.c:193:6:flash_mng_set_cmd	4	static
