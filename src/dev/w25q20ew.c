@@ -9,6 +9,7 @@
 #include "console.h"
 #include "intr.h"
 #include "octspi.h"
+#include <string.h>
 
 #include "w25q20ew.h"
 
@@ -83,7 +84,7 @@ static const OCTOSPI_COM_CFG cmd_config_tbl[CMD_MAX] = {
 	{ 0x75,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_ERASE_PROGRAM_SUSPEND						
 	{ 0x7A,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_ERASE_PROGRAM_RESUME						
 	{ 0xB9,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_POWER_DOWN									
-	{ 0x90,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0x00000000,		OCTOSPI_SZ_24BIT,	OCTOSPI_IF_SINGLE,	0,				OCTOSPI_IF_SINGLE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_MANUFACTURER_DEVICE_ID					
+	{ 0x90,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0x00000000,		OCTOSPI_SZ_24BIT,	OCTOSPI_IF_SINGLE,	0,				OCTOSPI_IF_DUAL,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_MANUFACTURER_DEVICE_ID					
 	{ 0x92,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_MANUFACTURER_DEVICE_ID_DUAL_IO			
 	{ 0x94,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_MANUFACTURER_DEVICE_ID_QUAD_IO			
 	{ 0x4B,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_UNIQUE_ID_NUMBER						
@@ -116,7 +117,7 @@ static const OCTOSPI_OPEN open_par = {
 	FALSE,							// SIOOは使用しない
 };
 
-// OCTOSPIのコールバック(割込みコンテキスト)
+// OCTOSPIのコールバック (*) 今のところ未使用
 static void octospi_callback(void *vp)
 {
 	W25Q20EW_CTL *this = (W25Q20EW_CTL*)vp;
@@ -171,7 +172,7 @@ int32_t w25q20ew_write_enable(void)
 	cmd_cfg = &(cmd_config_tbl[CMD_WRITE_ENABLE]);
 	
 	// 送信
-	ret = octspi_send(W25Q20EW_OCTOSPI_CH, cmd_cfg);
+	ret = octospi_send(W25Q20EW_OCTOSPI_CH, cmd_cfg, NULL, 0);
 	if (ret != 0) {
 		return -1;
 	}
@@ -262,7 +263,7 @@ int32_t w25q20ew_get_devise_id(void)
 	cmd_cfg = &(cmd_config_tbl[CMD_READ_MANUFACTURER_DEVICE_ID]);
 	
 	// 受信
-	ret = octspi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, &id, sizeof(id));
+	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, &id, sizeof(id));
 	if (ret != 0) {
 		return -1;
 	}

@@ -94,7 +94,9 @@ typedef struct {
 // 公開関数
 extern void octospi_init(void);
 extern int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par);
-extern int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size);
-extern int32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size);
+extern int32_t octospi_close(OCTOSPI_CH ch);
+extern int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_COM_CFG *write_cfg);
+extern int32_t octospi_send(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size);
+extern int32_t octospi_recv(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size);
 
 #endif

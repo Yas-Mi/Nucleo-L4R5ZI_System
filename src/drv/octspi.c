@@ -374,7 +374,7 @@ static void pin_config(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 }
 
 // 指定ステータスまで待つ
-static int32_t wait_status(CTOSPI_CH ch, uint32_t flag, uint32_t timeout)
+static int32_t wait_status(OCTOSPI_CH ch, uint32_t flag, uint32_t timeout)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	
@@ -520,6 +520,9 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 		octspi_base_addr->ccr |= CCR_DQSE;
 	}
 	
+	// ピン設定
+	pin_config(ch, par);
+	
 	// OCTOSPI有効
 	octspi_base_addr->cr |= CR_EN;
 	
@@ -534,7 +537,7 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 }
 
 // メモリマップドモード設定関数 (*)オープン関数を呼んでから呼ぶ必要あり
-int32_t octospi_memory_mapped(OCTOSPI_COM_CFG *read_cfg, OCTOSPI_COM_CFG *write_cfg)
+int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_COM_CFG *write_cfg)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
@@ -569,7 +572,7 @@ int32_t octospi_memory_mapped(OCTOSPI_COM_CFG *read_cfg, OCTOSPI_COM_CFG *write_
 	
 	// リード設定 (*) リードはIRレジスタとCCRレジスタ
 	// ダミーサイクルの設定
-	octspi_base_addr->tcr |= cfg->dummy_cycle;
+	octspi_base_addr->tcr |= read_cfg->dummy_cycle;
 	
 	// ライト設定 (*) ライトはWIRレジスタとWCCRレジスタ
 	// 今のところライトはインダイレクトモードで行うため、設定はしない
@@ -612,7 +615,7 @@ int32_t octospi_close(OCTOSPI_CH ch)
 }
 
 // 送受信処理
-static int32_t octspi_proc(OCTOSPI_CH ch, uint32_t mode, uint8_t *data, uint32_t size)
+static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, uint8_t *data, uint32_t size)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
@@ -676,17 +679,17 @@ static int32_t octspi_proc(OCTOSPI_CH ch, uint32_t mode, uint8_t *data, uint32_t
 		
 		// アドレス、データどちらもない
 		// (*) 命令レジスタに命令を書いたタイミングで送信される
-		if (((cfg->addr_if == OCTOSPI_IF_NONE) || (cfg->addr_if == OCTOSPI_IF_MAX)) && (cfg->data_size == 0)) {
+		if (((cfg->addr_if == OCTOSPI_IF_NONE) || (cfg->addr_if == OCTOSPI_IF_MAX)) && (size == 0)) {
 			;
 		// アドレスはあるが、データがない
 		// (*) アドレスレジスタにアドレスを書いたタイミングで送信される
-		} else if (((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) && (cfg->data_size == 0)) {
+		} else if (((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) && (size == 0)) {
 			// アドレスの設定
 			octspi_base_addr->ar = cfg->addr;
 			
 		// アドレス、データどちらもある
 		// (*) データレジスタにデータを書いたタイミングで送信される
-		} else if (((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) && (cfg->data_size > 0)) {
+		} else if (((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) && (size > 0)) {
 			// アドレスの設定
 			octspi_base_addr->ar = cfg->addr;
 			
@@ -749,12 +752,10 @@ static int32_t octspi_proc(OCTOSPI_CH ch, uint32_t mode, uint8_t *data, uint32_t
 	return E_OK;
 }
 
-int32_t octspi_send(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
+int32_t octospi_send(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
 {
-	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
 	int32_t ret;
-
 	
 	// チャネルは正常？
 	if (ch >= OCTOSPI_CH_MAX) {
@@ -773,18 +774,18 @@ int32_t octspi_send(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t
 	this->status = ST_RUN;
 	
 	// 送信処理
-	ret = octspi_proc(ch, FMODE_INDIRECT_WRITE, data, size);
+	ret = octospi_proc(ch, cfg, FMODE_INDIRECT_WRITE, data, size);
 	
 	// 状態を更新
-	this->status = ST_OPEND;
+	this->status = ST_OPENED;
 	
 	return ret;
 }
 
-int32_t octspi_recv(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
+int32_t octospi_recv(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
 {
-	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
+	int32_t ret;
 	
 	// チャネルは正常？
 	if (ch >= OCTOSPI_CH_MAX) {
@@ -800,7 +801,7 @@ int32_t octspi_recv(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t
 	}
 	
 	// 受信処理
-	ret = octspi_proc(ch, FMODE_INDIRECT_READ, data, size);
+	ret = octospi_proc(ch, cfg, FMODE_INDIRECT_READ, data, size);
 	
-	return 0;
+	return ret;
 }

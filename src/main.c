@@ -45,7 +45,7 @@ SOFTWARE.
 #include "cyc.h"
 #include "octspi.h"
 #include "flash_mng.h"
-
+#include "w25q20ew.h"
 /* Private macro */
 /* Private variables */
 /* Private function prototypes */
@@ -107,6 +107,10 @@ static int start_threads(int argc, char *argv[])
 	bt_dev_set_cmd();
 	sound_app_set_cmd();
 	pcm3060_set_cmd();
+	w25q20ew_set_cmd();
+	
+	// テスト
+	flash_mng_open(FLASH_MNG_KIND_W25Q20EW);
 	
 	// タスクの起動
 	// デバイス
@@ -123,7 +127,7 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(bluetoothdrv_main, "blue_tooth",  8, 0x200, 0, NULL);
 	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
 	//kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
-	kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
+	//kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
 	
 	/* 優先順位を下げて，アイドルスレッドに移行する */
 	kz_chpri(15); 
