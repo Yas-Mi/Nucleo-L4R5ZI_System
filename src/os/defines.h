@@ -50,4 +50,9 @@ typedef struct {
 	uint8_t  nxt_state;
 }FSM;
 
+// 共通戻り値
+#define E_OK	(0)
+#define E_PAR	(-1)
+#define E_TMOUT	(-2)
+
 #endif

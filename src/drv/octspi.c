@@ -384,11 +384,11 @@ static int32_t wait_status(CTOSPI_CH ch, uint32_t flag, uint32_t timeout)
 	while((octspi_base_addr->sr & flag) == 0) {
 		// タイムアウト発生
 		if (timeout-- == 0) {
-			return -1;
+			return E_TMOUT;
 		}
 	}
 	
-	return 0
+	return E_OK;
 }
 
 // 初期化関数
@@ -417,17 +417,17 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 	
 	// チャネルは正常？
 	if (ch >= OCTOSPI_CH_MAX) {
-		return -1;
+		return E_PAR;
 	}
 	
 	// メモリタイプチェック
 	if (par->mem_type >= OCTOSPI_MEM_MAX) {
-		return -1;
+		return E_PAR;
 	}
 	
 	// インタフェースチェック (*) 今のところ、OCTOは未サポート
 	if (par->interface >= OCTOSPI_IF_OCTO) {
-		return -1;
+		return E_PAR;
 	}
 	
 	// コンテキストを取得
@@ -435,7 +435,7 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 	
 	// 初期化済みでなければ終了
 	if (this->status != ST_INTIALIZED) {
-		return -1;
+		return E_PAR;
 	}
 	
 	// オープンパラメータをコピー
@@ -532,7 +532,7 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 	// 状態を更新
 	this->status = ST_OPENED;
 	
-	return 0;
+	return E_OK;
 }
 
 int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
@@ -553,13 +553,13 @@ int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t s
 	
 	// オープン済みでなければ終了
 	if (this->status != ST_OPENED) {
-		return -1;
+		return E_PAR;
 	}
 	
 	// インダイレクトモードでなければ終了
 	// ★まずはindirect mode
 	if (open_par->ope_mode != OCTOSPI_OPE_MODE_INDIRECT) {
-		return -1;
+		return E_PAR;
 	}
 	
 	// ベースレジスタ取得
@@ -642,12 +642,12 @@ int32_t octspi_send(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t s
 	//octspi_base_addr->cr |= (CR_TCIE | CR_TEIE);
 	// 送信完了まで待つ
 	if (wait_status(ch, SR_TCF, TIMEOUT) != 0) {
-		return -1;
+		return E_TMOUT;
 	}
 	// 送信完了フラグをクリア
 	octspi_base_addr->fcr |= FCR_CTCF;
 	
-	return 0;
+	return E_OK;
 }
 
 int32_t octspi_recv(uint32_t ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
