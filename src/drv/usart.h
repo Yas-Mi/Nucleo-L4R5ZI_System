@@ -9,7 +9,6 @@ typedef enum {
 	USART_CH1,
 	USART_CH2,
 	USART_CH3,
-	USART_CH4,
 	USART_CH_MAX,
 } USART_CH;
 

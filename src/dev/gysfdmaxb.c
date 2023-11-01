@@ -24,9 +24,9 @@
 
 // マクロ
 #define GYSFDMAXB_USE_UART_CH			USART_CH_3		// 使用するUSARTのチャネル
-#define GYSFDMAXB_USE_UART_BAUDRATE		(9600)			// 9600
 #define DATA_SIZE_NONE					(0x00)
 #define DATA_SIZE_VALIABLE				(0xFF)
+
 // デバイス依存マクロ
 #define GYSFDMAXB_SENTENCE_MAX			(96)
 #define GYSFDMAXB_PACKET_TALKER_ID		"PMTK"
@@ -42,6 +42,13 @@
 #define GYSFDMAXB_SEND_PACKET_BAUDRATE			(7)		// ボーレート変更
 #define GYSFDMAXB_SEND_PACKET_INTERVAL			(8)		// 出力間隔変更
 #define GYSFDMAXB_SEND_PACKET_MAX				(9)
+
+// 解析結果
+#define DATA_ANALYZING				(0)		// 解析中
+#define DATA_ANALYZE_OK				(1)		// 解析OK
+#define DATA_ANALYZE_NG				(2)		// 解析NG
+
+
 
 // パケット情報取得マクロ
 #define get_packet_type(a)	((a >> 16) 0x0000FFFF)
@@ -61,6 +68,7 @@ typedef struct {
 	kz_msgbox_id_t		msg_id;			// メッセージID
 	GYSFDMAXB_CALLBACK	callback_fp;	// コールバック
 	void				*callback_vp;	// コールバックパラメータ
+	uint32_t			analyze_state;	// 解析状態
 	BUFF				rcv_buf;		// 受信バッファ
 	uint32_t			baudrate;		// ボーレート
 } GYSFDMAXB_CTL;
@@ -234,15 +242,20 @@ static int gysfdmaxb_stm_main(int argc, char *argv[])
 }
 
 // データ解析
-static void analyze_data(uint8_t data)
+static uint32_t analyze_data(uint8_t data)
 {
 	GYSFDMAXB_CTL *this = &gysfdmaxb_ctl;
 	BUFF *buf = &(this->rcv_buf);
 	
 	// データをバッファに格納
-	buf->data[buf->idx++] = data;
+	buf->data[buf->idx] = data;
 	
-	if ()
+	// センテンスの開始？
+	if (buf->data[buf->idx] != '$') {
+		return 
+	} else {
+		
+	}
 	
 	
 	
@@ -254,6 +267,7 @@ static int gysfdmaxb_rcv_main(int argc, char *argv[])
 	GYSFDMAXB_CTL *this = &gysfdmaxb_ctl;
 	uint8_t data;
 	int32_t size;
+	uint32_t ret;
 	
 	while (1) {
 		// 要求する受信サイズ分、受信するまで待つ
@@ -264,7 +278,18 @@ static int gysfdmaxb_rcv_main(int argc, char *argv[])
 		}
 		
 		// データ解析
-		if ()
+		ret = analyze_data(data);
+		
+		// 解析中
+		if (ret == DATA_ANALYZING) {
+			;
+		// 解析OK
+		} else if (ret == DATA_ANALYZE_OK) {
+			
+		// 解析NG
+		} else if (ret == DATA_ANALYZE_NG) {
+			
+		}
 		
 	}
 	
@@ -278,9 +303,11 @@ int32_t gysfdmaxb_init(void)
 	
 	// 制御ブロックの初期化
 	memset(this, 0, sizeof(GYSFDMAXB_CTL));
+	// 初期化
+	this->baudrate = send_packet_baudrate_tbl[GYSFDMAXB_BAUDRATE_9600].baudrate_raw;
 	
 	// usartオープン
-	ret = usart_open(GYSFDMAXB_USE_UART_CH, GYSFDMAXB_USE_UART_BAUDRATE);
+	ret = usart_open(GYSFDMAXB_USE_UART_CH, this->baudrate);
 	// usartをオープンできなかったらエラーを返して終了
 	if (ret != 0) {
 		return -1;
@@ -336,6 +363,8 @@ int32_t gysfdmaxb_change_baudrate(GYSFDMAXB_BAUDRATE baudrate)
 	
 	// メッセージ送信
 	kz_send(this->msg_id, sizeof(GYSFDMAXB_MSG), msg);
+	
+	return 0;
 }
 
 // 出力間隔変更
@@ -354,13 +383,26 @@ int32_t gysfdmaxb_change_interval(uint8_t interval)
 	kz_send(this->msg_id, sizeof(GYSFDMAXB_MSG), msg);
 }
 
+static void gysfdmaxb_cmd_change_baudrate_9600(void)
+{
+	gysfdmaxb_change_baudrate(GYSFDMAXB_BAUDRATE_9600);
+}
+
+static void gysfdmaxb_cmd_change_baudrate_115200(void)
+{
+	gysfdmaxb_change_baudrate(GYSFDMAXB_BAUDRATE_115200);
+}
+
 // コマンド設定関数
 void gysfdmaxb_set_cmd(void)
 {
 	COMMAND_INFO cmd;
 	
 	// コマンドの設定
-	cmd.input = "";
-	cmd.func = ;
+	cmd.input = "gysfdmaxb_change_baudrate 115200";
+	cmd.func = gysfdmaxb_cmd_change_baudrate_115200;
+	console_set_command(&cmd);
+	cmd.input = "gysfdmaxb_change_baudrate 9600";
+	cmd.func = gysfdmaxb_cmd_change_baudrate_9600;
 	console_set_command(&cmd);
 }

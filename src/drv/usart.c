@@ -129,7 +129,6 @@ static const USART_CFG usart_cfg[USART_CH_MAX] =
 	{(volatile struct stm32l4_usart*)USART1_BASE_ADDR, USART1_IRQn, usart1_handler, USART1_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART1},
 	{(volatile struct stm32l4_usart*)USART2_BASE_ADDR, USART2_IRQn, usart2_handler, USART2_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART2},
 	{(volatile struct stm32l4_usart*)USART3_BASE_ADDR, USART3_IRQn, usart3_handler, USART3_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART3},
-	{(volatile struct stm32l4_usart*)USART4_BASE_ADDR, USART4_IRQn, usart4_handler, USART4_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART4},
 };
 #define get_reg(ch)			(usart_cfg[ch].usart_base_addr)		// レジスタ取得マクロ
 #define get_ire_type(ch)	(usart_cfg[ch].irq_type)			// 割込みタイプ取得マクロ
@@ -233,11 +232,11 @@ void usart2_handler(void){
 }
 
 void usart3_handler(void){
-	usart_common_handler(USART_CH2);
+	usart_common_handler(USART_CH3);
 }
 
 void usart4_handler(void){
-	usart_common_handler(USART_CH2);
+	usart_common_handler(USART_CH4);
 }
 
 // 指定したボーレートからレジスタ設定値を計算する関数
