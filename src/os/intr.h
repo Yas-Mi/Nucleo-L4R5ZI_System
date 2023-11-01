@@ -1,7 +1,7 @@
 #ifndef _INTR_H_INCLUDED_
 #define _INTR_H_INCLUDED_
 
-/* ソフトウエア・割込みベクタの定義 */
+/* 繧ｽ繝輔ヨ繧ｦ繧ｨ繧｢繝ｻ蜑ｲ霎ｼ縺ｿ繝吶け繧ｿ縺ｮ螳夂ｾｩ */
 #define SOFTVEC_TYPE_NUM (110)
 
 #define INTERRUPT_NO_OFFSET						(16)
@@ -36,6 +36,7 @@
 #define USART1_GLOBAL_INTERRUPT_NO				(37 + INTERRUPT_NO_OFFSET)
 #define USART2_GLOBAL_INTERRUPT_NO				(38 + INTERRUPT_NO_OFFSET)
 #define USART3_GLOBAL_INTERRUPT_NO				(39 + INTERRUPT_NO_OFFSET)
+#define USART4_GLOBAL_INTERRUPT_NO				(52 + INTERRUPT_NO_OFFSET)
 #define DMA2_CH1_GLOBAL_INTERRUPT_NO 			(56 + INTERRUPT_NO_OFFSET)
 #define DMA2_CH2_GLOBAL_INTERRUPT_NO 			(57 + INTERRUPT_NO_OFFSET)
 #define DMA2_CH3_GLOBAL_INTERRUPT_NO 			(58 + INTERRUPT_NO_OFFSET)
@@ -43,12 +44,12 @@
 #define SAI1_GLOBAL_INTERRUPT_NO				(74 + INTERRUPT_NO_OFFSET)
 #define OCTOSPI2_GLOBAL_INTERRUPT_NO			(76 + INTERRUPT_NO_OFFSET)
 
-// 割込み優先度の定義
+// 蜑ｲ霎ｼ縺ｿ蜆ｪ蜈亥ｺｦ縺ｮ螳夂ｾｩ
 #define INTERRPUT_PRIORITY_3	(3)
 #define INTERRPUT_PRIORITY_4	(4)
 #define INTERRPUT_PRIORITY_5	(5)
 
-/* 割込みハンドラの定義 */
+/* 蜑ｲ霎ｼ縺ｿ繝上Φ繝峨Λ縺ｮ螳夂ｾｩ */
 typedef void (*INT_HANDLER)(void);
 
 #endif
