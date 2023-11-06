@@ -17,7 +17,19 @@ typedef enum {
 	GYSFDMAXB_BAUDRATE_MAX,
 } GYSFDMAXB_BAUDRATE;
 
-typedef void (*GYSFDMAXB_CALLBACK)(void *vp);	// コールバック
+typedef struct {
+	uint8_t  status;	// 測位状態
+	uint16_t year;		// 年
+	uint8_t month;		// 月
+	uint8_t day;		// 日
+	uint8_t week;		// 曜日
+	uint8_t hour;		// 時
+	uint8_t minute;		// 分
+	int16_t longitude;	// 経度
+	int16_t latitude;	// 緯度
+} GYSFDMAXB_DATA;
+
+typedef void (*GYSFDMAXB_CALLBACK)(void *vp, GYSFDMAXB_DATA *data);	// コールバック
 
 extern int32_t gysfdmaxb_init(void);
 extern int32_t gysfdmaxb_reg_callback(GYSFDMAXB_CALLBACK callback_fp, void *callback_vp);

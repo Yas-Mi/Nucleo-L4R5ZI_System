@@ -8,22 +8,26 @@
 #include "kozos.h"
 #include "console.h"
 #include "intr.h"
+#include "util.h"
+#include "str_util.h"
 #include <string.h>
 
-#include "w25q20ew.h"
+#include "gysfdmaxb.h"
 
 // 状態
 #define ST_UNINITIALIZED	(0)		// 未初期化
 #define ST_INITIALIZED		(1)		// 初期化
 #define ST_IDLE				(2)		// アイドル
 #define ST_RUNNING			(3)		// 実行中
-#define ST_MAX				(4)
+#define ST_UNDEFINED		(4)		// 未定義
+#define ST_MAX				(5)
 
 // イベント
 #define EVENT_SEND			(0)		// 送信
+#define EVENT_MAX			(1)
 
 // マクロ
-#define GYSFDMAXB_USE_UART_CH			USART_CH_3		// 使用するUSARTのチャネル
+#define GYSFDMAXB_USE_UART_CH			USART_CH3		// 使用するUSARTのチャネル
 #define DATA_SIZE_NONE					(0x00)
 #define DATA_SIZE_VALIABLE				(0xFF)
 
@@ -48,11 +52,9 @@
 #define DATA_ANALYZE_OK				(1)		// 解析OK
 #define DATA_ANALYZE_NG				(2)		// 解析NG
 
-
-
 // パケット情報取得マクロ
-#define get_packet_type(a)	((a >> 16) 0x0000FFFF)
-#define get_packet_val(a)	((a >> 0) 0x0000FFFF)
+#define get_packet_type(a)	((a >> 16) & 0x0000FFFF)
+#define get_packet_val(a)	((a >> 0) & 0x0000FFFF)
 
 // バッファ
 typedef struct {
@@ -71,6 +73,7 @@ typedef struct {
 	uint32_t			analyze_state;	// 解析状態
 	BUFF				rcv_buf;		// 受信バッファ
 	uint32_t			baudrate;		// ボーレート
+	uint8_t				debug_flag;		// デバッグフラグ
 } GYSFDMAXB_CTL;
 static GYSFDMAXB_CTL gysfdmaxb_ctl;
 
@@ -84,8 +87,7 @@ typedef struct {
 typedef struct {
 	char 		*pkt_type;
 	uint8_t		data_size;
-	SET_DATA	set_data;
-} SEND_PACKET_INFO
+} SEND_PACKET_INFO;
 
 // 送信パケット情報テーブル
 static const SEND_PACKET_INFO send_packet_info_tbl[GYSFDMAXB_SEND_PACKET_MAX] = {
@@ -101,6 +103,27 @@ static const SEND_PACKET_INFO send_packet_info_tbl[GYSFDMAXB_SEND_PACKET_MAX] = 
 	{"314",	 	1					},	// 出力間隔変更
 };
 
+// 受信パケット情報
+typedef uint32_t (*DATA_FUNC)(uint8_t *data);
+typedef struct {
+	char		*data_field;	// データフィールド
+	DATA_FUNC	func;			// データ抽出関数
+} RECV_PACKET_INFO;
+
+// プロトタイプ
+static uint32_t rmc_func(uint8_t *data);
+
+// 受信パケット情報テーブル
+static const RECV_PACKET_INFO recv_packet_info_tbl[] = {
+//	{"$GPGGA,", gga_func},
+//	{"$GPGLL,", gll_func},
+//	{"$GPGSA,", gsa_func},
+//	{"$GPGSV,", gsv_func},
+	{"$GPRMC,", rmc_func},
+//	{"$GPVTG,", vtg_func},
+//	{"$GPZDA,", zda_func},
+};
+
 // ボーレート情報
 typedef struct {
 	uint32_t 	baudrate_raw;
@@ -113,13 +136,9 @@ static const SEND_PACKET_BAUDRATE_INFO send_packet_baudrate_tbl[GYSFDMAXB_BAUDRA
 };
 
 // チェックサム計算
-static UB calc_chksum(char *p_buff, UW size)
+static uint8_t calc_chksum(uint8_t *p_buff, uint32_t size)
 {
-	UB chksum = 0;
-	
-	if (*p_buff != '$') {
-		return 0;
-	}
+	uint8_t chksum = 0;
 	
 	p_buff++;
 	while (size--) {
@@ -194,7 +213,7 @@ static void gysfdmaxb_msg_send(uint32_t par)
 	send_packet[idx] = '*';
 	idx++;
 	// チェックサム設定
-	calc_chksum()
+	//calc_chksum()
 	// CR LF設定
 	send_packet[idx] = '\r';
 	idx++;
@@ -208,10 +227,10 @@ static void gysfdmaxb_msg_send(uint32_t par)
 // 状態遷移テーブル
 static const FSM fsm[ST_MAX][EVENT_MAX] = {
 	// EVENT_SEND					
-	{{NULL,					ST_UNDEIFNED},},	// ST_UNINITIALIZED
-	{{NULL,					ST_UNDEIFNED},},	// ST_INITIALIZED
+	{{NULL,					ST_UNDEFINED},},	// ST_UNINITIALIZED
+	{{NULL,					ST_UNDEFINED},},	// ST_INITIALIZED
 	{{gysfdmaxb_msg_send,	ST_RUNNING  },},	// ST_IDLE
-	{{NULL,					ST_UNDEIFNED},},	// ST_RUNNING
+	{{NULL,					ST_UNDEFINED},},	// ST_RUNNING
 };
 
 // 状態管理タスク
@@ -220,12 +239,13 @@ static int gysfdmaxb_stm_main(int argc, char *argv[])
 	GYSFDMAXB_CTL *this = &gysfdmaxb_ctl;
 	GYSFDMAXB_MSG *msg;
 	GYSFDMAXB_MSG tmp_msg;
+	int32_t size;
 	
 	while(1){
 		// メッセージ受信
 		kz_recv(this->msg_id, &size, &msg);
 		// いったんメッセージをローカル変数にコピー
-		memcpy(&tmp_msg, msg, sizeof(BT_MSG));
+		memcpy(&tmp_msg, msg, sizeof(GYSFDMAXB_MSG));
 		// メッセージを解放
 		kz_kmfree(msg);
 		// 処理を実行
@@ -233,7 +253,7 @@ static int gysfdmaxb_stm_main(int argc, char *argv[])
 			fsm[this->state][tmp_msg.event].func(tmp_msg.data);
 		}
 		// 状態遷移
-		if (fsm[this->state][tmp_msg.event].nxt_state != ST_UNDEIFNED) {
+		if (fsm[this->state][tmp_msg.event].nxt_state != ST_UNDEFINED) {
 			this->state = fsm[this->state][tmp_msg.event].nxt_state;
 		}
 	}
@@ -241,24 +261,167 @@ static int gysfdmaxb_stm_main(int argc, char *argv[])
 	return 0;
 }
 
+// RMCデータ抽出関数
+static uint32_t rmc_func(uint8_t *data)
+{
+	GYSFDMAXB_CTL *this = &gysfdmaxb_ctl;
+	GYSFDMAXB_DATA callback_data;
+	uint8_t *base = data;
+	uint8_t comma_pos;
+	uint32_t ret;
+	uint8_t i;
+	
+	// RMCフォーマット
+	// $GPRMC,135559.000,A,3540.5648,N,13944.6910,E,0.23,126.59,091121,,,A*6D
+	
+	// コンマの位置を取得
+	comma_pos = find_str(',', base);
+	if (comma_pos == 0) {
+		ret = DATA_ANALYZE_NG;
+		goto EXIT_RMC_FUNC;
+	}
+	// 時刻を取得
+	callback_data.hour = ascii2num(base[0])*10+ascii2num(base[1]); 
+	callback_data.minute = ascii2num(base[2])*10+ascii2num(base[3]); 
+	
+	// コンマの位置を取得
+	base += comma_pos + 1;
+	comma_pos = find_str(',', base);
+	if (comma_pos == 0) {
+		ret = DATA_ANALYZE_NG;
+		goto EXIT_RMC_FUNC;
+	}
+	
+	// 測位状態を取得
+	callback_data.status = base[0];
+	
+	// コンマの位置を取得
+	base += comma_pos + 1;
+	comma_pos = find_str(',', base);
+	if (comma_pos == 0) {
+		ret = DATA_ANALYZE_NG;
+		goto EXIT_RMC_FUNC;
+	}
+	
+	// 緯度を取得 (*) 南緯は考えない
+	callback_data.latitude = ascii2num(base[0])*10+ascii2num(base[1]);
+	
+	for (i = 0; i < 2; i++) {
+		// コンマの位置を取得
+		base += comma_pos + 1;
+		comma_pos = find_str(',', base);
+		if (comma_pos == 0) {
+			ret = DATA_ANALYZE_NG;
+			goto EXIT_RMC_FUNC;
+		}
+	}
+	
+	// 経度を取得 (*) 西経は考えない
+	callback_data.longitude = ascii2num(base[0])*100+ascii2num(base[1])*10+ascii2num(base[2]);
+	
+	for (i = 0; i < 4; i++) {
+		// コンマの位置を取得
+		base += comma_pos + 1;
+		comma_pos = find_str(',', base);
+		if (comma_pos == 0) {
+			ret = DATA_ANALYZE_NG;
+			goto EXIT_RMC_FUNC;
+		}
+	}
+	
+	// 日付を取得
+	callback_data.year = ascii2num(base[4])*10+ascii2num(base[5]);
+	callback_data.month = ascii2num(base[2])*10+ascii2num(base[3]);
+	callback_data.day = ascii2num(base[0])*10+ascii2num(base[1]);
+	
+	// コールバック
+	if (this->callback_fp != NULL) {
+		this->callback_fp(this->callback_vp, &callback_data);
+	}
+	
+	ret = DATA_ANALYZE_OK;
+	
+EXIT_RMC_FUNC:
+	return ret;
+}
+
 // データ解析
 static uint32_t analyze_data(uint8_t data)
 {
 	GYSFDMAXB_CTL *this = &gysfdmaxb_ctl;
 	BUFF *buf = &(this->rcv_buf);
+	int32_t ret = DATA_ANALYZING;
+	uint8_t ast_idx = 0;
+	uint8_t chksum, rcv_chksum;
+	uint8_t data_idx, data_len;
+	uint8_t tmp_data[2];
 	
 	// データをバッファに格納
 	buf->data[buf->idx] = data;
 	
-	// センテンスの開始？
-	if (buf->data[buf->idx] != '$') {
-		return 
-	} else {
+	// 最初のデータが$？
+	if ((buf->idx == 0) && (buf->data[0] == '$')) {
+		// バッファインデックス更新
+		buf->idx++;
 		
+	// データが1以上ある？
+	} else if (buf->idx > 0) {
+		//  末尾がCRLF？
+		if ((buf->data[buf->idx - 1] == '\r') && (buf->data[buf->idx] == '\n')) {
+			// コンソール表示
+			if (this->debug_flag != FALSE) {
+				console_str_send((uint8_t*)buf->data);
+			}
+			
+			// 受信対象のデータ？
+			for (data_idx = 0; data_idx < sizeof(recv_packet_info_tbl)/sizeof(recv_packet_info_tbl[0]); data_idx++) {
+				data_len = strlen(recv_packet_info_tbl[data_idx].data_field);
+				if (memcmp(recv_packet_info_tbl[data_idx].data_field, buf->data, data_len) == 0) {
+					break;
+				}
+			}
+			// 受信対象のデータではなかった場合は解析NG
+			if (data_idx == sizeof(recv_packet_info_tbl)/sizeof(recv_packet_info_tbl[0])) {
+				ret = DATA_ANALYZE_NG;
+				goto EXIT_ANALIZE;
+			}
+			
+			// '*'の位置を取得
+			for (ast_idx = buf->idx; ast_idx > 0; ast_idx--) {
+				if (buf->data[ast_idx] == '*') {
+					break;
+				}
+			}
+			// '*'がなかった場合は解析NG
+			if (ast_idx == 0) {
+				ret = DATA_ANALYZE_NG;
+				goto EXIT_ANALIZE;
+			}
+			
+			// チェックサム計算
+			chksum = calc_chksum(&(buf->data[0]), buf->idx);
+			rcv_chksum = ascii2num(buf->data[ast_idx+1])*16+ascii2num(buf->data[ast_idx+2]);
+			// チェックサムが一致しなければ解析NG
+			if (chksum != rcv_chksum) {
+				ret = DATA_ANALYZE_NG;
+				goto EXIT_ANALIZE;
+			}
+			
+			// データ抽出
+			ret = recv_packet_info_tbl[data_idx].func(&(buf->data[data_len]));
+			
+EXIT_ANALIZE:
+			// バッファクリア
+			memset(buf, 0, sizeof(BUFF));
+			
+		} else {
+			// バッファインデックス更新
+			buf->idx++;
+			
+		}
 	}
 	
-	
-	
+	return ret;
 }
 
 // 受信タスク
@@ -285,10 +448,10 @@ static int gysfdmaxb_rcv_main(int argc, char *argv[])
 			;
 		// 解析OK
 		} else if (ret == DATA_ANALYZE_OK) {
-			
+			;
 		// 解析NG
 		} else if (ret == DATA_ANALYZE_NG) {
-			
+			;
 		}
 		
 	}
@@ -300,6 +463,7 @@ static int gysfdmaxb_rcv_main(int argc, char *argv[])
 int32_t gysfdmaxb_init(void)
 {
 	GYSFDMAXB_CTL *this = &gysfdmaxb_ctl;
+	int32_t ret;
 	
 	// 制御ブロックの初期化
 	memset(this, 0, sizeof(GYSFDMAXB_CTL));
@@ -337,7 +501,7 @@ int32_t gysfdmaxb_reg_callback(GYSFDMAXB_CALLBACK callback_fp, void *callback_vp
 	}
 	
 	// コールバック登録
-	this->callback_fp = callback;
+	this->callback_fp = callback_fp;
 	this->callback_vp = callback_vp;
 	
 	return 0;
@@ -383,6 +547,7 @@ int32_t gysfdmaxb_change_interval(uint8_t interval)
 	kz_send(this->msg_id, sizeof(GYSFDMAXB_MSG), msg);
 }
 
+// コマンド
 static void gysfdmaxb_cmd_change_baudrate_9600(void)
 {
 	gysfdmaxb_change_baudrate(GYSFDMAXB_BAUDRATE_9600);
@@ -391,6 +556,28 @@ static void gysfdmaxb_cmd_change_baudrate_9600(void)
 static void gysfdmaxb_cmd_change_baudrate_115200(void)
 {
 	gysfdmaxb_change_baudrate(GYSFDMAXB_BAUDRATE_115200);
+}
+
+static void gysfdmaxb_cmd_debug_on(void)
+{
+	GYSFDMAXB_CTL *this = &gysfdmaxb_ctl;
+	
+	// 割込み禁止
+	INTR_DISABLE;
+	this->debug_flag = TRUE;
+	// 割込み禁止解除
+	INTR_ENABLE;
+}
+
+static void gysfdmaxb_cmd_debug_off(void)
+{
+	GYSFDMAXB_CTL *this = &gysfdmaxb_ctl;
+	
+	// 割込み禁止
+	INTR_DISABLE;
+	this->debug_flag = FALSE;
+	// 割込み禁止解除
+	INTR_ENABLE;
 }
 
 // コマンド設定関数
@@ -404,5 +591,11 @@ void gysfdmaxb_set_cmd(void)
 	console_set_command(&cmd);
 	cmd.input = "gysfdmaxb_change_baudrate 9600";
 	cmd.func = gysfdmaxb_cmd_change_baudrate_9600;
+	console_set_command(&cmd);
+	cmd.input = "gysfdmaxb_cmd_debug on";
+	cmd.func = gysfdmaxb_cmd_debug_on;
+	console_set_command(&cmd);
+	cmd.input = "gysfdmaxb_cmd_debug off";
+	cmd.func = gysfdmaxb_cmd_debug_off;
 	console_set_command(&cmd);
 }

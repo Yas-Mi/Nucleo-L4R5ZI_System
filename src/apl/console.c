@@ -4,7 +4,7 @@
 #include "kozos.h"
 #include "intr.h"
 #include "interrupt.h"
-#include "lib.h"
+//#include "lib.h"
 
 #define CONOLE_BUF_SIZE		(128U)		// コマンドラインバッファサイズ
 #define CONOLE_CMD_NUM		(32U)		// 設定できるコマンドの数

@@ -8,7 +8,7 @@
 #include "kozos.h"
 #include "lcd_fw.h"
 #include "lcd_dev.h"
-#include "lib.h"
+//#include "lib.h"
 
 // ó‘Ô
 #define LCD_FW_ST_NOT_INTIALIZED	(0U) // –¢‰Šú‰»

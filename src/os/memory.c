@@ -1,6 +1,6 @@
 #include "defines.h"
 #include "kozos.h"
-#include "lib.h"
+//#include "lib.h"
 #include "memory.h"
 #include "console.h"
 /*

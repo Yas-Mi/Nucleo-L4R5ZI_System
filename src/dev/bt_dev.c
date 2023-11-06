@@ -669,7 +669,7 @@ int32_t bt_dev_check_sts(void)
 	msg = kz_kmalloc(sizeof(BT_MSG));
 	msg->msg_type = EVENT_CHECK_STS;
 	msg->msg_data.data = NULL;
-	kz_send(this->msg_id,18, msg);
+	kz_send(this->msg_id, sizeof(BT_MSG), msg);
 }
 	
 // ボーレート設定関数

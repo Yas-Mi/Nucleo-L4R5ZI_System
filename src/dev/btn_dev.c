@@ -9,7 +9,7 @@
 #include "console.h"
 #include "stm32l4xx_hal_gpio.h"
 #include "btn_dev.h"
-#include "lib.h"
+//#include "lib.h"
 
 // ボタン状態
 #define PUSHED			(0U)	// ボタンが離された

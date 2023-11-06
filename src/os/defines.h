@@ -26,6 +26,7 @@ typedef enum {
 	MSGBOX_ID_CTL_MAIN,
 	MSGBOX_ID_BTN_MAIN,
 	MSGBOX_ID_LCD_APP_MAIN,
+	MSGBOX_ID_GYSFDMAXB,
 //  MSGBOX_ID_US_DATA,
 	MSGBOX_ID_NUM
 } kz_msgbox_id_t;
@@ -36,6 +37,8 @@ typedef enum {
 #define SOUND_APP_PRI	(10)
 #define CYC_PRI			(9)
 #define GYSFDMAXB_PRI	(8)
+#define LCD_APL_PRI		(10)
+
 
 // タスクで使用するスタック
 #define BT_DEV_STACK	(0x1000)
@@ -43,6 +46,7 @@ typedef enum {
 #define SOUND_APP_STACK	(0x2000)
 #define CYC_STACK		(0x1000)
 #define GYSFDMAXB_STACK	(0x1000)
+#define LCD_APL_STACK	(0x1000)
 
 // 状態遷移用定義
 //typedef void (*FUNC)(void *par);

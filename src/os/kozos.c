@@ -5,7 +5,7 @@
 #include "interrupt.h"
 #include "syscall.h"
 #include "memory.h"
-#include "lib.h"
+//#include "lib.h"
 #include "stm32l4xx.h"
 #include "usart.h"
 #include "btn_dev.h"

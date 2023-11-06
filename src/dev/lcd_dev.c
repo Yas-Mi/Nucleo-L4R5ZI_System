@@ -8,7 +8,8 @@
 #include "kozos.h"
 #include "i2c_wrapper.h"
 #include "lcd_dev.h"
-#include "lib.h"
+//#include "lib.h"
+#include "util.h"
 
 // 状態
 #define LCD_ST_NOT_INTIALIZED	(0U) // 未初期化
@@ -53,7 +54,7 @@ static const uint8_t init_cmd[] = {
 	0x06, // Entry Mode Set ,increment 
 };
 
-// 文字列パターンテーブル
+// 文字列パターンテーブル jis→lcd表示用の値
 static const CHAR_PTN char_ptn[] = {
 	// 0～9
 	{0x824F, 0x30}, {0x8250, 0x31}, {0x8251, 0x32}, {0x8252, 0x33}, {0x8253, 0x34},  // 0～4
@@ -89,8 +90,10 @@ static const CHAR_PTN char_ptn[] = {
 	{0x8140, 0x20},                                                                 // 　
 	{0x814A, 0xDE},                                                                 // ゛
 	{0x814B, 0xDF},                                                                 // ゜
+	{0x8146, 0x3A},                                                                 //：
 	{0x8144, 0x2E},                                                                 //．
-	{0x815B, 0x2D},                                                                 //ー	
+	{0x815B, 0x2D},                                                                 //ー
+	{0x815E, 0x2F},                                                                 //／
 	{0x8183, 0x3C},                                                                 //＜
 	{0x8184, 0x3E},                                                                 //＞
 };
@@ -126,7 +129,8 @@ static void lcd_send_data(uint32_t type, const uint8_t *send_data, uint8_t size)
 		// データを送信
 		i2c_wrapper_send(LCD_USE_I2C_CH, LCD_SLAVE_ADDRESS, data, 2);
 		// 5msのディレイ
-		kz_tsleep(5);
+		//kz_tsleep(5);
+		busy_wait(5);
 	}
 }
 
@@ -169,6 +173,10 @@ void LCD_dev_init(void)
 }
 
 // LCD書き込み関数
+// 仕様
+// str : 最大32+2byteの配列
+//       16文字のjisコード(=16*2byte),最後2byteは必ず0x00,0x00にすること
+//       DISP_STRING_MAXを使用して、アプリ側で配列を定義すること
 int8_t LCD_dev_write(uint8_t x, uint8_t y, uint16_t *str)
 {
 	LCD_CTL *this = &lcd_ctl;
@@ -196,12 +204,12 @@ int8_t LCD_dev_write(uint8_t x, uint8_t y, uint16_t *str)
 	len = strlen(str)/2;
 	
 	// 表示文字が行をまたぐ場合、エラーを返す
-	if((x + len) > LCD_DISPLAY_WIDTH) {
+	if((x + len) > LCD_DISPLAY_WIDTH*2) {
 		return -1;
 	}
 	
 	// 文字列をLCDイメージRAMに格納
-	while (*str != '\0') {
+	while (*str != 0x0000) {
 		sjis = *str;
 		// byteが反対になっているため反対にする
 		sjis = (uint16_t)((sjis << 8) & 0xFF00) | (uint16_t)((sjis >> 8) & 0x00FF);

@@ -37,15 +37,18 @@ SOFTWARE.
 #include "pin_function.h"
 #include "console.h"
 #include "sound_app.h"
+#include "lcd_app.h"
 #include "i2c_wrapper.h"
 #include "bt_dev.h"
 #include "pcm3060.h"
+#include "lcd_dev.h"
 #include "tim.h"
 #include "wav.h"
 #include "cyc.h"
 #include "octspi.h"
 #include "flash_mng.h"
 #include "w25q20ew.h"
+#include "gysfdmaxb.h"
 /* Private macro */
 /* Private variables */
 /* Private function prototypes */
@@ -92,7 +95,9 @@ static int start_threads(int argc, char *argv[])
 	
 	// デバイスの初期化
 	bt_dev_init();
-	pcm3060_init();
+	//pcm3060_init();
+	LCD_dev_init();
+	gysfdmaxb_init();
 	
 	// マネージャの初期化
 	wav_init();
@@ -101,13 +106,15 @@ static int start_threads(int argc, char *argv[])
 	
 	// アプリの初期化
 	console_init();
-	sound_app_init();
+	//sound_app_init();
+	lcd_apl_init();
 	
 	// コマンドの設定
 	bt_dev_set_cmd();
 	sound_app_set_cmd();
 	pcm3060_set_cmd();
 	w25q20ew_set_cmd();
+	gysfdmaxb_set_cmd();
 	
 	// テスト
 	flash_mng_open(FLASH_MNG_KIND_W25Q20EW);

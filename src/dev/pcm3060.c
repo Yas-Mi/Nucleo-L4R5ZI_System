@@ -15,7 +15,7 @@
 #include "defines.h"
 #include "kozos.h"
 #include "i2c_wrapper.h"
-#include "lib.h"
+//#include "lib.h"
 #include "stm32l4xx_hal_gpio.h"
 #include "pcm3060.h"
 #include "sai.h"

@@ -7,7 +7,7 @@
 #include "defines.h"
 #include "kozos.h"
 #include "wav.h"
-#include "lib.h"
+//#include "lib.h"
 
 // ó‘Ô
 #define ST_NOT_INTIALIZED	(0U) // –¢‰Šú‰»

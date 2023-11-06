@@ -1,0 +1,6 @@
+lcd_app.c:48:7:zeller	32	static
+lcd_app.c:62:13:gysfdmaxb_callback	24	static
+lcd_app.c:70:13:lcd_app_cyc_proc	88	static
+lcd_app.c:193:5:lcd_app_main	40	static
+lcd_app.c:222:6:lcd_apl_init	24	static
+lcd_app.c:248:6:lcd_apl_cyc_msg	16	static

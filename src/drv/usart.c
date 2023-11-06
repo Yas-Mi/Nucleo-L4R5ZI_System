@@ -111,7 +111,6 @@ static USART_CTL usart_ctl[USART_CH_MAX];
 void usart1_handler(void);
 void usart2_handler(void);
 void usart3_handler(void);
-void usart4_handler(void);
 
 /* USARTチャネル固有情報 */
 typedef struct {
@@ -233,10 +232,6 @@ void usart2_handler(void){
 
 void usart3_handler(void){
 	usart_common_handler(USART_CH3);
-}
-
-void usart4_handler(void){
-	usart_common_handler(USART_CH4);
 }
 
 // 指定したボーレートからレジスタ設定値を計算する関数
