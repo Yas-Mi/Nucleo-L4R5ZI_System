@@ -701,7 +701,7 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 			// データの送受信
 			while (this->data_size > 0) {
 				// FIFOに空きがある/データがある？
-				if (wait_status(ch, SR_TCF ,TIMEOUT) != E_OK) {
+				if (wait_status(ch, SR_FTF ,TIMEOUT) != E_OK) {
 					return E_TMOUT;
 				}
 				// ライト？

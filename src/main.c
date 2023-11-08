@@ -96,8 +96,8 @@ static int start_threads(int argc, char *argv[])
 	// デバイスの初期化
 	bt_dev_init();
 	//pcm3060_init();
-	LCD_dev_init();
-	gysfdmaxb_init();
+	//LCD_dev_init();
+	//gysfdmaxb_init();
 	
 	// マネージャの初期化
 	wav_init();
@@ -107,7 +107,7 @@ static int start_threads(int argc, char *argv[])
 	// アプリの初期化
 	console_init();
 	//sound_app_init();
-	lcd_apl_init();
+	//lcd_apl_init();
 	
 	// コマンドの設定
 	bt_dev_set_cmd();
