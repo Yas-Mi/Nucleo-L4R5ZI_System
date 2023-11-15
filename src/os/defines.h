@@ -39,7 +39,6 @@ typedef enum {
 #define GYSFDMAXB_PRI	(8)
 #define LCD_APL_PRI		(10)
 
-
 // タスクで使用するスタック
 #define BT_DEV_STACK	(0x1000)
 #define CONSOLE_STACK	(0x1000)
@@ -60,5 +59,6 @@ typedef struct {
 #define E_OK	(0)
 #define E_PAR	(-1)
 #define E_TMOUT	(-2)
+#define E_STS	(-3)
 
 #endif

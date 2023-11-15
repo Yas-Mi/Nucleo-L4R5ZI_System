@@ -5,7 +5,9 @@ w25q20ew.c:158:9:w25q20ew_write_enable	24	static
 w25q20ew.c:184:9:w25q20ew_write	32	static
 w25q20ew.c:207:9:w25q20ew_erase	24	static
 w25q20ew.c:225:9:w25q20ew_read	32	static
-w25q20ew.c:248:9:w25q20ew_get_devise_id	24	static
-w25q20ew.c:278:9:w25q20ew_write_disable	16	static
-w25q20ew.c:295:13:w25q20ew_cmd_get_device_id	8	static
-w25q20ew.c:301:6:w25q20ew_set_cmd	16	static
+w25q20ew.c:249:9:w25q20ew_get_devise_id	32	static
+w25q20ew.c:276:9:w25q20ew_get_sfdp	32	static
+w25q20ew.c:303:9:w25q20ew_write_disable	16	static
+w25q20ew.c:320:13:w25q20ew_cmd_get_device_id	24	static
+w25q20ew.c:344:13:w25q20ew_cmd_get_sfdp	272	static
+w25q20ew.c:368:6:w25q20ew_set_cmd	16	static

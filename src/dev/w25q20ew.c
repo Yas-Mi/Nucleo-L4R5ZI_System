@@ -89,7 +89,7 @@ static const OCTOSPI_COM_CFG cmd_config_tbl[CMD_MAX] = {
 	{ 0x94,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_MANUFACTURER_DEVICE_ID_QUAD_IO
 	{ 0x4B,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_UNIQUE_ID_NUMBER
 	{ 0x9F,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_JDEC_ID
-	{ 0x5A,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_SFDP_REGISTER
+	{ 0x5A,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0x00000000,		OCTOSPI_SZ_24BIT,	OCTOSPI_IF_SINGLE,	8,				OCTOSPI_IF_SINGLE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_SFDP_REGISTER
 	{ 0x44,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_ERASE_SECURITY_REGISTER
 	{ 0x42,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_PROGRAM_SECURITY_REGISTER
 };
@@ -245,11 +245,11 @@ int32_t w25q20ew_read(uint32_t addr, uint8_t *data, uint8_t size)
 }
 
 // デバイスID取得
-int32_t w25q20ew_get_devise_id(void)
+// 引数には2byteの配列を渡す
+int32_t w25q20ew_get_devise_id(uint8_t *id)
 {
 	W25Q20EW_CTL *this = &w25q20ew_ctl;
 	const OCTOSPI_COM_CFG *cmd_cfg;
-	uint8_t id[2];
 	int32_t ret;
 	
 	// アイドルでなければ終了
@@ -263,23 +263,20 @@ int32_t w25q20ew_get_devise_id(void)
 	cmd_cfg = &(cmd_config_tbl[CMD_READ_MANUFACTURER_DEVICE_ID]);
 	
 	// 受信
-	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, &id, sizeof(id));
-	if (ret != 0) {
-		return -1;
-	}
+	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, id, 2);
 	
 	// 状態を更新
 	this->state = ST_IDLE;
 	
-	return 0;
+	return ret;
 }
 
-// デバイスID取得
-int32_t w25q20ew_get_devise_id(void)
+// SFDP取得
+// 引数には256byteの配列を渡す
+int32_t w25q20ew_get_sfdp(uint8_t *sfdp)
 {
 	W25Q20EW_CTL *this = &w25q20ew_ctl;
 	const OCTOSPI_COM_CFG *cmd_cfg;
-	uint8_t id[2];
 	int32_t ret;
 	
 	// アイドルでなければ終了
@@ -290,18 +287,16 @@ int32_t w25q20ew_get_devise_id(void)
 	this->state = ST_RUNNING;
 	
 	// コマンド情報を取得
-	cmd_cfg = &(cmd_config_tbl[CMD_READ_MANUFACTURER_DEVICE_ID]);
+	memset(sfdp, 0, sizeof(sfdp));
+	cmd_cfg = &(cmd_config_tbl[CMD_READ_SFDP_REGISTER]);
 	
 	// 受信
-	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, &id, sizeof(id));
-	if (ret != 0) {
-		return -1;
-	}
+	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, sfdp, 256);
 	
 	// 状態を更新
 	this->state = ST_IDLE;
 	
-	return 0;
+	return ret;
 }
 
 // ライトディセーブル
@@ -324,7 +319,49 @@ int32_t w25q20ew_write_disable(void)
 // コマンド
 static void w25q20ew_cmd_get_device_id(void)
 {
-	w25q20ew_get_devise_id();
+	uint8_t id[2];
+	uint32_t ret;
+	uint32_t i;
+	
+	// 初期化
+	memset(id, 0, sizeof(id));
+	
+	// ID取得
+	ret = w25q20ew_get_devise_id(id);
+	if (ret != 0) {
+		console_str_send("w25q20ew_get_devise_id error\n");
+	}
+	
+	// 表示
+	console_str_send("id\n");
+	for (i = 0; i < 2; i++) {
+		console_val_send(id[i]);
+		console_str_send("\n");
+	}
+}
+
+// コマンド
+static void w25q20ew_cmd_get_sfdp(void)
+{
+	uint8_t sfdp[256];
+	uint32_t ret;
+	uint32_t i;
+	
+	// 初期化
+	memset(sfdp, 0, sizeof(sfdp));
+	
+	// SFDP取得
+	ret = w25q20ew_get_sfdp(sfdp);
+	if (ret != 0) {
+		console_str_send("w25q20ew_cmd_get_sfdp error\n");
+	}
+	
+	// 表示
+	console_str_send("sfdp\n");
+	for (i = 0; i < 256; i++) {
+		console_val_send(sfdp[i]);
+		console_str_send("\n");
+	}
 }
 
 // コマンド設定関数
@@ -335,5 +372,8 @@ void w25q20ew_set_cmd(void)
 	// コマンドの設定
 	cmd.input = "w25q20ew get_device_id";
 	cmd.func = w25q20ew_cmd_get_device_id;
+	console_set_command(&cmd);
+	cmd.input = "w25q20ew get_sfdp";
+	cmd.func = w25q20ew_cmd_get_sfdp;
 	console_set_command(&cmd);
 }

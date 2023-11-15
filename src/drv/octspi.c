@@ -127,7 +127,11 @@ struct stm32l4_octspi {
 	volatile uint32_t reserved10;   /* ofs:0x0044 */
 	volatile uint32_t ar;           /* ofs:0x0048 */
 	volatile uint32_t reserved11;   /* ofs:0x004C */
-	volatile uint32_t dr;           /* ofs:0x0050 */
+	//volatile uint32_t dr;           /* ofs:0x0050 */
+	union {
+		volatile uint32_t word;
+		volatile uint8_t byte[4];
+	} dr;
 	volatile uint32_t reserved12;   /* ofs:0x0054 */
 	volatile uint32_t reserved13;   /* ofs:0x0058 */
 	volatile uint32_t reserved14;   /* ofs:0x005C */
@@ -319,12 +323,12 @@ static void opctspi2_handler(void) {
 static uint8_t get_expornent(uint32_t value)
 {
 	uint8_t i;
-	uint32_t base = 2;
+	uint32_t base = 1;
 	uint8_t expornent = 0;
 	
 	/* 256乗まで */
-	for (i = 0; i < 256; i++) {
-		base = base << i;
+	for (i = 1; i < 256; i++) {
+		base = base * 2;
 		if (base >= value) {
 			expornent = i;
 			break;
@@ -620,6 +624,7 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
 	uint32_t tmp_ccr = 0UL;
+	__IO uint32_t *data_reg;
 	
 	// コンテキストを取得
 	this = get_myself(ch);
@@ -641,6 +646,9 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 	// ベースレジスタ取得
 	octspi_base_addr = get_reg(ch);
 	
+	// データレジスタ取得
+	data_reg =  &(octspi_base_addr->dr);
+	
 	// モードをクリア
 	octspi_base_addr->cr &= 0xCFFFFFFF;
 	// モードの設定
@@ -648,6 +656,10 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 	
 	// インダイレクトモード
 	if ((mode == FMODE_INDIRECT_WRITE)||(mode == FMODE_INDIRECT_READ)) {
+		// まずは各レジスタの初期化
+		octspi_base_addr->tcr = 0x00000000;
+		octspi_base_addr->ccr = 0x00000000;
+		
 		// ダミーサイクルの設定
 		octspi_base_addr->tcr |= cfg->dummy_cycle;
 		
@@ -655,7 +667,7 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 		// データ
 		if (size > 0) {
 			// サイズの設定
-			octspi_base_addr->dlr = size;
+			octspi_base_addr->dlr = size - 1;
 			tmp_ccr |= CCR_DMODE(cfg->data_if);
 		}
 		// オルタナティブデータ
@@ -701,18 +713,19 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 			// データの送受信
 			while (this->data_size > 0) {
 				// FIFOに空きがある/データがある？
-				if (wait_status(ch, SR_FTF ,TIMEOUT) != E_OK) {
+				if (wait_status(ch, SR_FTF, TIMEOUT) != E_OK) {
 					return E_TMOUT;
 				}
 				// ライト？
 				if (mode == FMODE_INDIRECT_WRITE) {
 					// データを設定
-					octspi_base_addr->dr = *(this->data);
+					//octspi_base_addr->dr = *(this->data);
 					
 				// リード？
 				} else {
 					// データを取得
-					*(this->data) = octspi_base_addr->dr;
+					//*(this->data) = *((__IO uint8_t*)(data_reg));
+					*(this->data) = octspi_base_addr->dr.byte[0];
 					
 				}
 				
@@ -727,7 +740,14 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 				return E_TMOUT;
 			}
 			// 送信完了フラグをクリア
-			octspi_base_addr->fcr |= FCR_CTCF;
+			octspi_base_addr->sr |= FCR_CTCF;
+			
+			// エラー発生？
+			if ((octspi_base_addr->sr & SR_TEF) != 0) {
+				// エラーをクリアして終了
+				octspi_base_addr->sr |= FCR_CTEF;
+				return E_STS;
+			}
 			
 		// その他
 		} else {
@@ -800,8 +820,14 @@ int32_t octospi_recv(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_
 		return -1;
 	}
 	
+	// 状態を更新
+	this->status = ST_RUN;
+	
 	// 受信処理
 	ret = octospi_proc(ch, cfg, FMODE_INDIRECT_READ, data, size);
+	
+	// 状態を更新
+	this->status = ST_OPENED;
 	
 	return ret;
 }
