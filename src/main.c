@@ -29,26 +29,33 @@ SOFTWARE.
 
 /* Includes */
 #include <console.h>
+#include <string.h>
 #include "stm32l4xx.h"
 #include "defines.h"
 #include "kozos.h"
 #include "interrupt.h"
-#include "clock.h"
 #include "pin_function.h"
-#include "console.h"
-#include "sound_app.h"
-#include "lcd_app.h"
+#include "clock.h"
+// ドライバ
+#include "octspi.h"
+#include "sai.h"
 #include "i2c_wrapper.h"
+#include "dma.h"
+// デバイス
+#include "flash_mng.h"
+#include "w25q20ew.h"
+#include "gysfdmaxb.h"
 #include "bt_dev.h"
 #include "pcm3060.h"
 #include "lcd_dev.h"
 #include "tim.h"
+// マネージャ
 #include "wav.h"
 #include "cyc.h"
-#include "octspi.h"
-#include "flash_mng.h"
-#include "w25q20ew.h"
-#include "gysfdmaxb.h"
+// アプリ
+#include "console.h"
+#include "sound_app.h"
+#include "lcd_app.h"
 /* Private macro */
 /* Private variables */
 /* Private function prototypes */
@@ -62,6 +69,7 @@ SOFTWARE.
 **===================
 **===========================================================================
 */
+#if 0
 static uint8_t test_data[16*1024];
 // テスト用タスク 
 static int test_tsk1(int argc, char *argv[])
@@ -81,6 +89,7 @@ static int test_tsk1(int argc, char *argv[])
 	
 	return 0;
 }
+#endif
 
 /* システム・タスクとユーザ・タスクの起動 */
 static int start_threads(int argc, char *argv[])
@@ -110,11 +119,12 @@ static int start_threads(int argc, char *argv[])
 	//lcd_apl_init();
 	
 	// コマンドの設定
-	bt_dev_set_cmd();
-	sound_app_set_cmd();
-	pcm3060_set_cmd();
+	//bt_dev_set_cmd();
+	//sound_app_set_cmd();
+	//pcm3060_set_cmd();
 	w25q20ew_set_cmd();
-	gysfdmaxb_set_cmd();
+	//gysfdmaxb_set_cmd();
+	flash_mng_set_cmd();
 	
 	// テスト
 	flash_mng_open(FLASH_MNG_KIND_W25Q20EW);

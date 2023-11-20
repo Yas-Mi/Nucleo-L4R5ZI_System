@@ -17,4 +17,6 @@ extern int32_t flash_mng_write(uint32_t kind, uint32_t addr, uint8_t *data, uint
 extern int32_t flash_mng_erase(uint32_t kind, uint32_t addr);
 extern int32_t flash_mng_read(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t size);
 
+extern void flash_mng_set_cmd(void);
+
 #endif /* MNG_FLASH_MNG_H_ */

@@ -303,9 +303,8 @@ static OCTSPI_CTL octspi_ctl[OCTOSPI_CH_MAX];
 #define get_myself(n) (&octspi_ctl[(n)])
 
 // 割込み共通ハンドラ
-void opctspi_common_handler(uint32_t ch){
-	volatile struct stm32l4_octspi *octspi_base_addr;
-	octspi_base_addr = get_reg(ch);
+void opctspi_common_handler(uint32_t ch)
+{
 	// 今のところ使用しない
 }
 
@@ -624,7 +623,6 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
 	uint32_t tmp_ccr = 0UL;
-	__IO uint32_t *data_reg;
 	
 	// コンテキストを取得
 	this = get_myself(ch);
@@ -645,9 +643,6 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 	
 	// ベースレジスタ取得
 	octspi_base_addr = get_reg(ch);
-	
-	// データレジスタ取得
-	data_reg =  &(octspi_base_addr->dr);
 	
 	// モードをクリア
 	octspi_base_addr->cr &= 0xCFFFFFFF;
@@ -693,67 +688,55 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 		// (*) 命令レジスタに命令を書いたタイミングで送信される
 		if (((cfg->addr_if == OCTOSPI_IF_NONE) || (cfg->addr_if == OCTOSPI_IF_MAX)) && (size == 0)) {
 			;
-		// アドレスはあるが、データがない
-		// (*) アドレスレジスタにアドレスを書いたタイミングで送信される
-		} else if (((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) && (size == 0)) {
-			// アドレスの設定
-			octspi_base_addr->ar = cfg->addr;
-			
-		// アドレス、データどちらもある
-		// (*) データレジスタにデータを書いたタイミングで送信される
-		} else if (((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) && (size > 0)) {
-			// アドレスの設定
-			octspi_base_addr->ar = cfg->addr;
-			
-			// データポインタを設定
-			this->data = data;
-			// データサイズを設定
-			this->data_size = size;
-			
-			// データの送受信
-			while (this->data_size > 0) {
-				// FIFOに空きがある/データがある？
-				if (wait_status(ch, SR_FTF, TIMEOUT) != E_OK) {
+		// アドレス、データどっちかはある
+		} else {
+			// アドレスがある？
+			if ((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) {
+				// アドレスの設定
+				octspi_base_addr->ar = cfg->addr;
+			}
+			// データがある？
+			if (size > 0) {
+				// データポインタを設定
+				this->data = data;
+				// データサイズを設定
+				this->data_size = size;
+				
+				// データの送受信
+				while (this->data_size-- > 0) {
+					// FIFOに空きがある/データがある？
+					if (wait_status(ch, SR_FTF, TIMEOUT) != E_OK) {
+						return E_TMOUT;
+					}
+					// ライト？
+					if (mode == FMODE_INDIRECT_WRITE) {
+						// データを設定
+						octspi_base_addr->dr.byte[0] = *(this->data++);
+						
+					// リード？
+					} else {
+						// データを取得
+						*(this->data++) = octspi_base_addr->dr.byte[0];
+						
+					}
+				}
+				
+				// データ送信が終わるまで待つ
+				if (wait_status(ch, SR_TCF, TIMEOUT) != 0) {
 					return E_TMOUT;
 				}
-				// ライト？
-				if (mode == FMODE_INDIRECT_WRITE) {
-					// データを設定
-					//octspi_base_addr->dr = *(this->data);
-					
-				// リード？
-				} else {
-					// データを取得
-					//*(this->data) = *((__IO uint8_t*)(data_reg));
-					*(this->data) = octspi_base_addr->dr.byte[0];
+				// 送信完了フラグをクリア
+				octspi_base_addr->sr |= FCR_CTCF;
+				
+				// エラー発生？
+				if ((octspi_base_addr->sr & SR_TEF) != 0) {
+					// エラーをクリアして終了
+					octspi_base_addr->sr |= FCR_CTEF;
+					return E_STS;
 					
 				}
-				
-				// データ情報更新
-				this->data++;
-				this->data_size--;
-				
 			}
-			
-			// データ送信が終わるまで待つ
-			if (wait_status(ch, SR_TCF, TIMEOUT) != 0) {
-				return E_TMOUT;
-			}
-			// 送信完了フラグをクリア
-			octspi_base_addr->sr |= FCR_CTCF;
-			
-			// エラー発生？
-			if ((octspi_base_addr->sr & SR_TEF) != 0) {
-				// エラーをクリアして終了
-				octspi_base_addr->sr |= FCR_CTEF;
-				return E_STS;
-			}
-			
-		// その他
-		} else {
-			;
 		}
-		
 	// オートマティックステータスポーリングモード
 	} else if (mode == FMODE_AUTOMATIC_STATUS_POLLING) {
 		// ★後で実装

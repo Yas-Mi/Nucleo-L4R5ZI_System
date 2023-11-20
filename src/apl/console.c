@@ -59,13 +59,13 @@ static void console_analysis(uint8_t data)
 	switch (data) {
 		case '\t':	// tab
 			// コマンドの一覧を表示
-			console_str_send((uint8_t*)"\n");
+			console_str_send("\n");
 			for (i = 0; i < this->cmd_idx; i++) {
 				cmd_info = &(this->cmd_info[i]);
 				console_str_send((uint8_t*)cmd_info->input);
-				console_str_send((uint8_t*)"\n");
+				console_str_send("\n");
 			}
-			console_str_send((uint8_t*)"\n");
+			console_str_send("\n");
 			break;
 		case '\b':	// back space
 			break;
@@ -103,7 +103,7 @@ static int console_main(int argc, char *argv[])
 	while (1) {
 		// "command>"を出力
 		if (this->buf_idx == 0) {
-			console_str_send((uint8_t*)"command>");
+			console_str_send("command>");
 		}
 		// コンソールからの入力を受信する
 		data[0] = console_recv();
@@ -144,7 +144,7 @@ void console_init(void)
 }
 
 // コンソールへ文字列を送信する関数
-uint8_t console_str_send(uint8_t *data)
+uint8_t console_str_send(char *data)
 {
 	int32_t ret;
 	uint8_t len;
@@ -240,6 +240,50 @@ uint8_t console_val_send_u16(uint16_t data)
 	ret = console_str_send(snd_data);
 	
 	return ret;
+}
+
+// コンソールへ数値(16進数)を送信する関数(8bit版)
+// (*) https://qiita.com/kaiyou/items/93af0fe0d49ff21fe20a
+int32_t console_val_send_hex(uint8_t data, uint8_t digit)
+{
+	int32_t n, i, j;
+	uint8_t temp;
+	int32_t num[10];
+	char answer[10];
+	char snd_data[10];
+	int32_t ret;
+	uint8_t pad_num;
+	
+	if (digit == 0) {
+		return -1;
+	}
+	
+	//各桁の値を求める（num[0]が1の位）
+	i = 0;
+	temp = data;
+	do {
+		num[i] = temp % 16;
+		temp = temp /16;
+		i++;
+	} while (temp != 0);
+	
+	//値が10以上になる桁をA~Fに変換する（answer[i-1]が1の位）
+	for (j = 0; i > j; j++) {
+		if (num[i - j - 1] > 9) {
+			answer[j] = num[i - j - 1] + 'A' - 10;
+		} else {
+			answer[j] = '0' + num[i - j - 1];
+		}
+		answer[j + 1] = '\0';
+	}
+	
+	// 桁数調整
+	memset(snd_data, '0', sizeof(snd_data));
+	// (*) iは2以上にならないため範囲を超えてコピーすることはない
+	memcpy(&(snd_data[digit - i]), &(answer[0]), (i+1));
+	
+	// 送信
+	ret = console_str_send(snd_data);
 }
 
 // コマンドを設定する関数
