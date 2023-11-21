@@ -5,26 +5,18 @@
  *      Author: User
  */
 
-#ifndef DEV_W25Q20EW_H_
-#define DEV_W25Q20EW_H_
-
-#include "defines.h"
-#include "kozos.h"
-
-typedef void (*W25Q20EW_CALLBACK)(void *vp);	// コールバック
+#ifndef DEV_W25Q20EW_CTRL_H_
+#define DEV_W25Q20EW_CTRL_H_
 
 extern int32_t w25q20ew_init(void);
 extern int32_t w25q20ew_open(void);
 extern int32_t w25q20ew_close(void);
-extern int32_t w25q20ew_write_enable(void);
-extern int32_t w25q20ew_wait_wel(uint32_t flag, uint32_t timeout);
 extern int32_t w25q20ew_write(uint32_t addr, uint8_t *data, uint8_t size);
 extern int32_t w25q20ew_erase(uint32_t addr);
-extern int32_t w25q20ew_wait_wr_proc(uint32_t timeout);
 extern int32_t w25q20ew_read(uint32_t addr, uint8_t *data, uint8_t size);
 extern int32_t w25q20ew_get_devise_id(uint8_t *id);
 extern int32_t w25q20ew_get_sfdp(uint8_t *sfdp);
-extern int32_t w25q20ew_write_disable(void);
+
 extern void w25q20ew_set_cmd(void);
 
-#endif /* DEV_W25Q20EW_H_ */
+#endif /* DEV_W25Q20EW_CTRL_H_ */

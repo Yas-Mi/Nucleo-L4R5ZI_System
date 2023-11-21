@@ -9,7 +9,7 @@
 #include "kozos.h"
 #include "console.h"
 #include "intr.h"
-#include "w25q20ew.h"
+#include "w25q20ew_ctrl.h"
 
 #include "flash_mng.h"
 
@@ -29,28 +29,6 @@ typedef struct {
 } FLASH_MNG_CTL;
 static FLASH_MNG_CTL fls_mng_ctl[FLASH_MNG_KIND_MAX];
 
-// フラッシュ関数情報
-typedef int32_t (*FLASH_MNG_INIT)(void);
-typedef int32_t (*FLASH_MNG_OPEN)(void);
-typedef int32_t (*FLASH_MNG_WRITE_ENABLE)(void);
-typedef int32_t (*FLASH_MNG_WEIT_WEL)(uint32_t flag, uint32_t timeout);
-typedef int32_t (*FLASH_MNG_WRITE)(uint32_t addr, uint8_t *data, uint8_t size);
-typedef int32_t (*FLASH_MNG_ERASE)(uint32_t addr);
-typedef int32_t (*FLASH_MNG_WEIR_WR_PROC)(uint32_t timeout);
-typedef int32_t (*FLASH_MNG_READ)(uint32_t addr, uint8_t *data, uint8_t size);
-typedef int32_t (*FLASH_MNG_WRITE_DISABLE)(void);
-typedef struct {
-	FLASH_MNG_INIT			init;			// 初期化
-	FLASH_MNG_OPEN			open;			// オープン
-	FLASH_MNG_WRITE_ENABLE	write_enable;	// ライトイネーブル
-	FLASH_MNG_WEIT_WEL		wait_wel;		// WELイネーブル/ディセーブル
-	FLASH_MNG_WRITE			write;			// ライト
-	FLASH_MNG_ERASE			erase;			// イレース
-	FLASH_MNG_WEIR_WR_PROC	wait_wr_proc;	// 書き込み終了待ち
-	FLASH_MNG_READ			read;			// リード
-	FLASH_MNG_WRITE_DISABLE	write_disable;	// ライトディセーブル
-} FLASH_MNG_FUNC;
-
 // フラッシュ関数情報テーブル
 static const FLASH_MNG_FUNC fls_mng_func_tbl[FLASH_MNG_KIND_MAX] =
 {
@@ -58,13 +36,9 @@ static const FLASH_MNG_FUNC fls_mng_func_tbl[FLASH_MNG_KIND_MAX] =
 	{
 		w25q20ew_init,
 		w25q20ew_open,
-		w25q20ew_write_enable,
-		w25q20ew_wait_wel,
 		w25q20ew_write,
 		w25q20ew_erase,
-		w25q20ew_wait_wr_proc,
 		w25q20ew_read,
-		w25q20ew_write_disable,
 	},
 	// ここに他のFLASHを追加していく
 };
@@ -165,43 +139,9 @@ int32_t flash_mng_erace(uint32_t kind, uint32_t addr)
 	// 関数テーブルを取得
 	func = &(fls_mng_func_tbl[kind]);
 	
-	// ライトイネーブル
-	ret = func->write_enable();
-	if (ret != E_OK) {
-		goto EXIT;
-	}
-	
-	// ライトイネーブル待ち
-	ret = func->wait_wel(1, FLASH_MNG_TIMEOUT);
-	if (ret != E_OK) {
-		goto EXIT;
-	}
-	
 	// イレース
 	ret = func->erase(addr);
-	if (ret != E_OK) {
-		goto EXIT;
-	}
 	
-	// イレース完了待ち
-	ret = func->wait_wr_proc(FLASH_MNG_TIMEOUT);
-	if (ret != E_OK) {
-		goto EXIT;
-	}
-	
-	// ライトディセーブル
-	ret = func->write_disable();
-	if (ret != E_OK) {
-		goto EXIT;
-	}
-	
-	// ライトディセーブル待ち
-	ret = func->wait_wel(0, FLASH_MNG_TIMEOUT);
-	if (ret != E_OK) {
-		goto EXIT;
-	}
-	
-EXIT:
 	// 状態を更新
 	this->state = ST_IDLE;
 	
@@ -245,23 +185,7 @@ int32_t flash_mng_write(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t si
 	func = &(fls_mng_func_tbl[kind]);
 	
 	// ライトイネーブル
-	ret = func->write_enable();
-	if (ret != 0) {
-		return -1;
-	}
-	
-#if 0
-	// 書き込み
-	ret = func->write();
-	if (ret != 0) {
-		return -1;
-	}
-	
-	// ライトディセーブル
-	ret = w25q20ew_write_enable();
-	
-	// フラッシュのレジスタをポーンリグして確認しIDLEになるまで待つ
-#endif
+	ret = func->write(addr, data, size);
 	
 	// 状態を更新
 	this->state = ST_IDLE;
@@ -272,7 +196,7 @@ int32_t flash_mng_write(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t si
 // リード関数
 int32_t flash_mng_read(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t size)
 {
-	FLASH_MNG_CTL *this = &fls_mng_ctl;
+	FLASH_MNG_CTL *this = (FLASH_MNG_CTL*)&fls_mng_ctl;
 	const FLASH_MNG_FUNC *func;
 	int32_t ret;
 	
@@ -331,10 +255,12 @@ static void flash_mng_cmd_erace(void)
 }
 
 // デバッグ用のRAM
-static uint8_t flash_mng_buff[4*1024];
+#define FLASH_MNG_BUFF_SIZE		(4*1024)
+static uint8_t flash_mng_buff[FLASH_MNG_BUFF_SIZE];
 static void flash_mng_cmd_read(void)
 {
 	int32_t ret;
+	uint32_t i, j, k;
 	
 	// 初期化
 	memset(flash_mng_buff, 0, sizeof(flash_mng_buff));
@@ -342,6 +268,23 @@ static void flash_mng_cmd_read(void)
 	ret = flash_mng_read(FLASH_MNG_KIND_W25Q20EW, 0, flash_mng_buff, 4*1024);
 	if (ret != E_OK) {
 		console_str_send("flash_mng_erace error\n");
+		return;
+	}
+	// 表示
+	console_str_send("==================== read ============================\n");
+	console_str_send("     |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
+	console_str_send("------------------------------------------------------\n");
+	for (i = 0; i < 16; i++) {
+		for (j = 0; j < FLASH_MNG_BUFF_SIZE/16; j++) {
+			k = i*16+j;
+			if (j == 0) {
+				// アドレス表示
+				console_str_send(" |");
+			}
+			console_str_send(" ");
+			console_val_send_hex(flash_mng_buff[k], 2);
+		}
+		console_str_send("\n");
 	}
 }
 
