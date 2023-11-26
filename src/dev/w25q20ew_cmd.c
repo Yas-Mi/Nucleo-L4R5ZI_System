@@ -12,6 +12,7 @@
 
 #include "w25q20ew_cmd.h"
 #include "w25q20ew_ctrl.h"
+#include "w25q20ew_common.h"
 
 // コマンド
 #define CMD_WRITE_ENABLE									(0)
@@ -126,7 +127,6 @@ int32_t w25q20ew_cmd_write_enable(void)
 // 書き込み関数
 int32_t w25q20ew_cmd_write(uint32_t addr, uint8_t *data, uint8_t size)
 {
-	W25Q20EW_CTL *this = &w25q20ew_ctl;
 	
 	return 0;
 }
@@ -181,7 +181,7 @@ int32_t w25q20ew_cmd_read_single(uint32_t addr, uint8_t *data, uint8_t size)
 // ステータスリード
 int32_t w25q20ew_cmd_read_status(uint8_t *data)
 {
-	OCTOSPI_COM_CFG cfg;
+	const OCTOSPI_COM_CFG *cmd_cfg;
 	int32_t ret;
 	
 	// コマンド情報を取得

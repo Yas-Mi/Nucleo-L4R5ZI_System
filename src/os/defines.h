@@ -60,5 +60,6 @@ typedef struct {
 #define E_PAR	(-1)
 #define E_TMOUT	(-2)
 #define E_STS	(-3)
+#define E_OBJ	(-4)
 
 #endif

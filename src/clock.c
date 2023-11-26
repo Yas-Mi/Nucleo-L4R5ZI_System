@@ -125,6 +125,9 @@ void periferal_clock_init(void)
 	__HAL_RCC_TIM17_CLK_ENABLE();		// TIM17のクロックを有効
 	__HAL_RCC_DMA1_CLK_ENABLE();		// DMA1のクロック有効
 	__HAL_RCC_DMAMUX1_CLK_ENABLE();		// DMAMUXのクロック有効
+	__HAL_RCC_SPI1_CLK_ENABLE();		// SPI1のクロック有効
+	__HAL_RCC_SPI2_CLK_ENABLE();		// SPI2のクロック有効
+	__HAL_RCC_SPI3_CLK_ENABLE();		// SPI3のクロック有効
 	
 	// GPIOのクロックを有効にする
 	__HAL_RCC_PWR_CLK_ENABLE();

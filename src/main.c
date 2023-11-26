@@ -43,7 +43,7 @@ SOFTWARE.
 #include "dma.h"
 // デバイス
 #include "flash_mng.h"
-#include "w25q20ew.h"
+#include "w25q20ew_ctrl.h"
 #include "gysfdmaxb.h"
 #include "bt_dev.h"
 #include "pcm3060.h"

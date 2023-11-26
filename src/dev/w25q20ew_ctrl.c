@@ -13,6 +13,7 @@
 
 #include "w25q20ew_cmd.h"
 #include "w25q20ew_ctrl.h"
+#include "w25q20ew_common.h"
 
 // マクロ
 #define W25Q20EW_POLLING_PERIOD		(1)				// 値をチェックするポーリング周期
@@ -319,7 +320,7 @@ int32_t w25q20ew_get_sfdp(uint8_t *sfdp)
 }
 
 // コマンド
-static void w25q20ew_cmd_get_device_id(void)
+static void w25q20ew_ctrl_cmd_get_device_id(void)
 {
 	uint8_t id[2];
 	uint32_t ret;
@@ -343,7 +344,7 @@ static void w25q20ew_cmd_get_device_id(void)
 }
 
 // コマンド
-static void w25q20ew_cmd_get_sfdp(void)
+static void w25q20ew_ctrl_cmd_get_sfdp(void)
 {
 	uint8_t sfdp[256];
 	uint32_t ret;
