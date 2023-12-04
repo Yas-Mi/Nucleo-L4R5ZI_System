@@ -33,11 +33,11 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING
  14 .debug_ranges 000010e0  00000000  00000000  00043538  2**3
                   CONTENTS, READONLY, DEBUGGING
- 15 .debug_line   00009e24  00000000  00000000  00044618  2**0
+ 15 .debug_line   00009e26  00000000  00000000  00044618  2**0
                   CONTENTS, READONLY, DEBUGGING
- 16 .debug_str    00006b61  00000000  00000000  0004e43c  2**0
+ 16 .debug_str    00006b61  00000000  00000000  0004e43e  2**0
                   CONTENTS, READONLY, DEBUGGING
- 17 .comment      0000007c  00000000  00000000  00054f9d  2**0
+ 17 .comment      0000007c  00000000  00000000  00054f9f  2**0
                   CONTENTS, READONLY
  18 .debug_frame  000049ec  00000000  00000000  0005501c  2**2
                   CONTENTS, READONLY, DEBUGGING
@@ -17231,43 +17231,43 @@ static int test_tsk1(int argc, char *argv[])
  80065e6:	2300      	movs	r3, #0
  80065e8:	81fb      	strh	r3, [r7, #14]
 	uint32_t i;
-	console_str_send("saikyo\n");
- 80065ea:	480f      	ldr	r0, [pc, #60]	; (8006628 <test_tsk1+0x4c>)
- 80065ec:	f7fd fa38 	bl	8003a60 <console_str_send>
 	msp2807_open();
- 80065f0:	f7fd fe7e 	bl	80042f0 <msp2807_open>
+ 80065ea:	f7fd fe81 	bl	80042f0 <msp2807_open>
 	while(1) {
 		for (i = 0; i < MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT; i++) {
- 80065f4:	2300      	movs	r3, #0
- 80065f6:	60bb      	str	r3, [r7, #8]
- 80065f8:	e007      	b.n	800660a <test_tsk1+0x2e>
+ 80065ee:	2300      	movs	r3, #0
+ 80065f0:	60bb      	str	r3, [r7, #8]
+ 80065f2:	e007      	b.n	8006604 <test_tsk1+0x28>
 			test_data[i] = cnt;
- 80065fa:	490c      	ldr	r1, [pc, #48]	; (800662c <test_tsk1+0x50>)
- 80065fc:	68bb      	ldr	r3, [r7, #8]
- 80065fe:	89fa      	ldrh	r2, [r7, #14]
- 8006600:	f821 2013 	strh.w	r2, [r1, r3, lsl #1]
+ 80065f4:	490c      	ldr	r1, [pc, #48]	; (8006628 <test_tsk1+0x4c>)
+ 80065f6:	68bb      	ldr	r3, [r7, #8]
+ 80065f8:	89fa      	ldrh	r2, [r7, #14]
+ 80065fa:	f821 2013 	strh.w	r2, [r1, r3, lsl #1]
 		for (i = 0; i < MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT; i++) {
+ 80065fe:	68bb      	ldr	r3, [r7, #8]
+ 8006600:	3301      	adds	r3, #1
+ 8006602:	60bb      	str	r3, [r7, #8]
  8006604:	68bb      	ldr	r3, [r7, #8]
- 8006606:	3301      	adds	r3, #1
- 8006608:	60bb      	str	r3, [r7, #8]
- 800660a:	68bb      	ldr	r3, [r7, #8]
- 800660c:	f5b3 3f96 	cmp.w	r3, #76800	; 0x12c00
- 8006610:	d3f3      	bcc.n	80065fa <test_tsk1+0x1e>
+ 8006606:	f5b3 3f96 	cmp.w	r3, #76800	; 0x12c00
+ 800660a:	d3f3      	bcc.n	80065f4 <test_tsk1+0x18>
 		}
+		console_str_send("write!\n");
+ 800660c:	4807      	ldr	r0, [pc, #28]	; (800662c <test_tsk1+0x50>)
+ 800660e:	f7fd fa27 	bl	8003a60 <console_str_send>
 		msp2807_write(test_data);
- 8006612:	4806      	ldr	r0, [pc, #24]	; (800662c <test_tsk1+0x50>)
+ 8006612:	4805      	ldr	r0, [pc, #20]	; (8006628 <test_tsk1+0x4c>)
  8006614:	f7fd feaa 	bl	800436c <msp2807_write>
 		cnt++;
  8006618:	89fb      	ldrh	r3, [r7, #14]
  800661a:	3301      	adds	r3, #1
  800661c:	81fb      	strh	r3, [r7, #14]
-		kz_tsleep(1000);
- 800661e:	f44f 707a 	mov.w	r0, #1000	; 0x3e8
+		kz_tsleep(10000);
+ 800661e:	f242 7010 	movw	r0, #10000	; 0x2710
  8006622:	f001 fbe7 	bl	8007df4 <kz_tsleep>
 		for (i = 0; i < MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT; i++) {
- 8006626:	e7e5      	b.n	80065f4 <test_tsk1+0x18>
- 8006628:	0800852c 	.word	0x0800852c
- 800662c:	20052ec8 	.word	0x20052ec8
+ 8006626:	e7e2      	b.n	80065ee <test_tsk1+0x12>
+ 8006628:	20052ec8 	.word	0x20052ec8
+ 800662c:	0800852c 	.word	0x0800852c
 
 08006630 <start_threads>:
 }

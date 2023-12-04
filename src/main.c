@@ -79,15 +79,15 @@ static int test_tsk1(int argc, char *argv[])
 {	
 	uint16_t cnt = 0;
 	uint32_t i;
-	console_str_send("saikyo\n");
 	msp2807_open();
 	while(1) {
 		for (i = 0; i < MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT; i++) {
 			test_data[i] = cnt;
 		}
+		console_str_send("write!\n");
 		msp2807_write(test_data);
 		cnt++;
-		kz_tsleep(1000);
+		kz_tsleep(10000);
 	}
 	
 	return 0;
