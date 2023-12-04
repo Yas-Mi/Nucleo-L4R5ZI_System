@@ -29,13 +29,14 @@
 
 // SPIレジスタ定義
 struct stm32l4_spi {
-	volatile uint32_t cr1;		// Control Register 1
-	volatile uint32_t cr2;		// Control Register 2
-	volatile uint32_t sr;		// Status Register 2
-	volatile uint32_t dr;		// Data Register 2
-	volatile uint32_t crcpr;	// CRC polynomial Register
-	volatile uint32_t rxcrcr;	// Rx CRC Register
-	volatile uint32_t txcrcr;	// Tx CRC Register
+	volatile uint32_t cr1;		// Control Register 1		OFSET 0x00
+	volatile uint32_t cr2;		// Control Register 2		OFSET 0x04
+	volatile uint32_t sr;		// Status Register 2		OFSET 0x08
+	volatile uint16_t reserved;	// リザーブ
+	volatile uint8_t dr[2];		// Data Register 2			OFSET 0x0C
+	volatile uint32_t crcpr;	// CRC polynomial Register	OFSET 0x00
+	volatile uint32_t rxcrcr;	// Rx CRC Register			OFSET 0x00
+	volatile uint32_t txcrcr;	// Tx CRC Register			OFSET 0x00
 };
 
 // レジスタビット定義
@@ -85,8 +86,7 @@ typedef struct {
 	uint32_t			snd_sz;			// 送信データサイズ
 	uint8_t				*p_rcv_data;	// 受信データポインタ
 	uint32_t			rcv_sz;			// 受信データサイズ
-	int32_t				ercd;			// エラーコード
-	kz_thread_id_t		slp_tsk_id;		// タスクID
+	kz_msgbox_id_t		msg_id;			// メールボックスID
 } SPI_CTL;
 static SPI_CTL spi_ctl[SPI_CH_MAX];
 #define get_myself(n) (&spi_ctl[(n)])
@@ -94,11 +94,12 @@ static SPI_CTL spi_ctl[SPI_CH_MAX];
 // SPIチャネル固有情報
 typedef struct {
 	volatile struct stm32l4_spi *spi_base_addr;		// ベースレジスタ
-	IRQn_Type irq_type;								// 割込みタイプ
-	INT_HANDLER handler;							// 割込みハンドラ
-	uint32_t	vec_no;								// 割込み番号
-	uint32_t	int_priority;						// 割込み優先度
-	uint32_t	clk;								// クロック定義
+	IRQn_Type 		irq_type;								// 割込みタイプ
+	INT_HANDLER 	handler;							// 割込みハンドラ
+	uint32_t		vec_no;								// 割込み番号
+	uint32_t		int_priority;						// 割込み優先度
+	uint32_t		clk;								// クロック定義
+	kz_msgbox_id_t	msg_id;								// メールボックスID
 } SPI_CFG;
 
 // 割込みハンドラのプロトタイプ
@@ -109,9 +110,9 @@ void spi3_handler(void);
 /* SPIチャネル固有情報テーブル */
 static const SPI_CFG spi_cfg[USART_CH_MAX] =
 {
-	{(volatile struct stm32l4_spi*)SPI1_BASE_ADDR, SPI1_IRQn, spi1_handler, SPI1_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART1},
-	{(volatile struct stm32l4_spi*)SPI2_BASE_ADDR, SPI2_IRQn, spi2_handler, SPI2_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART2},
-	{(volatile struct stm32l4_spi*)SPI3_BASE_ADDR, SPI3_IRQn, spi3_handler, SPI3_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART3},
+	{(volatile struct stm32l4_spi*)SPI1_BASE_ADDR, SPI1_IRQn, spi1_handler, SPI1_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART1, MSGBOX_ID_SPI1},
+	{(volatile struct stm32l4_spi*)SPI2_BASE_ADDR, SPI2_IRQn, spi2_handler, SPI2_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART2, MSGBOX_ID_SPI2},
+	{(volatile struct stm32l4_spi*)SPI3_BASE_ADDR, SPI3_IRQn, spi3_handler, SPI3_GLOBAL_INTERRUPT_NO, INTERRPUT_PRIORITY_5, RCC_PERIPHCLK_USART3, MSGBOX_ID_SPI3},
 };
 #define get_reg(ch)			(spi_cfg[ch].spi_base_addr)		// レジスタ取得マクロ
 #define get_ire_type(ch)	(spi_cfg[ch].irq_type)			// 割込みタイプ取得マクロ
@@ -119,6 +120,7 @@ static const SPI_CFG spi_cfg[USART_CH_MAX] =
 #define get_vec_no(ch)		(spi_cfg[ch].vec_no)			// 割り込み番号取得マクロ
 #define get_int_prio(ch)	(spi_cfg[ch].int_priority)		// 割り込み優先度取得マクロ
 #define get_clk_no(ch)		(spi_cfg[ch].clk)				// クロック定義取得マクロ
+#define get_mbx_id(ch)		(spi_cfg[ch].msg_id)			// メールボックスID取得マクロ
 
 // 割込み共通ハンドラ
 static void spi_common_handler(DMA_CH ch)
@@ -126,15 +128,17 @@ static void spi_common_handler(DMA_CH ch)
 	SPI_CTL *this = get_myself(ch);
 	volatile struct stm32l4_spi *spi_base_addr = get_reg(ch);
 	uint8_t dummy_data;
+	int32_t *ret;
 	
 	// エラー
 	if (spi_base_addr->sr & (SR_FRE | SR_OVR | SR_MODF)) {
 		// 送受信割込み無効
 		spi_base_addr->cr2 &= ~(CR2_RXNEIE | CR2_TXEIE);
-		// エラーコードを設定して終了
-		this->ercd = E_OBJ;
-		kx_wakeup(this->slp_tsk_id);
-		return;
+		// メッセージ送信
+		ret = kx_kmalloc(sizeof(int32_t));
+		*ret = E_OBJ;
+		kx_send(this->msg_id, sizeof(int32_t), ret);
+		
 	}
 	
 	// 送信バッファエンプティ割込み
@@ -142,8 +146,7 @@ static void spi_common_handler(DMA_CH ch)
 		// まだ送信データがある？
 		if (this->snd_sz != 0) {
 			// データ送信
-			spi_base_addr->dr = *(this->p_snd_data++);
-			this->snd_sz--;
+			spi_base_addr->dr[0] = *(this->p_snd_data++);
 			
 		// もう送信データはない？
 		} else {
@@ -151,13 +154,10 @@ static void spi_common_handler(DMA_CH ch)
 			if (this->rcv_sz != 0) {
 				// 受信のためにダミーデータを送信する
 				dummy_data = 0;
-				spi_base_addr->dr = dummy_data;
-				this->rcv_sz--;
+				spi_base_addr->dr[0] = dummy_data;
 				
 			} else {
-				// 送信データ割込み無効
-				spi_base_addr->cr2 &= ~CR2_TXEIE;
-				
+				;
 			}
 		}
 	}
@@ -167,21 +167,29 @@ static void spi_common_handler(DMA_CH ch)
 		// データ送信時にダミーデータを受信してしまうため読み捨てる
 		if (this->snd_sz != 0) {
 			// ダミーリード
-			dummy_data = *((uint8_t*)(spi_base_addr->dr));
+			dummy_data = *((uint8_t*)(spi_base_addr->dr[0]));
+			// 送信データサイズは、ダミーリードしてから減らす
+			this->snd_sz--;
 			
 		// データを受信
 		} else if (this->rcv_sz != 0) {
-			*(this->p_rcv_data++) = *((uint8_t*)(spi_base_addr->dr));
+			*(this->p_rcv_data++) = *((uint8_t*)(spi_base_addr->dr[0]));
+			this->rcv_sz--;
 			
 		// 送信データも受信データもない
 		} else {
-			// 受信バッファ割込み無効
-			spi_base_addr->cr2 &= ~CR2_RXNEIE;
-			// エラーコードを設定して送受信終了
-			this->ercd = E_OK;
-			kx_wakeup(this->slp_tsk_id);
-			
+			;
 		}
+	}
+	// 送信/受信が完了した
+	if ((this->snd_sz == 0) && (this->rcv_sz == 0)) {
+		// 送受信割込み無効
+		spi_base_addr->cr2 &= ~(CR2_RXNEIE | CR2_TXEIE);
+		// メッセージ送信
+		ret = kx_kmalloc(sizeof(int32_t));
+		*ret = E_OK;
+		kx_send(this->msg_id, sizeof(int32_t), ret);
+		
 	}
 }
 
@@ -204,6 +212,7 @@ static uint32_t calc_br(SPI_CH ch, uint32_t baudrate)
 	uint32_t spi_clk;
 	uint8_t power_of_2;
 	uint8_t i;
+	uint8_t br;
 	
 	// SPIクロック取得
 	spi_clk = HAL_RCCEx_GetPeriphCLKFreq(get_clk_no(ch));
@@ -216,7 +225,12 @@ static uint32_t calc_br(SPI_CH ch, uint32_t baudrate)
 		}
 	}
 	
-	return power_of_2;
+	// br値を計算
+	if (i > 0) {
+		br = i - 1;
+	}
+	
+	return br;
 }
 
 // 外部公開関数
@@ -233,6 +247,8 @@ void spi_init(void)
 		memset(this, 0, sizeof(SPI_CTL));
 		// 割込みハンドラ登録
 		kz_setintr(get_vec_no(ch), get_handler(ch));
+		// メールボックスID取得
+		this->msg_id = get_mbx_id(ch);
 		// 状態を更新
 		this->status = ST_INTIALIZED;
 	}
@@ -302,7 +318,8 @@ int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rc
 {
 	SPI_CTL *this;
 	volatile struct stm32l4_spi *spi_base_addr;
-	int32_t ercd;
+	int32_t size;
+	int32_t *ercd;
 	
 	// NULLの場合エラーを返して終了
 	if (snd_data == NULL) {
@@ -322,11 +339,6 @@ int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rc
 		return -1;
 	}
 	
-	// 誰かがすでに使っている場合はエラーを返して終了
-	if (this->slp_tsk_id != 0) {
-		return -1;
-	}
-	
 	// データ情報設定
 	this->p_snd_data = snd_data;
 	this->snd_sz = snd_sz;
@@ -337,23 +349,18 @@ int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rc
 	spi_base_addr = get_reg(ch);
 	
 	// 送信バッファエンプティ割り込み、受信割り込み、エラー割込み有効
-	spi_base_addr->cr2 |= (SR_TXE | CR2_RXNEIE | CR2_ERRIE);
+	spi_base_addr->cr2 |= (CR2_TXEIE | CR2_RXNEIE | CR2_ERRIE);
 	
-	// タスクIDを取得
-	this->slp_tsk_id = kz_getid();
-	// 転送完了まで寝る
-	kz_sleep();
-	
-	// 結果取得
-	ercd = this->ercd;
+	// メッセージ受信
+	kz_recv(this->msg_id, &size, &ercd);
+	// メッセージを解放
+	kz_kmfree(ercd);
 	
 	// 初期化
-	this->slp_tsk_id = 0;
 	this->p_snd_data = NULL;
 	this->snd_sz = 0;
 	this->p_rcv_data = NULL;
 	this->rcv_sz = 0;
-	this->ercd = E_OK;
 	
-	return ercd;
+	return *ercd;
 }

@@ -41,17 +41,20 @@ SOFTWARE.
 #include "sai.h"
 #include "i2c_wrapper.h"
 #include "dma.h"
+#include "spi.h"
+#include "tim.h"
 // デバイス
-#include "flash_mng.h"
 #include "w25q20ew_ctrl.h"
 #include "gysfdmaxb.h"
 #include "bt_dev.h"
 #include "pcm3060.h"
 #include "lcd_dev.h"
-#include "tim.h"
+#include "MSP2807.h"
+
 // マネージャ
 #include "wav.h"
 #include "cyc.h"
+#include "flash_mng.h"
 // アプリ
 #include "console.h"
 #include "sound_app.h"
@@ -69,22 +72,22 @@ SOFTWARE.
 **===================
 **===========================================================================
 */
-#if 0
-static uint8_t test_data[16*1024];
+#if 1
+static uint16_t test_data[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT];
 // テスト用タスク 
 static int test_tsk1(int argc, char *argv[])
 {	
-	uint32_t addr = 0x00000000;
-	
-	// テストデータに値を設定
-	memset(test_data, 0x5A, sizeof(test_data));
-	
-	// オープン
-	flash_mng_open(FLASH_MNG_KIND_W25Q20EW);
-	
+	uint16_t cnt = 0;
+	uint32_t i;
+	console_str_send("saikyo\n");
+	msp2807_open();
 	while(1) {
-		// 書き込み
-		flash_mng_write(FLASH_MNG_KIND_W25Q20EW, addr, test_data, sizeof(test_data));
+		for (i = 0; i < MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT; i++) {
+			test_data[i] = cnt;
+		}
+		msp2807_write(test_data);
+		cnt++;
+		kz_tsleep(1000);
 	}
 	
 	return 0;
@@ -101,9 +104,11 @@ static int start_threads(int argc, char *argv[])
 //	tim_init();
 	dma_init();
 	octospi_init();
+	spi_init();
 	
 	// デバイスの初期化
 	bt_dev_init();
+	msp2807_init();
 	//pcm3060_init();
 	//LCD_dev_init();
 	//gysfdmaxb_init();
@@ -144,7 +149,7 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(bluetoothdrv_main, "blue_tooth",  8, 0x200, 0, NULL);
 	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
 	//kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
-	//kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
+	kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
 	
 	/* 優先順位を下げて，アイドルスレッドに移行する */
 	kz_chpri(15); 

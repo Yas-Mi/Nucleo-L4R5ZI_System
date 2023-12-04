@@ -4,6 +4,7 @@
  *  Created on: 2023/11/27
  *      Author: User
  */
+#include <string.h>
 #include "defines.h"
 #include "kozos.h"
 #include "bt_dev.h"
@@ -11,9 +12,9 @@
 #include "ctl_main.h"
 #include "intr.h"
 #include "tim.h"
-#include <string.h>
-
 #include "spi.h"
+
+#include "MSP2807.h"
 
 // マクロ
 #define MSP2807_SPI_BAUDRATE	(1*1000*1000)	// 通信速度 1MHz
@@ -55,15 +56,15 @@ typedef struct {
 } MSP2807_GPIO_CFG;
 
 // GPIO情報テーブル
-static const MSP2807_GPIO_CFG gpio_cfg[MSP2807_GPIO_TYPE] = {
+static const MSP2807_GPIO_CFG gpio_cfg[MSP2807_GPIO_TYPE_MAX] = {
 	{GPIOA, GPIO_PIN_8},	// リセットピン
 	{GPIOC, GPIO_PIN_9},	// DC/RS
 };
-#define gpio_reset(val)	HAL_GPIO_WritePin(gpio_cfg[MSP2807_GPIO_TYPE_RESET].pin_group, pio_cfg[MSP2807_GPIO_TYPE_RESET].pin, val)
-#define gpio_dcrs(val)	HAL_GPIO_WritePin(gpio_cfg[MSP2807_GPIO_TYPE_DCX].pin_group, pio_cfg[MSP2807_GPIO_TYPE_DCX].pin, val)
+#define gpio_reset(val)	HAL_GPIO_WritePin(gpio_cfg[MSP2807_GPIO_TYPE_RESET].pin_group, gpio_cfg[MSP2807_GPIO_TYPE_RESET].pin, val)
+#define gpio_dcrs(val)	HAL_GPIO_WritePin(gpio_cfg[MSP2807_GPIO_TYPE_DCX].pin_group, gpio_cfg[MSP2807_GPIO_TYPE_DCX].pin, val)
 
 // オープンパラメータ
-static const SPI_OPEN spi_open = {
+static const SPI_OPEN spi_open_par = {
 	MSP2807_SPI_BAUDRATE,		// 通信速度
 	SPI_CPOL_POSITIVE,			// Clock Polarity
 	SPI_CPHA_FIRST_EDGE,    	// Clock Phase
@@ -154,7 +155,7 @@ static int32_t msp2807_setup(void)
 	}
 	
 MSP2807_SETUP_EXIT:	
-	return ret
+	return ret;
 }
 
 // 初期化関数
@@ -183,7 +184,7 @@ int32_t msp2807_open(void)
 	}
 	
 	// SPIをオープン
-	ret = spi_open(MSP2807_USW_SPI_CH, &spi_open);
+	ret = spi_open(MSP2807_USW_SPI_CH, &spi_open_par);
 	if (ret != E_OK) {
 		console_str_send("spi_open error\n");
 		goto MSP2807_OPEN_EXIT;
@@ -210,9 +211,16 @@ MSP2807_OPEN_EXIT:
 // 描画関数
 int32_t msp2807_write(uint16_t *disp_data)
 {
+	MSP2807_CTL *this = &msp2807_ctl;
 	uint8_t snd_data[2];
 	uint32_t x, y;
 	uint16_t pixel;
+	int32_t ret;
+	
+	// IDLEでなければ終了
+	if (this->state != ST_IDLE) {
+		return -1;
+	}
 	
 	// コマンドモード
 	gpio_dcrs(GPIO_PIN_RESET);
