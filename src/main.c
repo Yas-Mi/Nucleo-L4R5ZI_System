@@ -84,10 +84,10 @@ static int test_tsk1(int argc, char *argv[])
 		for (i = 0; i < MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT; i++) {
 			test_data[i] = cnt;
 		}
-		console_str_send("write!\n");
+		console_str_send("writewrite\n");
 		msp2807_write(test_data);
 		cnt++;
-		kz_tsleep(10000);
+		kz_tsleep(1000);
 	}
 	
 	return 0;

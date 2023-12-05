@@ -294,6 +294,13 @@ int32_t msp2807_write(uint16_t *disp_data)
 	gpio_dcrs(GPIO_PIN_SET);
 	
 	// 描画
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, (uint8_t*)disp_data, (MSP2807_DISPLAY_HEIGHT*MSP2807_DISPLAY_WIDTH*2), NULL, 0);
+	if (ret != E_OK) {
+		goto MSP2807_WRITE_EXIT;
+	}
+	
+#if 0
+	// 描画
 	for (y = 0; y < MSP2807_DISPLAY_HEIGHT; y++) {
 		for (x = 0; x < MSP2807_DISPLAY_WIDTH; x++) {
 			pixel = disp_data[y*MSP2807_DISPLAY_HEIGHT+x];
@@ -305,6 +312,7 @@ int32_t msp2807_write(uint16_t *disp_data)
 			}
 		}
 	}
+#endif
 	
 MSP2807_WRITE_EXIT:
 	return ret;

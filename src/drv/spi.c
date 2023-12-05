@@ -69,8 +69,8 @@ struct stm32l4_spi {
 #define CR2_TXDMAEN			(1 << 1)
 #define CR2_RXDMAEN			(1 << 0)
 // SR
-#define SR_FTLVL(v)			(((v) & 0x3) << 11)
-#define SR_FRLVL(v)			(((v) & 0x3) << 9)
+#define SR_FTLVL			(0x3 << 11)
+#define SR_FRLVL			(0x3 << 9)
 #define SR_FRE				(1 << 8)
 #define SR_BUSY				(1 << 7)
 #define SR_OVR				(1 << 6)
@@ -233,6 +233,52 @@ static uint32_t calc_br(SPI_CH ch, uint32_t baudrate)
 	return br;
 }
 
+// SPI無効処理
+static int32_t spi_disable(SPI_CH ch)
+{
+	volatile struct stm32l4_spi *spi_base_addr;
+	uint32_t timeout = 10;
+	int32_t dummy_data;
+	int32_t ret = E_OK;
+	
+	// ベースレジスタ取得
+	spi_base_addr = get_reg(ch);
+	
+	// 送信FIFOが0になるまで待つ
+	while(((spi_base_addr->sr >> 11) & 0x3) != 0) {
+		// タイムアウト発生
+		if (timeout-- == 0) {
+			ret = E_TMOUT;
+			goto SPI_DISABLE_EXIT;
+		}
+		// 1msウェイト
+		kz_tsleep(1);
+	}
+	
+	// BUSYフラグがクリアされるまで待つ
+	while((spi_base_addr->sr & SR_BUSY) != 0) {
+		// タイムアウト発生
+		if (timeout-- == 0) {
+			ret = E_TMOUT;
+			goto SPI_DISABLE_EXIT;
+		}
+		// 1msウェイト
+		kz_tsleep(1);
+	}
+	
+	// SPI無効
+	spi_base_addr->cr1 &= ~CR1_SPE;
+	
+	// 受信FIFOが0になるまで待つ
+	while(((spi_base_addr->sr >> 9) & 0x3) != 0) {
+		// ダミーリード
+		dummy_data = *((uint8_t*)(spi_base_addr->dr[0]));
+	}
+	
+SPI_DISABLE_EXIT:
+	return ret;
+}
+
 // 外部公開関数
 // 初期化関数
 void spi_init(void)
@@ -279,11 +325,14 @@ int32_t spi_open(SPI_CH ch, SPI_OPEN *open_par)
 	// ベースレジスタ取得
 	spi_base_addr = get_reg(ch);
 	
+	// メモ
+	// NSS input : Low → 誰かが下げているからスレーブなれる High → 誰も下げていないから、送信できる
+	
 	// レジスタ設定
 	// CR1設定：tranmit only, crc caluclation disabled, Master
 	// SSM=1:SSIでNSSを制御
 	// SSM=0:ハードウェアがNSSを制御
-	//        SSOE=1:マスターのみ使用。SPE=1でNSSがlow。NSSP=1の場合は通信間でパルスを発生させる。
+	//        SSOE=1:マスターのみ使用。NSSは、SPE=1でlow、SPE=0でHigh。NSSP=1の場合は通信間でパルスを発生させる。
 	//        SSOE=0:マルチマスター時に使用。
 	spi_base_addr->cr1 = CR1_BIDIOE | CR1_BR(calc_br(ch, open_par->baudrate)) | CR1_MSTR;
 	if (open_par->fmt == SPI_FRAME_FMT_LSB_FIRST) {
@@ -297,10 +346,8 @@ int32_t spi_open(SPI_CH ch, SPI_OPEN *open_par)
 	}
 	
 	// CR2設定：
-	spi_base_addr->cr2 = CR2_DS(open_par->size) | CR2_NSSP | CR2_SSOE;
-	
-	// SPI有効
-	spi_base_addr->cr1 |= CR1_SPE;
+	//spi_base_addr->cr2 = CR2_DS(open_par->size) | CR2_NSSP | CR2_SSOE;
+	spi_base_addr->cr2 = CR2_DS(open_par->size) | CR2_SSOE;
 	
 	// 割り込み有効
 	HAL_NVIC_SetPriority(get_ire_type(ch), INTERRPUT_PRIORITY_5, 0);
@@ -339,6 +386,9 @@ int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rc
 		return -1;
 	}
 	
+	// 状態を更新
+	this->status = ST_RUN;
+	
 	// データ情報設定
 	this->p_snd_data = snd_data;
 	this->snd_sz = snd_sz;
@@ -348,10 +398,13 @@ int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rc
 	// ベースレジスタ取得
 	spi_base_addr = get_reg(ch);
 	
+	// SPI有効
+	spi_base_addr->cr1 |= CR1_SPE;
+	
 	// 送信バッファエンプティ割り込み、受信割り込み、エラー割込み有効
 	spi_base_addr->cr2 |= (CR2_TXEIE | CR2_RXNEIE | CR2_ERRIE);
 	
-	// メッセージ受信
+	// 送信待ち
 	kz_recv(this->msg_id, &size, &ercd);
 	// メッセージを解放
 	kz_kmfree(ercd);
@@ -361,6 +414,12 @@ int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rc
 	this->snd_sz = 0;
 	this->p_rcv_data = NULL;
 	this->rcv_sz = 0;
+	
+	// SPI無効
+	spi_disable(ch);
+	
+	// 状態を更新
+	this->status = ST_OPENED;
 	
 	return *ercd;
 }
