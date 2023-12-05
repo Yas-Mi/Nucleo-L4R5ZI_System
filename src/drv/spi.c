@@ -56,9 +56,9 @@ struct stm32l4_spi {
 #define CR1_CPOL			(1 << 1)
 #define CR1_CPHA			(1 << 0)
 // CR2
-#define CR2_LDMA_TX			(1 << 15)
-#define CR2_LDMA_RX			(1 << 14)
-#define CR2_FRXTH			(1 << 13)
+#define CR2_LDMA_TX			(1 << 14)
+#define CR2_LDMA_RX			(1 << 13)
+#define CR2_FRXTH			(1 << 12)
 #define CR2_DS(v)			(((v) & 0xF) << 8)
 #define CR2_TXEIE			(1 << 7)
 #define CR2_RXNEIE			(1 << 6)
@@ -147,38 +147,31 @@ static void spi_common_handler(DMA_CH ch)
 		if (this->snd_sz != 0) {
 			// データ送信
 			spi_base_addr->dr[0] = *(this->p_snd_data++);
+			this->snd_sz--;
 			
 		// もう送信データはない？
 		} else {
-			// 受信
-			if (this->rcv_sz != 0) {
-				// 受信のためにダミーデータを送信する
-				dummy_data = 0;
-				spi_base_addr->dr[0] = dummy_data;
-				
-			} else {
-				;
-			}
+			// 送受信割込み禁止
+			spi_base_addr->cr2 &= ~CR2_TXEIE;
 		}
 	}
 	// 受信バッファ割込み
 	if (((spi_base_addr->cr2 & CR2_RXNEIE) != 0) && (spi_base_addr->sr & SR_RXNE) != 0) {
 		// まだ送信データがある？
 		// データ送信時にダミーデータを受信してしまうため読み捨てる
-		if (this->snd_sz != 0) {
-			// ダミーリード
+		if (this->rcv_sz != 0) {
+			// データ受信
 			dummy_data = *((uint8_t*)(spi_base_addr->dr[0]));
-			// 送信データサイズは、ダミーリードしてから減らす
-			this->snd_sz--;
-			
-		// データを受信
-		} else if (this->rcv_sz != 0) {
-			*(this->p_rcv_data++) = *((uint8_t*)(spi_base_addr->dr[0]));
+			if (this->p_rcv_data != NULL) {
+				*(this->p_rcv_data++) = dummy_data;
+			}
 			this->rcv_sz--;
 			
-		// 送信データも受信データもない
+		// もう全部受信した
 		} else {
-			;
+			// 受信割り込み禁止
+			spi_base_addr->cr2 &= ~(CR2_RXNEIE | CR2_TXEIE);
+			
 		}
 	}
 	// 送信/受信が完了した
@@ -347,7 +340,7 @@ int32_t spi_open(SPI_CH ch, SPI_OPEN *open_par)
 	
 	// CR2設定：
 	//spi_base_addr->cr2 = CR2_DS(open_par->size) | CR2_NSSP | CR2_SSOE;
-	spi_base_addr->cr2 = CR2_DS(open_par->size) | CR2_SSOE;
+	spi_base_addr->cr2 = CR2_FRXTH | CR2_DS(open_par->size) | CR2_SSOE;
 	
 	// 割り込み有効
 	HAL_NVIC_SetPriority(get_ire_type(ch), INTERRPUT_PRIORITY_5, 0);
@@ -361,7 +354,7 @@ int32_t spi_open(SPI_CH ch, SPI_OPEN *open_par)
 
 // 送受信関数
 // (*) マスターのみ
-int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rcv_data, uint32_t rcv_sz)
+int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint8_t *rcv_data, uint32_t snd_sz)
 {
 	SPI_CTL *this;
 	volatile struct stm32l4_spi *spi_base_addr;
@@ -393,7 +386,7 @@ int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rc
 	this->p_snd_data = snd_data;
 	this->snd_sz = snd_sz;
 	this->p_rcv_data = rcv_data;
-	this->rcv_sz = rcv_sz;
+	this->rcv_sz = snd_sz;
 	
 	// ベースレジスタ取得
 	spi_base_addr = get_reg(ch);
@@ -417,6 +410,9 @@ int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rc
 	
 	// SPI無効
 	spi_disable(ch);
+	
+	// 1msウェイト
+	kz_tsleep(1);
 	
 	// 状態を更新
 	this->status = ST_OPENED;

@@ -56,6 +56,6 @@ typedef struct {
 
 extern void spi_init(void);
 extern int32_t spi_open(SPI_CH ch, SPI_OPEN *open_par);
-extern int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint32_t snd_sz, uint8_t *rcv_data, uint32_t rcv_size);
+extern int32_t spi_send_recv(SPI_CH ch, uint8_t *snd_data, uint8_t *rcv_data, uint32_t snd_sz);
 
 #endif /* SPI_H_ */

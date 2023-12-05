@@ -84,7 +84,7 @@ static int32_t msp2807_setup(void)
 	
 	// ソフトウェアリセット
 	snd_data = MSP2807_CMD_SOFTWARE_RESET;
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_SETUP_EXIT;
 	}
@@ -93,14 +93,14 @@ static int32_t msp2807_setup(void)
 	
 	// Normal Display Mode ON
 	snd_data = MSP2807_CMD_NORMAL_DISPLAY_ON;
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_SETUP_EXIT;
 	}
 	
 	// Memory Access Control
 	snd_data = MSP2807_CMD_MEMORY_ACCESS_CONTROL;
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_SETUP_EXIT;
 	}
@@ -110,7 +110,7 @@ static int32_t msp2807_setup(void)
 	
 	// データ送信
 	snd_data = 0x48;	// MX = ON , GBR = ON (縦画面,左から右に表示)
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_SETUP_EXIT;
 	}
@@ -120,7 +120,7 @@ static int32_t msp2807_setup(void)
 	
 	// Memory Access Control
 	snd_data = MSP2807_CMD_PIXEL_FOMART_SET;
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_SETUP_EXIT;
 	}
@@ -130,7 +130,7 @@ static int32_t msp2807_setup(void)
 	
 	// データ送信
 	snd_data = 0x55;	// 16Bits / 1Pixcel
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_SETUP_EXIT;
 	}
@@ -140,7 +140,7 @@ static int32_t msp2807_setup(void)
 	
 	// Sleep Out
 	snd_data = MSP2807_CMD_SLEEP_OUT;
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_SETUP_EXIT;
 	}
@@ -149,7 +149,7 @@ static int32_t msp2807_setup(void)
 	
 	// Display ON
 	snd_data = MSP2807_CMD_DISPLAY_ON;
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_SETUP_EXIT;
 	}
@@ -227,7 +227,7 @@ int32_t msp2807_write(uint16_t *disp_data)
 	
 	// Column Address Set
 	snd_data[0] = MSP2807_CMD_COLUMN_ADDRESS_SET;
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data[0], 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_WRITE_EXIT;
 	}
@@ -238,7 +238,7 @@ int32_t msp2807_write(uint16_t *disp_data)
 	// データ送信
 	snd_data[0] = 0x00;
 	snd_data[1] = 0x00;	// 開始カラム 0
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data[0], 2, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 2);
 	if (ret != E_OK) {
 		goto MSP2807_WRITE_EXIT;
 	}
@@ -246,7 +246,7 @@ int32_t msp2807_write(uint16_t *disp_data)
 	// データ送信
 	snd_data[0] = 0x00;
 	snd_data[1] = 0xEF;	// 終了カラム 239
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data[0], 2, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 2);
 	if (ret != E_OK) {
 		goto MSP2807_WRITE_EXIT;
 	}
@@ -256,7 +256,7 @@ int32_t msp2807_write(uint16_t *disp_data)
 	
 	// Page Address Set
 	snd_data[0] = MSP2807_CMD_PAGE_ADDRESS_SET;
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data[0], 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_WRITE_EXIT;
 	}
@@ -267,7 +267,7 @@ int32_t msp2807_write(uint16_t *disp_data)
 	// データ送信
 	snd_data[0] = 0x00;
 	snd_data[1] = 0x00;	// 開始ページ 0
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data[0], 2, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 2);
 	if (ret != E_OK) {
 		goto MSP2807_WRITE_EXIT;
 	}
@@ -275,7 +275,7 @@ int32_t msp2807_write(uint16_t *disp_data)
 	// データ送信
 	snd_data[0] = 0x01;
 	snd_data[1] = 0x3F;	// 終了ページ 319
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data[0], 2, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 2);
 	if (ret != E_OK) {
 		goto MSP2807_WRITE_EXIT;
 	}
@@ -285,7 +285,7 @@ int32_t msp2807_write(uint16_t *disp_data)
 	
 	// Memory Write
 	snd_data[0] = MSP2807_CMD_MEMORY_WRITE;
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data[0], 1, NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, 1);
 	if (ret != E_OK) {
 		goto MSP2807_WRITE_EXIT;
 	}
@@ -294,7 +294,7 @@ int32_t msp2807_write(uint16_t *disp_data)
 	gpio_dcrs(GPIO_PIN_SET);
 	
 	// 描画
-	ret = spi_send_recv(MSP2807_USW_SPI_CH, (uint8_t*)disp_data, (MSP2807_DISPLAY_HEIGHT*MSP2807_DISPLAY_WIDTH*2), NULL, 0);
+	ret = spi_send_recv(MSP2807_USW_SPI_CH, &snd_data, NULL, (MSP2807_DISPLAY_HEIGHT*MSP2807_DISPLAY_WIDTH*2));
 	if (ret != E_OK) {
 		goto MSP2807_WRITE_EXIT;
 	}
