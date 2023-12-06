@@ -31,24 +31,27 @@ typedef enum {
 	MSGBOX_ID_SPI1,
 	MSGBOX_ID_SPI2,
 	MSGBOX_ID_SPI3,
+	MSGBOX_ID_TOUCH_SCREEN,
 	MSGBOX_ID_NUM
 } kz_msgbox_id_t;
 
 // タスクの優先度
-#define BT_DEV_PRI		(8)
-#define CONZOLE_PRI		(3)
-#define SOUND_APP_PRI	(10)
-#define CYC_PRI			(9)
-#define GYSFDMAXB_PRI	(8)
-#define LCD_APL_PRI		(10)
+#define BT_DEV_PRI			(8)
+#define CONZOLE_PRI			(3)
+#define SOUND_APP_PRI		(10)
+#define CYC_PRI				(9)
+#define GYSFDMAXB_PRI		(8)
+#define LCD_APL_PRI			(10)
+#define TOUCH_SCREEN_PRI	(9)
 
 // タスクで使用するスタック
-#define BT_DEV_STACK	(0x1000)
-#define CONSOLE_STACK	(0x1000)
-#define SOUND_APP_STACK	(0x2000)
-#define CYC_STACK		(0x1000)
-#define GYSFDMAXB_STACK	(0x1000)
-#define LCD_APL_STACK	(0x1000)
+#define BT_DEV_STACK		(0x1000)
+#define CONSOLE_STACK		(0x1000)
+#define SOUND_APP_STACK		(0x2000)
+#define CYC_STACK			(0x1000)
+#define GYSFDMAXB_STACK		(0x1000)
+#define LCD_APL_STACK		(0x1000)
+#define TOUCH_SCREEN_STACK	(0x1000)
 
 // 状態遷移用定義
 //typedef void (*FUNC)(void *par);

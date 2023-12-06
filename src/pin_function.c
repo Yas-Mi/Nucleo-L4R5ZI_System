@@ -53,6 +53,7 @@ static const PIN_FUNC_INFO pin_func[] = {
 	{ GPIOG, { GPIO_PIN_12, GPIO_MODE_AF_PP,     GPIO_NOPULL, GPIO_SPEED_FREQ_VERY_HIGH, GPIO_AF6_SPI3	        }, GPIO_PIN_RESET},	// SPI3 MOSI
 	{ GPIOA, { GPIO_PIN_8,  GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW,       0U	                    }, GPIO_PIN_RESET},	// ILI9341 RESET
 	{ GPIOC, { GPIO_PIN_9,  GPIO_MODE_OUTPUT_PP, GPIO_NOPULL, GPIO_SPEED_FREQ_LOW,       0U	                    }, GPIO_PIN_RESET},	// ILI9341 DC/RS
+	{ GPIOD, { GPIO_PIN_15, GPIO_MODE_INPUT,     GPIO_NOPULL, 0U,                        0U	                    }, GPIO_PIN_SET  },	// TSC2046 PENDOWN
 };
 
 // 外部公開関数
