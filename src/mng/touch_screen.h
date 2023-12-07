@@ -17,5 +17,8 @@ typedef enum {
 typedef void (*TS_MNG_CALLBACK)(TS_CALLBACK_TYPE type, uint16_t x, uint16_t y, void *vp);
 
 extern void ts_mng_init(void);
+extern int32_t ts_mng_proc_cyc(void);
+
+extern void ts_mng_set_cmd(void);
 
 #endif /* _TS_MNG_H_ */

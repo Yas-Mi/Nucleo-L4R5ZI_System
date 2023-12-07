@@ -80,7 +80,11 @@ static void ts_msg_check_touch_state(void)
 		if (ret != E_OK) {
 			console_str_send("msp2807_get_touch_pos error\n");
 		}
-		
+		console_str_send("x : ");
+		console_val_send_u16(x);
+		console_str_send(" y : ");
+		console_val_send_u16(y);
+		console_str_send("\n");
 	// タッチされていない	
 	} else {
 		;
@@ -139,7 +143,7 @@ void ts_mng_init(void)
 	this->msg_id = MSGBOX_ID_TOUCH_SCREEN;
 	
 	// 周期メッセージの作成
-	//set_cyclic_message(bt_dev_check_sts, CHECK_TOUCH_STATE_PERIOD);
+	set_cyclic_message(ts_mng_proc_cyc, CHECK_TOUCH_STATE_PERIOD);
 	
 	// タスクの生成
 	this->tsk_id = kz_run(touch_screen_main, "touch_screen_main",  TOUCH_SCREEN_PRI, TOUCH_SCREEN_STACK, 0, NULL);
@@ -148,6 +152,18 @@ void ts_mng_init(void)
 	this->state = ST_INITIALIZED;
 	
 	return 0;
+}
+
+// 周期関数
+int32_t ts_mng_proc_cyc(void)
+{
+	TOUCH_SCREEN_CTL *this = &ts_ctl;
+	TS_MNG_MSG *msg;
+	
+	msg = kz_kmalloc(sizeof(TS_MNG_MSG));
+	msg->msg_type = EVENT_CYC;
+	msg->msg_data = NULL;
+	kz_send(this->msg_id, sizeof(TS_MNG_MSG), msg);
 }
 
 // コマンド設定関数

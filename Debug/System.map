@@ -5432,25 +5432,27 @@ Discarded input sections
  .data          0x00000000        0x0 src\mng\touch_screen.o
  .bss           0x00000000        0x0 src\mng\touch_screen.o
  .bss.ts_ctl    0x00000000       0x10 src\mng\touch_screen.o
- .rodata        0x00000000       0x3e src\mng\touch_screen.o
+ .rodata        0x00000000       0x52 src\mng\touch_screen.o
  .text.ts_msg_check_touch_state
-                0x00000000       0x8c src\mng\touch_screen.o
+                0x00000000       0xc4 src\mng\touch_screen.o
  .rodata.fsm    0x00000000       0x18 src\mng\touch_screen.o
  .text.touch_screen_main
                 0x00000000       0x94 src\mng\touch_screen.o
  .text.ts_mng_init
-                0x00000000       0x50 src\mng\touch_screen.o
+                0x00000000       0x5c src\mng\touch_screen.o
+ .text.ts_mng_proc_cyc
+                0x00000000       0x3c src\mng\touch_screen.o
  .text.ts_mng_set_cmd
                 0x00000000        0xe src\mng\touch_screen.o
- .debug_info    0x00000000      0xe3c src\mng\touch_screen.o
- .debug_abbrev  0x00000000      0x22e src\mng\touch_screen.o
+ .debug_info    0x00000000      0xe7f src\mng\touch_screen.o
+ .debug_abbrev  0x00000000      0x260 src\mng\touch_screen.o
  .debug_aranges
-                0x00000000       0x38 src\mng\touch_screen.o
- .debug_ranges  0x00000000       0x28 src\mng\touch_screen.o
- .debug_line    0x00000000      0x35b src\mng\touch_screen.o
- .debug_str     0x00000000      0xb73 src\mng\touch_screen.o
+                0x00000000       0x40 src\mng\touch_screen.o
+ .debug_ranges  0x00000000       0x30 src\mng\touch_screen.o
+ .debug_line    0x00000000      0x371 src\mng\touch_screen.o
+ .debug_str     0x00000000      0xb96 src\mng\touch_screen.o
  .comment       0x00000000       0x7d src\mng\touch_screen.o
- .debug_frame   0x00000000       0x98 src\mng\touch_screen.o
+ .debug_frame   0x00000000       0xbc src\mng\touch_screen.o
  .ARM.attributes
                 0x00000000       0x39 src\mng\touch_screen.o
  .text          0x00000000        0x0 src\mng\wav.o
@@ -9351,6 +9353,7 @@ console_val_send_hex                              src\apl\console.o
                                                   src\mng\flash_mng.o
                                                   src\dev\w25q20ew_ctrl.o
 console_val_send_u16                              src\apl\console.o
+                                                  src\mng\touch_screen.o
                                                   src\apl\sound_app.o
 cyc_init                                          src\mng\cyc.o
                                                   src\main.o
@@ -9446,6 +9449,7 @@ kz_getid                                          src\os\syscall.o
                                                   src\drv\usart.o
                                                   src\dev\btn_dev.o
 kz_kmalloc                                        src\os\syscall.o
+                                                  src\mng\touch_screen.o
                                                   src\mng\lcd_fw.o
                                                   src\mng\cyc.o
                                                   src\misc\str_util.o
@@ -9479,6 +9483,7 @@ kz_run                                            src\os\syscall.o
                                                   src\apl\lcd_app.o
                                                   src\apl\console.o
 kz_send                                           src\os\syscall.o
+                                                  src\mng\touch_screen.o
                                                   src\dev\gysfdmaxb.o
                                                   src\dev\bt_dev.o
                                                   src\apl\sound_app.o
@@ -9620,6 +9625,7 @@ sai_send_dma                                      src\drv\sai.o
 sai_stop_dma                                      src\drv\sai.o
                                                   src\dev\pcm3060.o
 set_cyclic_message                                src\mng\cyc.o
+                                                  src\mng\touch_screen.o
                                                   src\dev\bt_dev.o
                                                   src\apl\lcd_app.o
 siprintf                                          src\tiny_printf.o
@@ -9666,6 +9672,7 @@ ts_formatlength                                   src\tiny_printf.o
 ts_formatstring                                   src\tiny_printf.o
 ts_itoa                                           src\tiny_printf.o
 ts_mng_init                                       src\mng\touch_screen.o
+ts_mng_proc_cyc                                   src\mng\touch_screen.o
 ts_mng_set_cmd                                    src\mng\touch_screen.o
 usart1_handler                                    src\drv\usart.o
 usart2_handler                                    src\drv\usart.o
