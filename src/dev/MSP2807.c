@@ -26,7 +26,7 @@
 #include "MSP2807.h"
 
 // マクロ
-#define MSP2807_SPI_BAUDRATE	(1*1000*1000)		// 通信速度 1MHz
+#define MSP2807_SPI_BAUDRATE	(5*1000*1000)		// 通信速度 5MHz
 #define MSP2807_USW_SPI_CH_LCD		(SPI_CH1)		// LCDコントローラの使用チャネル
 #define MSP2807_USE_SPI_CH_TOUCH	(SPI_CH2)		// タッチスクリーンコントローラの使用チャネル
 
