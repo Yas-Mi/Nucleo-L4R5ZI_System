@@ -83,6 +83,9 @@ static int test_tsk1(int argc, char *argv[])
 	uint16_t cnt = 0;
 	uint32_t i;
 	msp2807_open();
+	
+	memset(test_data, 0xFF, sizeof(test_data));
+	
 	while(1) {
 		// ƒTƒ“ƒvƒ‹•`‰æ
 		msp2807_write(sample);
