@@ -73,7 +73,7 @@ SOFTWARE.
 **===========================================================================
 */
 #if 1
-static uint16_t test_data[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT];
+static uint16_t test_data[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] = {0};
 static const uint16_t sample[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] = {
 	#include ".\mng\image\lena.hex"	
 };
@@ -84,15 +84,10 @@ static int test_tsk1(int argc, char *argv[])
 	uint32_t i;
 	msp2807_open();
 	while(1) {
-#if 0
-		for (i = 0; i < MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT; i++) {
-			test_data[i] = cnt;
-		}
-		console_str_send("writewrite\n");
-		msp2807_write(test_data);
-		cnt++;
-#endif
+		// ƒTƒ“ƒvƒ‹•`‰æ
 		msp2807_write(sample);
+		kz_tsleep(1000);
+		msp2807_write(test_data);
 		kz_tsleep(1000);
 	}
 	
