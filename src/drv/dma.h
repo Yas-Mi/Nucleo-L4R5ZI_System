@@ -36,11 +36,17 @@ typedef struct {
 } DMA_SEND;
 
 // DMAリソース
-#define DMA_RESOURCE_SAI1_A (0)				// SAI1のA
-#define DMA_RESOURCE_SAI1_B (1)				// SAI1のB
-#define DMA_RESOURCE_SAI2_A (2)				// SAI2のA
-#define DMA_RESOURCE_SAI2_B (3)				// SAI2のB
-#define DMA_RESOURCE_MAX 	(4)
+#define DMA_RESOURCE_SAI1_A		(0)				// SAI1のA
+#define DMA_RESOURCE_SAI1_B		(1)				// SAI1のB
+#define DMA_RESOURCE_SAI2_A		(2)				// SAI2のA
+#define DMA_RESOURCE_SAI2_B		(3)				// SAI2のB
+#define DMA_RESOURCE_SPI1_RX	(4)				// SPI1_RX
+#define DMA_RESOURCE_SPI1_TX	(5)				// SPI1_TX
+#define DMA_RESOURCE_SPI2_RX	(6)				// SPI2_RX
+#define DMA_RESOURCE_SPI2_TX	(7)				// SPI2_TX
+#define DMA_RESOURCE_SPI3_RX	(8)				// SPI3_RX
+#define DMA_RESOURCE_SPI3_TX	(9)				// SPI3_TX
+#define DMA_RESOURCE_MAX 		(10)
 
 // コールバック関数定義   
 typedef void (*DMA_CALLBACK)(DMA_CH ch, int32_t ret, void *vp);

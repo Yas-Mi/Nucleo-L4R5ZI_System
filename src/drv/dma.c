@@ -128,6 +128,12 @@ static const uint32_t dma_resource_cnv_tbl[DMA_RESOURCE_MAX] =
 	37,		// DMA_RESOURCE_SAI1_B
 	38,		// DMA_RESOURCE_SAI2_A
 	39,		// DMA_RESOURCE_SAI2_B
+	10,		// DMA_RESOURCE_SPI1_RX
+	11,		// DMA_RESOURCE_SPI1_TX
+	12,		// DMA_RESOURCE_SPI2_RX
+	13,		// DMA_RESOURCE_SPI2_TX
+	14,		// DMA_RESOURCE_SPI3_RX
+	15,		// DMA_RESOURCE_SPI3_TX
 };
 
 // 割込み共通ハンドラ
@@ -135,14 +141,16 @@ static void dma_common_handler(DMA_CH ch)
 {
 	volatile struct stm32l4_dma *dma = (struct stm32l4_dma*)DMA1_BASE_ADDR;
 	DMA_CTL *this = get_myself(ch);
-	uint32_t err_bit_pos = ((ch * 4) + 3);
-	uint32_t comp_bit_pos = ((ch * 4) + 1);
+	uint32_t global_bit_pos = ((ch * 4) + 0);
+	uint32_t comp_bit_pos =   ((ch * 4) + 1);
+	uint32_t half_bit_pos =   ((ch * 4) + 2);
+	uint32_t err_bit_pos =    ((ch * 4) + 3);
 	
 	// まずはエラーチェック
 	if (dma->isr & (1UL << err_bit_pos)) {
 		// エラーをクリア
 		// (*)エラー発生時ENビットが自動的に0になる
-		dma->ifcr |= (1UL << ch);
+		dma->ifcr |= (1UL << err_bit_pos);
 		// エラーコールバックを返して終了
 		this->callback(ch, -1, this->callback_vp);
 		return;
@@ -151,10 +159,13 @@ static void dma_common_handler(DMA_CH ch)
 	// 割込み処理
 	if (dma->isr & (1UL << comp_bit_pos)) {
 		// 割込みステータスをクリア
-		dma->ifcr |= (1UL << ch);
+		dma->ifcr |= (1UL << half_bit_pos) | (1UL << comp_bit_pos) | (1UL << global_bit_pos);
 		// コールバック
 		this->callback(ch, 0, this->callback_vp);
 	}
+	
+	// 状態を更新
+	this->status = ST_OPENED;
 	
 	return;
 }
