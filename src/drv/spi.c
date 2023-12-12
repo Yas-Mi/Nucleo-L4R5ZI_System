@@ -516,7 +516,7 @@ int32_t spi_send_dma(SPI_CH ch, uint8_t *data, uint32_t size)
 	
 	// DMAを使用して送信の設定
 	if (spi_dma_info[ch].tx_ch != DMA_CH_MAX) {
-		ret = dma_start(spi_dma_info[ch].tx_ch, &send_info);
+		ret = dma_start_ex(spi_dma_info[ch].tx_ch, &send_info);
 		if (ret != 0) {
 			this->status = ST_OPENED;
 			return -1;
@@ -529,7 +529,7 @@ int32_t spi_send_dma(SPI_CH ch, uint8_t *data, uint32_t size)
 	
 	// 送信だけdma有効
 	// TXEビットがセットされたときにDMAへ要求を送信
-	// TXEはFIFO(4byte)に半分以下
+	// TXEはFIFO(4byte)に半分以下のデータがあるときにセットされる
 	spi_base_addr->cr2 |= CR2_TXDMAEN;
 	
 	// SPI有効

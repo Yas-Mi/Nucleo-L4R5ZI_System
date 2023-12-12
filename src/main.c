@@ -92,7 +92,7 @@ static int test_tsk1(int argc, char *argv[])
 		memcpy(disp_data, sample, sizeof(disp_data));
 		msp2807_write(disp_data);
 		kz_tsleep(1000);
-		memcpy(disp_data, white_data, sizeof(disp_data));
+		memset(disp_data, 0xFF, sizeof(disp_data));
 		msp2807_write(disp_data);
 		kz_tsleep(1000);
 	}

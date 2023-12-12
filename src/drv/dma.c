@@ -11,6 +11,9 @@
 #include "intr.h"
 #include "system_def.h"
 
+// マクロ
+#define MAX_TRANSFER_COUNT	(0xFFFF)	// 最大送信回数
+
 // 状態
 #define ST_NOT_INTIALIZED	(0U)	// 未初期化
 #define ST_INTIALIZED		(1U)	// 初期化済
@@ -83,9 +86,12 @@ typedef enum {
 
 // DMA制御ブロック
 typedef struct {
-	uint32_t status;			// 状態
-	DMA_CALLBACK callback;		// コールバック
-	void * callback_vp;			// コールバックパラメータ
+	uint32_t		status;					// 状態
+	DMA_CALLBACK	callback;				// コールバック
+	void			*callback_vp;			// コールバックパラメータ
+	// 拡張転送関数用
+	uint32_t		remain_transfer_count;	// 残り送信回数
+	DMA_SEND		send_info;				// 送信情報
 } DMA_CTL;
 static DMA_CTL dma_ctl[DMA_CH_MAX];
 #define get_myself(n) (&dma_ctl[(n)])
@@ -145,12 +151,15 @@ static void dma_common_handler(DMA_CH ch)
 	uint32_t comp_bit_pos =   ((ch * 4) + 1);
 	uint32_t half_bit_pos =   ((ch * 4) + 2);
 	uint32_t err_bit_pos =    ((ch * 4) + 3);
+	DMA_SEND send_info;
 	
 	// まずはエラーチェック
 	if (dma->isr & (1UL << err_bit_pos)) {
 		// エラーをクリア
 		// (*)エラー発生時ENビットが自動的に0になる
 		dma->ifcr |= (1UL << err_bit_pos);
+		// 停止
+		dma_stop(ch);
 		// エラーコールバックを返して終了
 		this->callback(ch, -1, this->callback_vp);
 		return;
@@ -160,12 +169,22 @@ static void dma_common_handler(DMA_CH ch)
 	if (dma->isr & (1UL << comp_bit_pos)) {
 		// 割込みステータスをクリア
 		dma->ifcr |= (1UL << half_bit_pos) | (1UL << comp_bit_pos) | (1UL << global_bit_pos);
-		// コールバック
-		this->callback(ch, 0, this->callback_vp);
+		// 停止
+		dma_stop(ch);
+		// まだ残りがあるなら
+		if (this->remain_transfer_count != 0) {
+			// DMA送信
+			memcpy(&send_info, &(this->send_info), sizeof(DMA_SEND));
+			send_info.src_addr = this->send_info.src_addr + this->send_info.transfer_count;
+			send_info.transfer_count = this->remain_transfer_count;
+			dma_start_ex(ch, &send_info);
+			
+		// 残りがないなら
+		} else {
+			// コールバック
+			this->callback(ch, 0, this->callback_vp);
+		}
 	}
-	
-	// 状態を更新
-	this->status = ST_OPENED;
 	
 	return;
 }
@@ -416,6 +435,174 @@ int32_t dma_start(DMA_CH ch, DMA_SEND *send_info)
 	return 0;
 }
 
+// DMA転送関数
+// (*) 転送回数（transfer_count）が17bitしかないため、それ以上のサイズが指定されたとしても大丈夫転送関数
+int32_t dma_start_ex(DMA_CH ch, DMA_SEND *send_info)
+{
+	volatile struct stm32l4_dma *dma = (struct stm32l4_dma*)DMA1_BASE_ADDR;
+	DMA_CTL *this;
+	DMA_TRANSFER_PTN trans_ptn;
+	uint32_t transfer_count;
+	
+	// チャネル番号が範囲外の場合エラーを返して終了
+	if (ch >= DMA_CH_MAX) {
+		return -1;
+	}
+	
+	// 制御ブロック取得
+	this = get_myself(ch);
+	
+	// 状態がオープン済みでない場合、エラーを返して終了
+	if (this->status != ST_OPENED) {
+		return -1;
+	}
+	
+	// 転送パターンの設定
+	// 転送元のアドレスがRAM？
+	if (is_ram_addr(send_info->src_addr)) {
+		// 転送先のアドレスがRAM？
+		if (is_ram_addr(send_info->dst_addr)) {
+			trans_ptn = DMA_TRANSFER_PTN_M2M;
+		// 転送先のアドレスがペリフェラル？
+		} else if (is_peri_addr(send_info->dst_addr)) {
+			trans_ptn = DMA_TRANSFER_PTN_M2P;
+		// 転送先のアドレスがRAMでもペリフェラルでもない場合はエラーを返して終了
+		} else {
+			return -1;
+		}
+	// 転送元のアドレスがペリフェラル？
+	} else if (is_peri_addr(send_info->src_addr)) {
+		// 転送先のアドレスがRAM？
+		if (is_ram_addr(send_info->dst_addr)) {
+			trans_ptn = DMA_TRANSFER_PTN_P2M;
+		// 転送先のアドレスがペリフェラル？
+		} else if (is_peri_addr(send_info->dst_addr)) {
+			trans_ptn = DMA_TRANSFER_PTN_P2P;
+		// 転送先のアドレスがRAMでもペリフェラルでもない場合はエラーを返して終了
+		} else {
+			return -1;
+		}
+	// 転送元のアドレスがRAMでもペリフェラルでもない場合はエラーを返して終了
+	} else {
+		return -1;
+	}
+	
+	// DMAレジスタの設定
+	// 下記はマニュアルに記載されているDMA設定手順
+	/*
+		The following sequence is needed to configure a DMA channel x:
+		1. Set the peripheral register address in the DMA_CPARx register. 
+			The data is moved from/to this address to/from the memory after the peripheral event, 
+			or after the channel is enabled in memory-to-memory mode.
+		2. Set the memory address in the DMA_CMARx register. 
+			The data is written to/read from the memory after the peripheral event or after the 
+			channel is enabled in memory-to-memory mode.
+		3. Configure the total number of data to transfer in the DMA_CNDTRx register.
+			After each data transfer, this value is decremented.
+		4. Configure the parameters listed below in the DMA_CCRx register:
+			– the channel priority
+			– the data transfer direction
+			– the circular mode
+			– the peripheral and memory incremented mode
+			– the peripheral and memory data size
+			– the interrupt enable at half and/or full transfer and/or transfer error
+		5. Activate the channel by setting the EN bit in the DMA_CCRx register
+	*/
+	
+	// 転送元/転送先のアドレス設定
+	// 転送元がメモリの場合
+	if ((trans_ptn == DMA_TRANSFER_PTN_M2M) || (trans_ptn == DMA_TRANSFER_PTN_M2P)) {
+		// 転送元のアドレス設定
+		dma->commonn_reg[ch].cmar = send_info->src_addr;
+		// 転送先のアドレス設定
+		dma->commonn_reg[ch].cpar = send_info->dst_addr;
+	// 転送元がperiferalの場合
+	} else {
+		// 転送元のアドレス設定
+		dma->commonn_reg[ch].cpar = send_info->src_addr;
+		// 転送先のアドレス設定
+		dma->commonn_reg[ch].cmar = send_info->dst_addr;
+	}
+	
+	// 転送サイズの設定
+	// 一回の最大送信回数以上の場合
+	if (send_info->transfer_count > MAX_TRANSFER_COUNT) {
+		// 送信回数を最大に設定
+		transfer_count = MAX_TRANSFER_COUNT;
+		// 残送信回数を設定
+		this->remain_transfer_count = send_info->transfer_count - transfer_count;
+		// 送信情報を覚えておく
+		memcpy(&(this->send_info), send_info, sizeof(DMA_SEND));
+		this->send_info.transfer_count = transfer_count;
+	// 一回で送信できる場合
+	} else {
+		this->remain_transfer_count = 0;
+		transfer_count = send_info->transfer_count;
+	}
+	dma->commonn_reg[ch].cndtr = transfer_count;
+	// コンフィグ
+	// MSIZEとPSIZEの関係
+	// DIR:0 memory to periferal
+	//     1 periferal to memory
+	// DIR = 1
+	//  転送元は、CCRのMSIZEとMINCで定義
+	//  転送先は、CCRのPSIZEとPINCで定義
+	// DIR = 0
+	//  転送元は、CCRのPSIZEとPINCで定義
+	//  転送先は、CCRのMSIZEとMINCで定義
+	// (例) 転送元のサイズが8bit、転送先のサイズが16bitの場合
+	//   転送元        転送先
+	//     0x00 0xAA --> 0x00 0x00
+	//                   0x01 0xAA
+	//     0x01 0xBB --> 0x02 0x00
+	//                   0x03 0xBB
+	//     0x02 0xCC --> 0x04 0x00
+	//                   0x05 0xCC
+	//     0x03 0xDD --> 0x06 0x00
+	//                   0x07 0xDD
+	// 転送パターンの設定
+	// Memory to Memoryの場合
+	if (trans_ptn == DMA_TRANSFER_PTN_M2M) {
+		dma->commonn_reg[ch].ccr = _CCR_MEM2MEM | _CCR_DIR;
+	// Memory to Periferal 
+	} else if (trans_ptn == DMA_TRANSFER_PTN_M2P) {
+		dma->commonn_reg[ch].ccr |= _CCR_DIR;
+	} else {
+		;
+	}
+	// アドレスとインクリメントの設定
+	// 転送元がMemoryの場合
+	if ((trans_ptn == DMA_TRANSFER_PTN_M2M)||(trans_ptn == DMA_TRANSFER_PTN_M2P)) {
+		// アドレスの設定
+		
+		if (send_info->src_addr_inc) {
+			dma->commonn_reg[ch].ccr |= _CCR_MINC;
+		}
+		if (send_info->dst_addr_inc) {
+			dma->commonn_reg[ch].ccr |= _CCR_PINC;
+		}
+	// 転送元がペリフェラルの場合
+	} else {
+		if (send_info->src_addr_inc) {
+			dma->commonn_reg[ch].ccr |= _CCR_PINC;
+		}
+		if (send_info->dst_addr_inc) {
+			dma->commonn_reg[ch].ccr |= _CCR_MINC;
+		}
+	}
+	// 転送単位の設定
+	dma->commonn_reg[ch].ccr |= (_CCR_MSIZE(send_info->transfer_unit) | _CCR_PSIZE(send_info->transfer_unit));
+	// 割込みの設定(エラー割込みと転送完了割り込み)
+	dma->commonn_reg[ch].ccr |= (_CCR_TEIE | _CCR_TCIE);
+	// 有効化
+	dma->commonn_reg[ch].ccr |= _CCR_EN;
+	
+	// 状態の更新
+	this->status = ST_RUN;
+	
+	return 0;
+}
+
 // DMA停止関数
 int32_t dma_stop(DMA_CH ch) 
 {
@@ -439,7 +626,7 @@ int32_t dma_stop(DMA_CH ch)
 	// (*) エラーが起きてたらエラーフラグをクリアしない限りDMA無効化にできない
 	if (dma->isr & (1UL << err_bit_pos)) {
 		// エラーをクリア
-		dma->ifcr |= (1UL << ch);
+		dma->ifcr |= (1UL << err_bit_pos);
 	}
 	dma->commonn_reg[ch].ccr &= ~_CCR_EN;
 	

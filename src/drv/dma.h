@@ -55,6 +55,7 @@ typedef void (*DMA_CALLBACK)(DMA_CH ch, int32_t ret, void *vp);
 extern void dma_init(void);
 extern int32_t dma_open(DMA_CH ch, uint32_t resource, DMA_CALLBACK callback, void * callback_vp);
 extern int32_t dma_start(DMA_CH ch, DMA_SEND *send_info);
+extern int32_t dma_start_ex(DMA_CH ch, DMA_SEND *send_info);
 extern int32_t dma_stop(DMA_CH ch);
 extern int32_t dma_close(DMA_CH ch, USART_CALLBACK cb, void *vp);
 
