@@ -55,6 +55,7 @@ SOFTWARE.
 #include "wav.h"
 #include "cyc.h"
 #include "flash_mng.h"
+#include "touch_screen.h"
 // アプリ
 #include "console.h"
 #include "sound_app.h"
@@ -78,7 +79,7 @@ static const uint16_t white_data[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] =
 static const uint16_t sample[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] = {
 	#include ".\mng\image\lena.hex"	
 };
-// テスト用タスク 
+// テスト用タスク1 
 static int test_tsk1(int argc, char *argv[])
 {	
 	uint16_t cnt = 0;
@@ -94,6 +95,39 @@ static int test_tsk1(int argc, char *argv[])
 		kz_tsleep(1000);
 		memset(disp_data, 0xFF, sizeof(disp_data));
 		msp2807_write(disp_data);
+		kz_tsleep(1000);
+	}
+	
+	return 0;
+}
+
+// タッチコールバック
+void ts_mng_callback(TS_CALLBACK_TYPE type, uint16_t x, uint16_t y, void *vp)
+{
+	// 表示
+	console_str_send("x:");
+	console_val_send_u16(x);
+	console_str_send(" y:");
+	console_val_send_u16(y);
+	console_str_send("\n");
+}
+
+// テスト用タスク2
+static int test_tsk2(int argc, char *argv[])
+{	
+	uint16_t cnt = 0;
+	uint32_t i;
+	int32_t ret;
+	
+	// オープン
+	msp2807_open();
+	// コールバック登録
+	ret = ts_mng_reg_callback(TS_CALLBACK_TYPE_SINGLE, ts_mng_callback, NULL);
+	// 白書き込み
+	memset(disp_data, 0xFF, sizeof(disp_data));
+	msp2807_write(disp_data);
+	
+	while(1) {
 		kz_tsleep(1000);
 	}
 	
@@ -124,6 +158,7 @@ static int start_threads(int argc, char *argv[])
 	wav_init();
 	cyc_init();
 	flash_mng_init();
+	ts_mng_init();
 	
 	// アプリの初期化
 	console_init();
@@ -156,7 +191,8 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(bluetoothdrv_main, "blue_tooth",  8, 0x200, 0, NULL);
 	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
 	//kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
-	kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
+	//kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
+	kz_run(test_tsk2, "test_tsk2",  3, 0x1000, 0, NULL);
 	
 	/* 優先順位を下げて，アイドルスレッドに移行する */
 	kz_chpri(15); 

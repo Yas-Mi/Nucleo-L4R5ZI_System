@@ -26,7 +26,8 @@
 #include "MSP2807.h"
 
 // マクロ
-#define MSP2807_SPI_BAUDRATE	(5*1000*1000)		// 通信速度 5MHz
+#define MSP2807_SPI_LCD_BAUDRATE	(60*1000*1000)	// 通信速度 60MHz
+#define MSP2807_SPI_TOUCH_BAUDRATE	(1*1000*1000)	// 通信速度 1MHz
 #define MSP2807_USW_SPI_CH_LCD		(SPI_CH1)		// LCDコントローラの使用チャネル
 #define MSP2807_USE_SPI_CH_TOUCH	(SPI_CH2)		// タッチスクリーンコントローラの使用チャネル
 
@@ -42,9 +43,31 @@
 #define MSP2807_LCD_CMD_PIXEL_FOMART_SET			(0x3A)
 
 // タッチスクリーンコントローラコマンド
-#define MSP2807_TOUCH_CMD_ADC_STP_PENDWN_ENABLE		(0x90)
-#define MSP2807_TOUCH_CMD_Y_ENABLE_PENDWN_DISABLE	(0x91)
-#define MSP2807_TOUCH_CMD_X_ENABLE_PENDWN_DISABLE	(0xD1)
+/* コマンドのフォーマット
+	+---+----------+------+---------+---------+
+	| S | A2 A1 A0 | MODE | SER/DFR | PD1 PD0 |
+	+---+----------+------+---------+---------+
+	S       : スタートビット
+	A2-A0   : チャネル選択ビット
+	MODE    : 12/8bit選択ビット
+	SER/DFR : シングルエンド/差動リファレンスの選択ビット
+	PD1-PD0 : パワーダウン選択ビット
+*/
+#define MSP2807_TOUCH_CMD_START_BIT					(1 << 7)
+#define MSP2807_TOUCH_CMD_A2						(1 << 6)
+#define MSP2807_TOUCH_CMD_A1						(1 << 5)
+#define MSP2807_TOUCH_CMD_A0						(1 << 4)
+#define MSP2807_TOUCH_CMD_MODE						(1 << 3)
+#define MSP2807_TOUCH_CMD_SERDFR					(1 << 2)
+#define MSP2807_TOUCH_CMD_P1						(1 << 1)
+#define MSP2807_TOUCH_CMD_P0						(1 << 0)
+#define MSP2807_TOUCH_CMD_X_MEASURE					(MSP2807_TOUCH_CMD_A2|MSP2807_TOUCH_CMD_A0)
+#define MSP2807_TOUCH_CMD_Y_MEASURE					(MSP2807_TOUCH_CMD_A0)
+#define MSP2807_TOUCH_CMD_REFERENCE_OFF_ADC_ON		(MSP2807_TOUCH_CMD_P0)
+#define MSP2807_TOUCH_CMD_REFERENCE_ON_ADC_OFF		(MSP2807_TOUCH_CMD_P1)
+#define MSP2807_TOUCH_CMD_ADC_STP_PENDWN_ENABLE		(MSP2807_TOUCH_CMD_START_BIT)
+#define MSP2807_TOUCH_CMD_X_ENABLE_PENDWN_DISABLE	(MSP2807_TOUCH_CMD_START_BIT|MSP2807_TOUCH_CMD_X_MEASURE|MSP2807_TOUCH_CMD_REFERENCE_OFF_ADC_ON)
+#define MSP2807_TOUCH_CMD_Y_ENABLE_PENDWN_DISABLE	(MSP2807_TOUCH_CMD_START_BIT|MSP2807_TOUCH_CMD_Y_MEASURE|MSP2807_TOUCH_CMD_REFERENCE_OFF_ADC_ON)
 
 // 状態
 #define ST_UNINITIALIZED	(0)		// 未初期化
@@ -52,9 +75,6 @@
 #define ST_IDLE				(2)		// アイドル
 #define ST_RUNNING			(3)		// 実行中
 #define ST_MAX				(4)
-
-// ペン状態
-
 
 // 制御用ブロック
 typedef struct {
@@ -90,8 +110,8 @@ static const MSP2807_GPIO_CFG gpio_cfg[MSP2807_GPIO_TYPE_MAX] = {
 
 // オープンパラメータ(LCD)
 static const SPI_OPEN lcd_spi_open_par = {
-	MSP2807_SPI_BAUDRATE,		// 通信速度
-	SPI_CPOL_POSITIVE,			// Clock Polarity
+	MSP2807_SPI_LCD_BAUDRATE,	// 通信速度
+	SPI_CPOL_NEGATIVE,			// Clock Polarity
 	SPI_CPHA_FIRST_EDGE,    	// Clock Phase
 	SPI_FRAME_FMT_MSB_FIRST,	// フレームフォーマット
 	SPI_DATA_SIZE_8BIT,			// データサイズ
@@ -99,7 +119,7 @@ static const SPI_OPEN lcd_spi_open_par = {
 
 // オープンパラメータ(タッチスクリーン)
 static const SPI_OPEN touch_spi_open_par = {
-	MSP2807_SPI_BAUDRATE,		// 通信速度
+	MSP2807_SPI_TOUCH_BAUDRATE,	// 通信速度
 	SPI_CPOL_POSITIVE,			// Clock Polarity
 	SPI_CPHA_FIRST_EDGE,    	// Clock Phase
 	SPI_FRAME_FMT_MSB_FIRST,	// フレームフォーマット
@@ -244,9 +264,6 @@ int32_t msp2807_open(void)
 		console_str_send("touch spi_open error\n");
 		goto MSP2807_OPEN_EXIT;
 	}
-	
-	// タッチスクリーンの割り込みを有効
-	
 	
 	// MSP2807リセット解除
 	gpio_reset(GPIO_PIN_SET);
@@ -437,31 +454,43 @@ int32_t msp2807_get_touch_pos(uint16_t *x, uint16_t *y)
 		return E_OBJ;
 	}
 	
-	// X軸有効X軸電圧供給，ペン割り込み無効
-	snd_data[0] = MSP2807_TOUCH_CMD_Y_ENABLE_PENDWN_DISABLE;
-	snd_data[1] = 0x00;	// ダミー
-	snd_data[0] = MSP2807_TOUCH_CMD_Y_ENABLE_PENDWN_DISABLE;
+	snd_data[0] = MSP2807_TOUCH_CMD_X_ENABLE_PENDWN_DISABLE;
+	snd_data[1] = 0; // ダミー
+	snd_data[2] = 0; // ダミー;
 	ret = spi_send_recv(MSP2807_USE_SPI_CH_TOUCH, snd_data, rcv_data, 3);
 	if (ret != E_OK) {
 		goto MSP2807_GET_TOUCH_POS_EXIT;
 	}
 	
 	// x座標の設定
-	*x = (rcv_data[1] << 8) | rcv_data[0];
+	*x = ((((uint16_t)rcv_data[1] << 8) | ((uint16_t)rcv_data[2])) >> 3);
 	
-	// Y軸有効Y軸電圧供給，ペン割り込み無効
-	snd_data[0] = MSP2807_TOUCH_CMD_X_ENABLE_PENDWN_DISABLE;
-	snd_data[1] = 0x00;	// ダミー
-	snd_data[0] = MSP2807_TOUCH_CMD_X_ENABLE_PENDWN_DISABLE;
+	// 安定待ち時間
+	kz_tsleep(1);
+	
+	snd_data[0] = MSP2807_TOUCH_CMD_Y_ENABLE_PENDWN_DISABLE;
+	snd_data[1] = 0; // ダミー
+	snd_data[2] = 0; // ダミー;
 	ret = spi_send_recv(MSP2807_USE_SPI_CH_TOUCH, snd_data, rcv_data, 3);
 	if (ret != E_OK) {
 		goto MSP2807_GET_TOUCH_POS_EXIT;
 	}
 	
 	// y座標の設定
-	*y = (rcv_data[1] << 8) | rcv_data[0];
+	*y = ((((uint16_t)rcv_data[1] << 8) | ((uint16_t)rcv_data[2])) >> 3);
+	
+	// 安定待ち時間
+	kz_tsleep(1);
 	
 MSP2807_GET_TOUCH_POS_EXIT:
+	
+	// ADC停止，ペン割り込み有効
+	snd_data[0] = MSP2807_TOUCH_CMD_ADC_STP_PENDWN_ENABLE;
+	ret = spi_send_recv(MSP2807_USE_SPI_CH_TOUCH, snd_data, NULL, 1);
+	
+	// 安定待ち時間
+	kz_tsleep(1);
+	
 	return ret;
 }
 

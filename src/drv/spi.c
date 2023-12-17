@@ -32,8 +32,8 @@ struct stm32l4_spi {
 	volatile uint32_t cr1;		// Control Register 1		OFSET 0x00
 	volatile uint32_t cr2;		// Control Register 2		OFSET 0x04
 	volatile uint32_t sr;		// Status Register 2		OFSET 0x08
-	volatile uint16_t reserved;	// リザーブ
 	volatile uint8_t dr[2];		// Data Register 2			OFSET 0x0C
+	volatile uint16_t reserved;	// リザーブ
 	volatile uint32_t crcpr;	// CRC polynomial Register	OFSET 0x00
 	volatile uint32_t rxcrcr;	// Rx CRC Register			OFSET 0x00
 	volatile uint32_t txcrcr;	// Tx CRC Register			OFSET 0x00
@@ -178,7 +178,7 @@ static void spi_common_handler(DMA_CH ch)
 		// データ送信時にダミーデータを受信してしまうため読み捨てる
 		if (this->rcv_sz != 0) {
 			// データ受信
-			dummy_data = *((uint8_t*)(spi_base_addr->dr[0]));
+			dummy_data = spi_base_addr->dr[0];
 			if (this->p_rcv_data != NULL) {
 				*(this->p_rcv_data++) = dummy_data;
 			}
@@ -261,8 +261,8 @@ static int32_t spi_disable(SPI_CH ch)
 {
 	volatile struct stm32l4_spi *spi_base_addr;
 	uint32_t timeout = 10;
-	int32_t dummy_data;
 	int32_t ret = E_OK;
+	uint8_t dummy_data;
 	
 	// ベースレジスタ取得
 	spi_base_addr = get_reg(ch);
@@ -295,7 +295,7 @@ static int32_t spi_disable(SPI_CH ch)
 	// 受信FIFOが0になるまで待つ
 	while(((spi_base_addr->sr >> 9) & 0x3) != 0) {
 		// ダミーリード
-		dummy_data = *((uint8_t*)(spi_base_addr->dr[0]));
+		dummy_data = spi_base_addr->dr[0];
 	}
 	
 SPI_DISABLE_EXIT:
@@ -319,7 +319,8 @@ static void set_config(SPI_CH ch, SPI_OPEN *open_par)
 	// SSM=0:ハードウェアがNSSを制御
 	//        SSOE=1:マスターのみ使用。NSSは、SPE=1でlow、SPE=0でHigh。NSSP=1の場合は通信間でパルスを発生させる。
 	//        SSOE=0:マルチマスター時に使用。
-	spi_base_addr->cr1 = CR1_BIDIOE | CR1_BR(calc_br(ch, open_par->baudrate)) | CR1_MSTR;
+	//spi_base_addr->cr1 = CR1_BIDIOE | CR1_BR(calc_br(ch, open_par->baudrate)) | CR1_MSTR;
+	spi_base_addr->cr1 = CR1_BR(calc_br(ch, open_par->baudrate)) | CR1_MSTR;
 	if (open_par->fmt == SPI_FRAME_FMT_LSB_FIRST) {
 		spi_base_addr->cr1 |= CR1_LSBFIRST;
 	}
@@ -366,7 +367,6 @@ void spi_init(void)
 int32_t spi_open(SPI_CH ch, SPI_OPEN *open_par)
 {
 	SPI_CTL *this;
-	volatile struct stm32l4_spi *spi_base_addr;
 	int32_t ret;
 	
 	// チャネル番号が範囲外の場合エラーを返して終了
