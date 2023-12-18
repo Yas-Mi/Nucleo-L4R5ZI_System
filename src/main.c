@@ -36,14 +36,14 @@ SOFTWARE.
 #include "interrupt.h"
 #include "pin_function.h"
 #include "clock.h"
-// ƒhƒ‰ƒCƒo
+// ãƒ‰ãƒ©ã‚¤ãƒ
 #include "octspi.h"
 #include "sai.h"
 #include "i2c_wrapper.h"
 #include "dma.h"
 #include "spi.h"
 #include "tim.h"
-// ƒfƒoƒCƒX
+// ãƒ‡ãƒã‚¤ã‚¹
 #include "w25q20ew_ctrl.h"
 #include "gysfdmaxb.h"
 #include "bt_dev.h"
@@ -51,12 +51,12 @@ SOFTWARE.
 #include "lcd_dev.h"
 #include "MSP2807.h"
 
-// ƒ}ƒl[ƒWƒƒ
+// ãƒãƒãƒ¼ã‚¸ãƒ£
 #include "wav.h"
 #include "cyc.h"
 #include "flash_mng.h"
 #include "touch_screen.h"
-// ƒAƒvƒŠ
+// ã‚¢ãƒ—ãƒª
 #include "console.h"
 #include "sound_app.h"
 #include "lcd_app.h"
@@ -79,17 +79,17 @@ static const uint16_t white_data[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] =
 static const uint16_t sample[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] = {
 	#include ".\mng\image\lena.hex"	
 };
-// ƒeƒXƒg—pƒ^ƒXƒN1 
+// ãƒ†ã‚¹ãƒˆç”¨ã‚¿ã‚¹ã‚¯1 
 static int test_tsk1(int argc, char *argv[])
 {	
 	uint16_t cnt = 0;
 	uint32_t i;
 	
-	// ƒI[ƒvƒ“
+	// ã‚ªãƒ¼ãƒ—ãƒ³
 	msp2807_open();
 	
 	while(1) {
-		// ƒTƒ“ƒvƒ‹•`‰æ
+		// ã‚µãƒ³ãƒ—ãƒ«æç”»
 		memcpy(disp_data, sample, sizeof(disp_data));
 		msp2807_write(disp_data);
 		kz_tsleep(1000);
@@ -101,44 +101,93 @@ static int test_tsk1(int argc, char *argv[])
 	return 0;
 }
 
-// ƒ^ƒbƒ`ƒR[ƒ‹ƒoƒbƒN
+// ãƒ†ã‚¹ãƒˆç”¨ã‚¿ã‚¹ã‚¯2
+#define BUFFRING_NUM	(16)
+// ãƒ†ã‚¹ãƒˆç”¨ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆ
+typedef struct {
+	uint16_t			x[BUFFRING_NUM];		// xåº§æ¨™
+	uint16_t			y[BUFFRING_NUM];		// yåº§æ¨™
+	uint8_t				get_cnt;				// å–å¾—å›æ•°
+	kz_msgbox_id_t		msg_id;					// ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸ID
+} TEST2_CTL;
+static TEST2_CTL test2_ctl;
+
+// ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸å®šç¾©
+typedef struct {
+	uint16_t x;
+	uint16_t y;
+} MSG_INFO;
+
+// ã‚¿ãƒƒãƒã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯
 void ts_mng_callback(TS_CALLBACK_TYPE type, uint16_t x, uint16_t y, void *vp)
 {
-	// •\¦
+	MSG_INFO *msg;
+	test2_ctl *this = &test2_ctl;
+	
+	// è¡¨ç¤º
 	console_str_send("x:");
 	console_val_send_u16(x);
 	console_str_send(" y:");
 	console_val_send_u16(y);
 	console_str_send("\n");
+	
+	// ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸é€ä¿¡
+	msg = kz_kmalloc(sizeof(MSG_INFO));
+	msg->x = x;
+	msg->y = y;
+	kz_send(this->msg_id, sizeof(MSG_INFO), msg);
 }
 
-// ƒeƒXƒg—pƒ^ƒXƒN2
-static int test_tsk2(int argc, char *argv[])
-{	
-	uint16_t cnt = 0;
-	uint32_t i;
+static void test_init(void)
+{
+	test2_ctl *this = &test2_ctl;
 	int32_t ret;
 	
-	// ƒI[ƒvƒ“
+	// ã‚ªãƒ¼ãƒ—ãƒ³
 	msp2807_open();
-	// ƒR[ƒ‹ƒoƒbƒN“o˜^
+	// ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯ç™»éŒ²
 	ret = ts_mng_reg_callback(TS_CALLBACK_TYPE_SINGLE, ts_mng_callback, NULL);
-	// ”’‘‚«‚İ
+	// ç™½æ›¸ãè¾¼ã¿
 	memset(disp_data, 0xFF, sizeof(disp_data));
 	msp2807_write(disp_data);
 	
+	// ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸IDè¨­å®š
+	this->msg_id = TEST;
+	
+}
+
+static int test_tsk2(int argc, char *argv[])
+{	
+	test2_ctl *this = &test2_ctl;
+	int32_t size;
+	
+	// åˆæœŸåŒ–
+	test_init();
+	
 	while(1) {
-		kz_tsleep(1000);
+		// ãƒ¡ãƒƒã‚»ãƒ¼ã‚¸å—ä¿¡
+		kz_recv(this->msg_id, &size, &msg);
+		
+		// ã‚ã‚‹ç¨‹åº¦ãƒãƒƒãƒ•ã‚¡ãƒªãƒ³ã‚°ã—ãŸã®ã§æ›¸ãè¾¼ã¿
+		if (this->get_cnt++ >= BUFFRING_NUM) {
+			// ã‚¯ãƒªã‚¢
+			this->get_cnt = 0;
+			
+			
+			
+			
+		}
+		
 	}
 	
 	return 0;
 }
 #endif
 
-/* ƒVƒXƒeƒ€Eƒ^ƒXƒN‚Æƒ†[ƒUEƒ^ƒXƒN‚Ì‹N“® */
+/* ã‚·ã‚¹ãƒ†ãƒ ãƒ»ã‚¿ã‚¹ã‚¯ã¨ãƒ¦ãƒ¼ã‚¶ãƒ»ã‚¿ã‚¹ã‚¯ã®èµ·å‹• */
 static int start_threads(int argc, char *argv[])
 {
-	// ƒyƒŠƒtƒFƒ‰ƒ‹‚Ì‰Šú‰»
+	// ãƒšãƒªãƒ•ã‚§ãƒ©ãƒ«ã®åˆæœŸåŒ–
 	usart_init();
 	i2c_wrapper_init();
 	sai_init();
@@ -147,25 +196,25 @@ static int start_threads(int argc, char *argv[])
 	octospi_init();
 	spi_init();
 	
-	// ƒfƒoƒCƒX‚Ì‰Šú‰»
+	// ãƒ‡ãƒã‚¤ã‚¹ã®åˆæœŸåŒ–
 	bt_dev_init();
 	msp2807_init();
 	//pcm3060_init();
 	//LCD_dev_init();
 	//gysfdmaxb_init();
 	
-	// ƒ}ƒl[ƒWƒƒ‚Ì‰Šú‰»
+	// ãƒãƒãƒ¼ã‚¸ãƒ£ã®åˆæœŸåŒ–
 	wav_init();
 	cyc_init();
 	flash_mng_init();
 	ts_mng_init();
 	
-	// ƒAƒvƒŠ‚Ì‰Šú‰»
+	// ã‚¢ãƒ—ãƒªã®åˆæœŸåŒ–
 	console_init();
 	//sound_app_init();
 	//lcd_apl_init();
 	
-	// ƒRƒ}ƒ“ƒh‚Ìİ’è
+	// ã‚³ãƒãƒ³ãƒ‰ã®è¨­å®š
 	//bt_dev_set_cmd();
 	//sound_app_set_cmd();
 	//pcm3060_set_cmd();
@@ -173,13 +222,13 @@ static int start_threads(int argc, char *argv[])
 	//gysfdmaxb_set_cmd();
 	flash_mng_set_cmd();
 	
-	// ƒeƒXƒg
+	// ãƒ†ã‚¹ãƒˆ
 	flash_mng_open(FLASH_MNG_KIND_W25Q20EW);
 	
-	// ƒ^ƒXƒN‚Ì‹N“®
-	// ƒfƒoƒCƒX
+	// ã‚¿ã‚¹ã‚¯ã®èµ·å‹•
+	// ãƒ‡ãƒã‚¤ã‚¹
 	//kz_run(BTN_dev_main, "BTN_dev_main",  2, 0x1000, 0, NULL);
-	// ƒAƒvƒŠ
+	// ã‚¢ãƒ—ãƒª
 	//kz_run(console_main, "console",  3, 0x1000, 0, NULL);
 	//kz_run(LCD_app_main, "LCD_app_main",  3, 0x1000, 0, NULL);
 	//kz_run(ctl_main, "ctl_main",  3, 0x1000, 0, NULL);
@@ -194,15 +243,15 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
 	kz_run(test_tsk2, "test_tsk2",  3, 0x1000, 0, NULL);
 	
-	/* —Dæ‡ˆÊ‚ğ‰º‚°‚ÄCƒAƒCƒhƒ‹ƒXƒŒƒbƒh‚ÉˆÚs‚·‚é */
+	/* å„ªå…ˆé †ä½ã‚’ä¸‹ã’ã¦ï¼Œã‚¢ã‚¤ãƒ‰ãƒ«ã‚¹ãƒ¬ãƒƒãƒ‰ã«ç§»è¡Œã™ã‚‹ */
 	kz_chpri(15); 
 	
-	// ƒVƒXƒeƒ€§Œäƒ^ƒXƒN‚Ì‰Šú‰»
+	// ã‚·ã‚¹ãƒ†ãƒ åˆ¶å¾¡ã‚¿ã‚¹ã‚¯ã®åˆæœŸåŒ–
 	//CTL_MSG_init();
 	
-	//INTR_ENABLE; /* Š„‚İ—LŒø‚É‚·‚é */
+	//INTR_ENABLE; /* å‰²è¾¼ã¿æœ‰åŠ¹ã«ã™ã‚‹ */
  	while (1) {
-		//TASK_IDLE; /* È“d—Íƒ‚[ƒh‚ÉˆÚs */
+		//TASK_IDLE; /* çœé›»åŠ›ãƒ¢ãƒ¼ãƒ‰ã«ç§»è¡Œ */
 	}
 	
 	return 0;
@@ -210,15 +259,15 @@ static int start_threads(int argc, char *argv[])
 
 int main(void)
 {	
-	// ƒyƒŠƒtƒFƒ‰ƒ‹‚ÌƒNƒƒbƒN‚ğ—LŒø‰»
+	// ãƒšãƒªãƒ•ã‚§ãƒ©ãƒ«ã®ã‚¯ãƒ­ãƒƒã‚¯ã‚’æœ‰åŠ¹åŒ–
 	periferal_clock_init();
-	// ƒsƒ“ƒtƒ@ƒ“ƒNƒVƒ‡ƒ“‚Ìİ’è
+	// ãƒ”ãƒ³ãƒ•ã‚¡ãƒ³ã‚¯ã‚·ãƒ§ãƒ³ã®è¨­å®š
 	pin_function_init();
 	
-	/* OS‚Ì“®ìŠJn */
+	/* OSã®å‹•ä½œé–‹å§‹ */
 	kz_start(start_threads, "idle", 0, 0x1000, 0, NULL);
 	
-	/* ‚±‚±‚É‚Í–ß‚Á‚Ä‚±‚È‚¢ */
+	/* ã“ã“ã«ã¯æˆ»ã£ã¦ã“ãªã„ */
 	
 	return 0;
 }
