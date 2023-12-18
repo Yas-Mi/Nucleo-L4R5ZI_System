@@ -36,14 +36,14 @@ SOFTWARE.
 #include "interrupt.h"
 #include "pin_function.h"
 #include "clock.h"
-// ドライバ
+// periferal
 #include "octspi.h"
 #include "sai.h"
 #include "i2c_wrapper.h"
 #include "dma.h"
 #include "spi.h"
 #include "tim.h"
-// デバイス
+// device
 #include "w25q20ew_ctrl.h"
 #include "gysfdmaxb.h"
 #include "bt_dev.h"
@@ -51,12 +51,12 @@ SOFTWARE.
 #include "lcd_dev.h"
 #include "MSP2807.h"
 
-// マネージャ
+// manager
 #include "wav.h"
 #include "cyc.h"
 #include "flash_mng.h"
 #include "touch_screen.h"
-// アプリ
+// app
 #include "console.h"
 #include "sound_app.h"
 #include "lcd_app.h"
@@ -79,17 +79,16 @@ static const uint16_t white_data[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] =
 static const uint16_t sample[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] = {
 	#include ".\mng\image\lena.hex"	
 };
-// テスト用タスク1 
+// for test 1 
 static int test_tsk1(int argc, char *argv[])
 {	
 	uint16_t cnt = 0;
 	uint32_t i;
 	
-	// オープン
+	// MSP2807�I�[�v��
 	msp2807_open();
 	
 	while(1) {
-		// サンプル描画
 		memcpy(disp_data, sample, sizeof(disp_data));
 		msp2807_write(disp_data);
 		kz_tsleep(1000);
@@ -101,93 +100,20 @@ static int test_tsk1(int argc, char *argv[])
 	return 0;
 }
 
-// テスト用タスク2
-#define BUFFRING_NUM	(16)
-// テスト用コンテキスト
-typedef struct {
-	uint16_t			x[BUFFRING_NUM];		// x座標
-	uint16_t			y[BUFFRING_NUM];		// y座標
-	uint8_t				get_cnt;				// 取得回数
-	kz_msgbox_id_t		msg_id;					// メッセージID
-} TEST2_CTL;
-static TEST2_CTL test2_ctl;
+// for test 2
 
-// メッセージ定義
-typedef struct {
-	uint16_t x;
-	uint16_t y;
-} MSG_INFO;
 
-// タッチコールバック
-void ts_mng_callback(TS_CALLBACK_TYPE type, uint16_t x, uint16_t y, void *vp)
-{
-	MSG_INFO *msg;
-	test2_ctl *this = &test2_ctl;
-	
-	// 表示
-	console_str_send("x:");
-	console_val_send_u16(x);
-	console_str_send(" y:");
-	console_val_send_u16(y);
-	console_str_send("\n");
-	
-	// メッセージ送信
-	msg = kz_kmalloc(sizeof(MSG_INFO));
-	msg->x = x;
-	msg->y = y;
-	kz_send(this->msg_id, sizeof(MSG_INFO), msg);
-}
 
-static void test_init(void)
-{
-	test2_ctl *this = &test2_ctl;
-	int32_t ret;
-	
-	// オープン
-	msp2807_open();
-	// コールバック登録
-	ret = ts_mng_reg_callback(TS_CALLBACK_TYPE_SINGLE, ts_mng_callback, NULL);
-	// 白書き込み
-	memset(disp_data, 0xFF, sizeof(disp_data));
-	msp2807_write(disp_data);
-	
-	// メッセージID設定
-	this->msg_id = TEST;
-	
-}
 
-static int test_tsk2(int argc, char *argv[])
-{	
-	test2_ctl *this = &test2_ctl;
-	int32_t size;
-	
-	// 初期化
-	test_init();
-	
-	while(1) {
-		// メッセージ受信
-		kz_recv(this->msg_id, &size, &msg);
-		
-		// ある程度バッファリングしたので書き込み
-		if (this->get_cnt++ >= BUFFRING_NUM) {
-			// クリア
-			this->get_cnt = 0;
-			
-			
-			
-			
-		}
-		
-	}
-	
-	return 0;
-}
+
+
+
 #endif
 
 /* システム・タスクとユーザ・タスクの起動 */
 static int start_threads(int argc, char *argv[])
 {
-	// ペリフェラルの初期化
+	// �y���t�F����������
 	usart_init();
 	i2c_wrapper_init();
 	sai_init();
@@ -196,25 +122,26 @@ static int start_threads(int argc, char *argv[])
 	octospi_init();
 	spi_init();
 	
-	// デバイスの初期化
+	// �f�o�C�X������
 	bt_dev_init();
 	msp2807_init();
 	//pcm3060_init();
 	//LCD_dev_init();
 	//gysfdmaxb_init();
 	
-	// マネージャの初期化
+	// �}�l�[�W��������
 	wav_init();
 	cyc_init();
 	flash_mng_init();
 	ts_mng_init();
 	
-	// アプリの初期化
+	// �A�v��������
 	console_init();
 	//sound_app_init();
 	//lcd_apl_init();
+	test_init();
 	
-	// コマンドの設定
+	// �R�}���h�ݒ�
 	//bt_dev_set_cmd();
 	//sound_app_set_cmd();
 	//pcm3060_set_cmd();
@@ -222,13 +149,10 @@ static int start_threads(int argc, char *argv[])
 	//gysfdmaxb_set_cmd();
 	flash_mng_set_cmd();
 	
-	// テスト
+	// �t���b�V���}�l�[�W���I�[�v��
 	flash_mng_open(FLASH_MNG_KIND_W25Q20EW);
 	
-	// タスクの起動
-	// デバイス
 	//kz_run(BTN_dev_main, "BTN_dev_main",  2, 0x1000, 0, NULL);
-	// アプリ
 	//kz_run(console_main, "console",  3, 0x1000, 0, NULL);
 	//kz_run(LCD_app_main, "LCD_app_main",  3, 0x1000, 0, NULL);
 	//kz_run(ctl_main, "ctl_main",  3, 0x1000, 0, NULL);
@@ -241,17 +165,16 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
 	//kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
 	//kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
-	kz_run(test_tsk2, "test_tsk2",  3, 0x1000, 0, NULL);
+
 	
-	/* 優先順位を下げて，アイドルスレッドに移行する */
+	// �D��x���Œ�ɂ���
 	kz_chpri(15); 
 	
-	// システム制御タスクの初期化
 	//CTL_MSG_init();
 	
-	//INTR_ENABLE; /* 割込み有効にする */
+	//INTR_ENABLE;
  	while (1) {
-		//TASK_IDLE; /* 省電力モードに移行 */
+		//TASK_IDLE;
 	}
 	
 	return 0;
@@ -259,15 +182,15 @@ static int start_threads(int argc, char *argv[])
 
 int main(void)
 {	
-	// ペリフェラルのクロックを有効化
+	// �N���b�N������
 	periferal_clock_init();
-	// ピンファンクションの設定
+	// �s���ݒ菉����
 	pin_function_init();
 	
-	/* OSの動作開始 */
+	// OS �X�^�[�g
 	kz_start(start_threads, "idle", 0, 0x1000, 0, NULL);
 	
-	/* ここには戻ってこない */
+	// �����ɂ͋A���Ă��Ȃ�
 	
 	return 0;
 }

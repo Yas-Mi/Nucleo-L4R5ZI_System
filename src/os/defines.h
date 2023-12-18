@@ -33,7 +33,8 @@ typedef enum {
 	MSGBOX_ID_SPI3,
 	MSGBOX_ID_TOUCH_SCREEN,
 	MSGBOX_ID_TOUCH_SCREEN_WRITE,
-	MSGBOX_ID_NUM
+	MSGBOX_ID_TEST,
+	MSGBOX_ID_NUM,
 } kz_msgbox_id_t;
 
 // タスクの優先度

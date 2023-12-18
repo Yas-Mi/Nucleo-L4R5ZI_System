@@ -34,7 +34,7 @@
 #define CHECK_TOUCH_STATE_CNT		(3)		// タッチ状態のチェック回数
 #define TS_TOUCHED					((1 << CHECK_TOUCH_STATE_CNT) - 1)
 											// タッチ確定
-#define AVERAGE_CNT					(5)		// 何回分の平均値をとるか
+#define AVERAGE_CNT					(3)		// 何回分の平均値をとるか
 #define CALLBACK_MAX				(2)		// コールバック最大値
 
 // コールバック情報
@@ -43,6 +43,29 @@ typedef struct {
 	TS_MNG_CALLBACK  callback_fp;
 	void             *callback_vp;
 } CALLBACK_INFO;
+
+// キャリブレーション情報
+/* 
+end_x end_y	
+	+----------------------+
+	|                      | ○
+	|                      | ○
+	|                      | ○
+	|                      | ○
+	|                      | ○
+	+----------------------+
+					start_x start_y
+*/
+typedef struct {
+	uint16_t start_x;		// 開始のx座標
+	uint16_t end_x;			// 終了のx座標
+	uint16_t start_y;		// 開始のy座標
+	uint16_t end_y;			// 終了のy座標
+	uint16_t width;			// 幅
+	uint16_t height;		// 高さ
+	uint16_t lcd_width;		// LCDの幅
+	uint16_t lcd_height;	// LCDの高さ
+} CALIB_INFO;
 
 // 制御用ブロック
 typedef struct {
@@ -56,6 +79,7 @@ typedef struct {
 	uint16_t			touch_y_val[AVERAGE_CNT];		// y座標
 	uint16_t			get_touch_val_cnt;				// タッチ値取得回数
 	CALLBACK_INFO		callback_info[CALLBACK_MAX];	// コールバック
+	CALIB_INFO			calib_info;						// キャリブレーション情報
 } TOUCH_SCREEN_CTL;
 static TOUCH_SCREEN_CTL ts_ctl;
 
@@ -75,10 +99,42 @@ static void do_callback(TS_CALLBACK_TYPE type, uint16_t x, uint16_t y)
 	// 呼び出し
 	for (i = 0; i < CALLBACK_MAX; i++) {
 		cb_info = &(this->callback_info[i]);
-		if (type == cb_info->type) {
+		if ((type == cb_info->type) && (cb_info->callback_fp != NULL)) {
 			cb_info->callback_fp(cb_info->type, x, y, cb_info->callback_vp);
 		}
 	}
+}
+
+// タッチスクリーンの座標からLCDの座標に変換
+static void conv_touch2lcd(uint16_t touch_x, uint16_t touch_y, uint16_t *lcd_x, uint16_t *lcd_y)
+{
+	TOUCH_SCREEN_CTL *this = &ts_ctl;
+	CALIB_INFO *calib_info = &(this->calib_info);
+	uint16_t adj_touch_x, adj_touch_y;
+	float ratio;
+	
+	// 値を整える
+	if (touch_x < calib_info->start_x) {
+		adj_touch_x = 0;
+	} else if (touch_x > calib_info->end_x){
+		adj_touch_x = calib_info->end_x - calib_info->start_x;
+	} else {
+		adj_touch_x = touch_x - calib_info->start_x;
+	}
+	if (touch_y < calib_info->start_y) {
+		adj_touch_y = 0;
+	} else if (touch_y > calib_info->end_y){
+		adj_touch_y = calib_info->end_y - calib_info->start_y;
+	} else {
+		adj_touch_y = touch_y - calib_info->start_y;
+	}
+	
+	// xの比率を計算
+	ratio = (float)((float)adj_touch_x/(float)calib_info->width);
+	*lcd_x = (uint16_t)((float)(calib_info->lcd_width) * ratio);
+	// yの比率を計算
+	ratio = (float)((float)adj_touch_y/(float)calib_info->height);
+	*lcd_y = (uint16_t)((float)(calib_info->lcd_height) * ratio);
 }
 
 // タッチの状態を取得
@@ -88,6 +144,7 @@ static void ts_msg_check_touch_state(void)
 	MSP2807_PEN_STATE state;
 	int32_t ret;
 	int16_t x, y;
+	int16_t lcd_x, lcd_y;
 	uint8_t i;
 	uint16_t sum_x, sum_y, ave_x, ave_y;
 	
@@ -109,6 +166,14 @@ static void ts_msg_check_touch_state(void)
 		if (ret != E_OK) {
 			console_str_send("msp2807_get_touch_pos error\n");
 		}
+#if 0
+		// 表示
+		console_str_send("mng x:");
+		console_val_send_u16(x);
+		console_str_send(" y:");
+		console_val_send_u16(y);
+		console_str_send("\n");
+#endif
 		// 覚えておく
 		this->touch_x_val[this->get_touch_val_cnt] = x;
 		this->touch_y_val[this->get_touch_val_cnt] = y;
@@ -124,8 +189,14 @@ static void ts_msg_check_touch_state(void)
 			}
 			ave_x = sum_x/AVERAGE_CNT;
 			ave_y = sum_y/AVERAGE_CNT;
+			// タッチパネルから取得した座標をLCDの座標に変換
+			conv_touch2lcd(ave_x, ave_y, &lcd_x, &lcd_y);
+			if ((lcd_x == 0) && (lcd_y == 0)) {
+				volatile int32_t a;
+				a++;
+			}
 			// コールバック
-			do_callback(TS_CALLBACK_TYPE_SINGLE, ave_x, ave_y);
+			do_callback(TS_CALLBACK_TYPE_SINGLE, lcd_x, lcd_y);
 			// タッチ値取得回数をクリア
 			this->get_touch_val_cnt = 0;
 			
@@ -152,17 +223,35 @@ static void ts_msg_write(uint32_t *disp_data)
 	ret = msp2807_write(*disp_data);
 	
 	// スリープタスクを起こす
-	write_ret = kx_kmalloc(sizeof(int32_t));
+	write_ret = kz_kmalloc(sizeof(int32_t));
 	*write_ret = ret;
-	kx_send(this->slp_msg_id, sizeof(int32_t), write_ret);
+	kz_send(this->slp_msg_id, sizeof(int32_t), write_ret);
+}
+
+// キャリブレーション
+static void calib(void)
+{
+	TOUCH_SCREEN_CTL *this = &ts_ctl;
+	
+	// 設定
+	// (*) 本来はちゃんと値を取得して設定したい
+	this->calib_info.start_x = 200;
+	this->calib_info.end_x = 3900;
+	this->calib_info.start_y = 200;
+	this->calib_info.end_y = 3900;
+	this->calib_info.width = this->calib_info.end_x - this->calib_info.start_x;
+	this->calib_info.height = this->calib_info.end_y - this->calib_info.start_y;
+	this->calib_info.lcd_width = MSP2807_DISPLAY_WIDTH;
+	this->calib_info.lcd_height = MSP2807_DISPLAY_HEIGHT;
+	
 }
 
 // 状態遷移テーブル
 static const FSM fsm[ST_MAX][EVENT_MAX] = {
-	// EVENT_CYC								EVENT_WRITE					EVENT_MAX	
-	{{NULL,	ST_UNDEIFNED},						{NULL,	ST_UNDEIFNED},		{NULL,	ST_UNDEIFNED},},	// ST_UNINITIALIZED
-	{{ts_msg_check_touch_state,	ST_UNDEIFNED},	{NULL,	ST_UNDEIFNED},		{NULL,	ST_UNDEIFNED},},	// ST_INITIALIZED
-	{{NULL,	ST_UNDEIFNED},						{NULL,	ST_UNDEIFNED},		{NULL,	ST_UNDEIFNED},},	// ST_UNDEIFNED
+	// EVENT_CYC								EVENT_WRITE							EVENT_MAX	
+	{{NULL,	ST_UNDEIFNED},						{NULL,	ST_UNDEIFNED},				{NULL,	ST_UNDEIFNED},},	// ST_UNINITIALIZED
+	{{ts_msg_check_touch_state,	ST_UNDEIFNED},	{ts_msg_write,	ST_UNDEIFNED},		{NULL,	ST_UNDEIFNED},},	// ST_INITIALIZED
+	{{NULL,	ST_UNDEIFNED},						{NULL,	ST_UNDEIFNED},				{NULL,	ST_UNDEIFNED},},	// ST_UNDEIFNED
 };
 
 // ステートマシンタスク
@@ -211,6 +300,9 @@ void ts_mng_init(void)
 	// タスクの生成
 	this->tsk_id = kz_run(touch_screen_main, "touch_screen_main",  TOUCH_SCREEN_PRI, TOUCH_SCREEN_STACK, 0, NULL);
 	
+	// キャリブレーション
+	calib();
+	
 	// 状態の更新
 	this->state = ST_INITIALIZED;
 	
@@ -235,7 +327,8 @@ int32_t ts_mng_write(uint16_t *disp_data)
 	TOUCH_SCREEN_CTL *this = &ts_ctl;
 	TS_MNG_MSG *msg;
 	int32_t size;
-	int32_t *ercd;
+	int32_t *rcv_ercd;
+	int32_t ercd;
 	
 	// 書き込みメッセージ送信
 	msg = kz_kmalloc(sizeof(TS_MNG_MSG));
@@ -244,11 +337,12 @@ int32_t ts_mng_write(uint16_t *disp_data)
 	kz_send(this->msg_id, sizeof(TS_MNG_MSG), msg);
 	
 	// 書き込みデータは更新したらダメなので送信しきるまでスリープ
-	kz_recv(this->slp_msg_id, &size, &ercd);
+	kz_recv(this->slp_msg_id, &size, &rcv_ercd);
+	ercd = *rcv_ercd;
 	// メッセージを解放
-	kz_kmfree(ercd);
+	kz_kmfree(rcv_ercd);
 	
-	return *ercd;
+	return ercd;
 }
 
 // 周期関数
@@ -267,6 +361,7 @@ int32_t ts_mng_reg_callback(TS_CALLBACK_TYPE type, TS_MNG_CALLBACK callback_fp, 
 			cb_info->callback_fp = callback_fp;
 			cb_info->callback_vp = callback_vp;
 			ret = E_OK;
+			break;
 		}
 	}
 	
