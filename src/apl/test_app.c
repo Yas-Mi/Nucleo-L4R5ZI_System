@@ -68,6 +68,8 @@ static void init(void)
 	msp2807_write(this->disp_data);
 }
 
+// 
+
 // メインタスク
 static int test_app_main(int argc, char *argv[])
 {	
@@ -76,6 +78,10 @@ static int test_app_main(int argc, char *argv[])
 	int32_t size;
 	uint8_t i, j;
 	uint32_t idx;
+	uint16_t xn, yn;
+	uint16_t start_x, start_y;
+	float a;
+	int16_t b;
 	
 	// 初期化
 	init();
@@ -88,40 +94,47 @@ static int test_app_main(int argc, char *argv[])
 		this->x[this->get_cnt] = msg->x;
 		this->y[this->get_cnt] = msg->y;
 		
+		// メッセージを解放
+		kz_kmfree(msg);
+#if 0
 		// 表示
 		console_str_send("app x:");
 		console_val_send_u16(this->x[this->get_cnt]);
 		console_str_send(" y:");
 		console_val_send_u16(this->y[this->get_cnt]);
 		console_str_send("\n");
-		
-		// メッセージを解放
-		kz_kmfree(msg);
-		
+#endif
 		// 指定回数取得した
 		if (++this->get_cnt >= BUFFRING_NUM) {
 			// 取得回数クリア
 			this->get_cnt = 0;
 			// 軌跡を書く
-			for (i = 0; i < BUFFRING_NUM; i++) {
-				idx = ((MSP2807_DISPLAY_HEIGHT - this->y[i])*MSP2807_DISPLAY_WIDTH) + this->x[i];
-				this->disp_data[idx] = 0x0000;
-				// 補間
-				if (i != (BUFFRING_NUM - 1)) {
-					for (j = 1; j <= INTERPOLATION_NUM; j++) {
-						idx = (this->y[i+1] - this->y[i])/INTERPOLATION_NUM
-					}
-					
-					
-					
-					
+			// (*) 1つ先の座標まで線を書くため、(BUFFRING_NUM - 1)
+			for (i = 0; i < (BUFFRING_NUM - 1) ; i++) {
+				// 小さいほうを開始位置、大きいほうを終了位置にする
+				if (this->x[i] >  this->x[i+1]) {
+					start_x =  this->x[i+1];
+					end_x =  this->x[i];
+				} else {
+					start_x =  this->x[i];
+					end_x =  this->x[i+1];
 				}
-				
+				// 一次関数の傾きと切片を求める (y = ax + b)
+				a = (float)((float)(end_y - start_y)/(float)(end_x - start_x));
+				b = (uint16_t)((float)this->x[i] * a - (float)this->y[i]);
+				// 2点間の描画
+				for (xn = start_x; xn < end_x; xn++) {
+					yn = (uint16_t)(a * (float)xn + (float)b);
+					// インデックスを計算
+					idx = ((MSP2807_DISPLAY_HEIGHT - this->y[i])*MSP2807_DISPLAY_WIDTH) + this->x[i];
+					// 黒書き込み
+					this->disp_data[idx] = 0x0000;
+				}
 			}
 			// 描画
 			ts_mng_write(this->disp_data);
+			
 		}
-		
 	}
 	
 	return 0;
@@ -142,5 +155,3 @@ void test_init(void)
 	// メッセージID設定
 	this->msg_id = MSGBOX_ID_TEST;
 }
-
-
