@@ -44,8 +44,6 @@ static void ts_mng_callback(TS_CALLBACK_TYPE type, uint16_t x, uint16_t y, void 
 	MSG_INFO *msg;
 	TEST2_CTL *this = &test2_ctl;
 	
-	console_str_send("callback\n");
-	
 	// メッセージ送信
 	msg = kz_kmalloc(sizeof(MSG_INFO));
 	msg->x = x;
@@ -62,13 +60,14 @@ static void init(void)
 	// MSP2807オープン
 	msp2807_open();
 	// シングルクリックコールバック登録
-	ret = ts_mng_reg_callback(TS_CALLBACK_TYPE_SINGLE, ts_mng_callback, NULL);
+	ret = ts_mng_reg_callback(TS_CALLBACK_TYPE_HOLD_DOWN, ts_mng_callback, NULL);
+	if (ret != E_OK) {
+		console_str_send("ts_mng_reg_callback error\n");
+	}
 	// 白書き込み
 	memset(this->disp_data, 0xFF, sizeof(this->disp_data));
 	msp2807_write(this->disp_data);
 }
-
-// 
 
 // メインタスク
 static int test_app_main(int argc, char *argv[])
@@ -76,10 +75,11 @@ static int test_app_main(int argc, char *argv[])
 	TEST2_CTL *this = &test2_ctl;
 	MSG_INFO *msg;
 	int32_t size;
-	uint8_t i, j;
+	uint8_t i;
 	uint32_t idx;
 	uint16_t xn, yn;
 	uint16_t start_x, start_y;
+	uint16_t end_x, end_y;
 	float a;
 	int16_t b;
 	
@@ -120,13 +120,22 @@ static int test_app_main(int argc, char *argv[])
 					end_x =  this->x[i+1];
 				}
 				// 一次関数の傾きと切片を求める (y = ax + b)
-				a = (float)((float)(end_y - start_y)/(float)(end_x - start_x));
-				b = (uint16_t)((float)this->x[i] * a - (float)this->y[i]);
+				a = (float)((float)(this->y[i+1] - this->y[i])/(float)(this->x[i+1] - this->x[i]));
+				b = (int16_t)((float)this->y[i] - (float)this->x[i] * a);
 				// 2点間の描画
 				for (xn = start_x; xn < end_x; xn++) {
-					yn = (uint16_t)(a * (float)xn + (float)b);
+					yn = (int16_t)(a * (float)xn + (float)b);
 					// インデックスを計算
-					idx = ((MSP2807_DISPLAY_HEIGHT - this->y[i])*MSP2807_DISPLAY_WIDTH) + this->x[i];
+					idx = ((MSP2807_DISPLAY_HEIGHT - yn)*MSP2807_DISPLAY_WIDTH) + xn;
+					// 念のため
+					if (idx >= MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT) {
+						console_str_send("idx error xn:");
+						console_val_send_u16(xn);
+						console_str_send(" yn:");
+						console_val_send_u16(yn);
+						console_str_send("\n");
+						continue;
+					}
 					// 黒書き込み
 					this->disp_data[idx] = 0x0000;
 				}
@@ -144,7 +153,6 @@ static int test_app_main(int argc, char *argv[])
 void test_init(void)
 {
 	TEST2_CTL *this = &test2_ctl;
-	int32_t ret;
 	
 	// コンテキスト初期化
 	memset(this, 0, sizeof(TEST2_CTL));

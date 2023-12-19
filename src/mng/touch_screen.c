@@ -13,6 +13,7 @@
 #include "kozos.h"
 #include "console.h"
 #include "intr.h"
+#include "ctl_main.h"
 #include "MSP2807.h"
 #include <string.h>
 
@@ -75,6 +76,7 @@ typedef struct {
 	kz_msgbox_id_t		slp_msg_id;						// スリープメッセージID
 	uint8_t				touch_state_bmp;				// タッチ状態のビットマップ
 	uint8_t				check_touch_state_cnt;			// タッチ状態のチェック回数
+	uint32_t			click_state;					// クリック状態
 	uint16_t			touch_x_val[AVERAGE_CNT];		// x座標
 	uint16_t			touch_y_val[AVERAGE_CNT];		// y座標
 	uint16_t			get_touch_val_cnt;				// タッチ値取得回数
@@ -138,13 +140,12 @@ static void conv_touch2lcd(uint16_t touch_x, uint16_t touch_y, uint16_t *lcd_x, 
 }
 
 // タッチの状態を取得
-static void ts_msg_check_touch_state(void)
+static void ts_msg_check_touch_state(uint32_t par)
 {
 	TOUCH_SCREEN_CTL *this = &ts_ctl;
-	MSP2807_PEN_STATE state;
 	int32_t ret;
-	int16_t x, y;
-	int16_t lcd_x, lcd_y;
+	uint16_t x, y;
+	uint16_t lcd_x, lcd_y;
 	uint8_t i;
 	uint16_t sum_x, sum_y, ave_x, ave_y;
 	
@@ -159,12 +160,19 @@ static void ts_msg_check_touch_state(void)
 	// チェック回数をクリア
 	this->check_touch_state_cnt = 0;
 	
-	// タッチされた？
+	// タッチ確定
 	if (this->touch_state_bmp == TS_TOUCHED) {
+		
+		
+		
+		
+		
+		
 		// 座標を取得
 		ret = msp2807_get_touch_pos(&x, &y);
 		if (ret != E_OK) {
 			console_str_send("msp2807_get_touch_pos error\n");
+			return;
 		}
 #if 0
 		// 表示
@@ -177,9 +185,9 @@ static void ts_msg_check_touch_state(void)
 		// 覚えておく
 		this->touch_x_val[this->get_touch_val_cnt] = x;
 		this->touch_y_val[this->get_touch_val_cnt] = y;
-		this->get_touch_val_cnt++;
+		
 		// 指定回数分取得した？
-		if (this->get_touch_val_cnt >= AVERAGE_CNT) {
+		if (++this->get_touch_val_cnt >= AVERAGE_CNT) {
 			// 平均値を計算
 			sum_x = 0;
 			sum_y = 0;
@@ -189,14 +197,13 @@ static void ts_msg_check_touch_state(void)
 			}
 			ave_x = sum_x/AVERAGE_CNT;
 			ave_y = sum_y/AVERAGE_CNT;
+			
 			// タッチパネルから取得した座標をLCDの座標に変換
 			conv_touch2lcd(ave_x, ave_y, &lcd_x, &lcd_y);
-			if ((lcd_x == 0) && (lcd_y == 0)) {
-				volatile int32_t a;
-				a++;
-			}
+			
 			// コールバック
 			do_callback(TS_CALLBACK_TYPE_SINGLE, lcd_x, lcd_y);
+			
 			// タッチ値取得回数をクリア
 			this->get_touch_val_cnt = 0;
 			
@@ -213,14 +220,15 @@ static void ts_msg_check_touch_state(void)
 }
 
 // タッチの状態を取得
-static void ts_msg_write(uint32_t *disp_data)
+static void ts_msg_write(uint32_t par)
 {
 	TOUCH_SCREEN_CTL *this = &ts_ctl;
 	int32_t *write_ret;
 	int32_t ret;
+	uint32_t disp_data_addr = par;
 	
 	// 書き込み
-	ret = msp2807_write(*disp_data);
+	ret = msp2807_write((uint16_t*)disp_data_addr);
 	
 	// スリープタスクを起こす
 	write_ret = kz_kmalloc(sizeof(int32_t));
@@ -248,10 +256,10 @@ static void calib(void)
 
 // 状態遷移テーブル
 static const FSM fsm[ST_MAX][EVENT_MAX] = {
-	// EVENT_CYC								EVENT_WRITE							EVENT_MAX	
-	{{NULL,	ST_UNDEIFNED},						{NULL,	ST_UNDEIFNED},				{NULL,	ST_UNDEIFNED},},	// ST_UNINITIALIZED
-	{{ts_msg_check_touch_state,	ST_UNDEIFNED},	{ts_msg_write,	ST_UNDEIFNED},		{NULL,	ST_UNDEIFNED},},	// ST_INITIALIZED
-	{{NULL,	ST_UNDEIFNED},						{NULL,	ST_UNDEIFNED},				{NULL,	ST_UNDEIFNED},},	// ST_UNDEIFNED
+	// EVENT_CYC								EVENT_WRITE
+	{{NULL,	ST_UNDEIFNED},						{NULL,	ST_UNDEIFNED},			},	// ST_UNINITIALIZED
+	{{ts_msg_check_touch_state,	ST_UNDEIFNED},	{ts_msg_write,	ST_UNDEIFNED},	},	// ST_INITIALIZED
+	{{NULL,	ST_UNDEIFNED},						{NULL,	ST_UNDEIFNED},			},	// ST_UNDEIFNED
 };
 
 // ステートマシンタスク
@@ -271,7 +279,7 @@ static int touch_screen_main(int argc, char *argv[])
 		kz_kmfree(msg);
 		// 処理を実行
 		if (fsm[this->state][tmp_msg.msg_type].func != NULL) {
-			fsm[this->state][tmp_msg.msg_type].func(&(tmp_msg.msg_data));
+			fsm[this->state][tmp_msg.msg_type].func(tmp_msg.msg_data);
 		}
 		// 状態遷移
 		if (fsm[this->state][tmp_msg.msg_type].nxt_state != ST_UNDEIFNED) {
@@ -286,7 +294,6 @@ static int touch_screen_main(int argc, char *argv[])
 void ts_mng_init(void)
 {
 	TOUCH_SCREEN_CTL *this = &ts_ctl;
-	int32_t ret;
 	
 	// 制御ブロックの初期化
 	memset(this, 0, sizeof(TOUCH_SCREEN_CTL));
@@ -305,8 +312,6 @@ void ts_mng_init(void)
 	
 	// 状態の更新
 	this->state = ST_INITIALIZED;
-	
-	return 0;
 }
 
 // 周期関数
@@ -317,8 +322,10 @@ int32_t ts_mng_proc_cyc(void)
 	
 	msg = kz_kmalloc(sizeof(TS_MNG_MSG));
 	msg->msg_type = EVENT_CYC;
-	msg->msg_data = NULL;
+	msg->msg_data = 0;
 	kz_send(this->msg_id, sizeof(TS_MNG_MSG), msg);
+	
+	return E_OK;
 }
 
 // 書き込み関数
