@@ -31,12 +31,22 @@
 #define EVENT_MAX		(2)
 
 // マクロ
-#define CHECK_TOUCH_STATE_PERIOD	(10)	// タッチ状態のチェック周期
-#define CHECK_TOUCH_STATE_CNT		(3)		// タッチ状態のチェック回数
+#define CHECK_TOUCH_STATE_PERIOD	(25)	// タッチ状態のチェック周期
+#define CHECK_TOUCH_STATE_CNT		(2)		// タッチ状態のチェック回数
 #define TS_TOUCHED					((1 << CHECK_TOUCH_STATE_CNT) - 1)
 											// タッチ確定
-#define AVERAGE_CNT					(3)		// 何回分の平均値をとるか
-#define CALLBACK_MAX				(2)		// コールバック最大値
+#define AVERAGE_CNT					(2)		// 何回分の平均値をとるか
+#define CALLBACK_MAX				(8)		// コールバック最大値
+#define SINGLE_CLICK_CNT			(CHECK_TOUCH_STATE_PERIOD*CHECK_TOUCH_STATE_CNT/CHECK_TOUCH_STATE_PERIOD*CHECK_TOUCH_STATE_CNT)
+											// シングルクリックカウント (CHECK_TOUCH_STATE_PERIOD*CHECK_TOUCH_STATE_CNTの倍数にしてね)
+											// 30ms以内に離せばシングルクリックの可能性あり
+// クリック状態
+#define TOUCH_NONE		(0)	// クリックなし
+#define TOUCH_START		(1)	// クリックスタート
+#define TOUCHING		(2)	// タッチ中
+#define RELEASE			(3)	// タッチ中から離した
+#define SINGLE_CLICK	(4)	// シングルクリック
+#define DOUBLE_CLICK	(5)	// ダブルクリック
 
 // コールバック情報
 typedef struct {
@@ -77,6 +87,8 @@ typedef struct {
 	uint8_t				touch_state_bmp;				// タッチ状態のビットマップ
 	uint8_t				check_touch_state_cnt;			// タッチ状態のチェック回数
 	uint32_t			click_state;					// クリック状態
+	uint32_t			touch_cnt;						// タッチ回数
+	uint32_t			touch_none_cnt;					// タッチしていない回数
 	uint16_t			touch_x_val[AVERAGE_CNT];		// x座標
 	uint16_t			touch_y_val[AVERAGE_CNT];		// y座標
 	uint16_t			get_touch_val_cnt;				// タッチ値取得回数
@@ -162,26 +174,31 @@ static void ts_msg_check_touch_state(uint32_t par)
 	
 	// タッチ確定
 	if (this->touch_state_bmp == TS_TOUCHED) {
+		if (this->click_state == TOUCH_NONE) {
+			// クリック状態更新
+			this->click_state = TOUCH_START;
+			// タッチ開始コールバック
+			do_callback(TS_CALLBACK_TYPE_TOUCH_START, 0, 0);
+		}
 		
+		// シングルクリック判定
+		if (this->touch_cnt++ < SINGLE_CLICK_CNT) {
+			goto CHECK_STATE_END;
+		}
 		
+		// 一定時間タッチすれば以降の処理に進む
 		
-		
-		
+		// クリック状態更新
+		this->click_state = TOUCHING;
 		
 		// 座標を取得
 		ret = msp2807_get_touch_pos(&x, &y);
 		if (ret != E_OK) {
 			console_str_send("msp2807_get_touch_pos error\n");
-			return;
+			goto CHECK_STATE_END;
+			
 		}
-#if 0
-		// 表示
-		console_str_send("mng x:");
-		console_val_send_u16(x);
-		console_str_send(" y:");
-		console_val_send_u16(y);
-		console_str_send("\n");
-#endif
+		
 		// 覚えておく
 		this->touch_x_val[this->get_touch_val_cnt] = x;
 		this->touch_y_val[this->get_touch_val_cnt] = y;
@@ -201,20 +218,43 @@ static void ts_msg_check_touch_state(uint32_t par)
 			// タッチパネルから取得した座標をLCDの座標に変換
 			conv_touch2lcd(ave_x, ave_y, &lcd_x, &lcd_y);
 			
-			// コールバック
-			do_callback(TS_CALLBACK_TYPE_SINGLE, lcd_x, lcd_y);
+			// タッチ中コールバック
+			do_callback(TS_CALLBACK_TYPE_TOUCHING, lcd_x, lcd_y);
 			
 			// タッチ値取得回数をクリア
 			this->get_touch_val_cnt = 0;
 			
 		}
+		
 	// タッチされていない	
 	} else {
+		// シングルクリック確定
+		if ((this->click_state == TOUCH_START) && 		// 以前の状態がタッチ開始
+			(this->touch_cnt <= SINGLE_CLICK_CNT)) {	// 連続タッチ数が一定以下
+			// シングルクリックコールバック
+			do_callback(TS_CALLBACK_TYPE_SINGLE_CLICK, lcd_x, lcd_y);
+			
+		// タッチ中からの離し
+		} else if (this->click_state == TOUCHING) {
+			// タッチ中からの離しコールバック
+			do_callback(TS_CALLBACK_TYPE_RELEASE, lcd_x, lcd_y);
+			
+		} else {
+			;
+		}
+		
+		// 連続タッチ数をクリア
+		this->touch_cnt = 0;
+		
+		// クリック状態更新
+		this->click_state = TOUCH_NONE;
+		
 		// タッチ値取得回数をクリア
 		this->get_touch_val_cnt = 0;
 		
 	}
 	
+CHECK_STATE_END:
 	// タッチ状態をクリア
 	this->touch_state_bmp = 0;
 }
@@ -315,7 +355,7 @@ void ts_mng_init(void)
 }
 
 // 周期関数
-int32_t ts_mng_proc_cyc(void)
+void ts_mng_proc_cyc(void)
 {
 	TOUCH_SCREEN_CTL *this = &ts_ctl;
 	TS_MNG_MSG *msg;
@@ -324,8 +364,6 @@ int32_t ts_mng_proc_cyc(void)
 	msg->msg_type = EVENT_CYC;
 	msg->msg_data = 0;
 	kz_send(this->msg_id, sizeof(TS_MNG_MSG), msg);
-	
-	return E_OK;
 }
 
 // 書き込み関数

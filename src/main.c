@@ -73,7 +73,7 @@ SOFTWARE.
 **===================
 **===========================================================================
 */
-#if 1
+#if 0
 static uint16_t disp_data[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] = {0};
 static const uint16_t white_data[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] = {0};
 static const uint16_t sample[MSP2807_DISPLAY_WIDTH*MSP2807_DISPLAY_HEIGHT] = {
@@ -85,7 +85,7 @@ static int test_tsk1(int argc, char *argv[])
 	uint16_t cnt = 0;
 	uint32_t i;
 	
-	// MSP2807ƒI[ƒvƒ“
+	// MSP2807 open
 	msp2807_open();
 	
 	while(1) {
@@ -99,21 +99,12 @@ static int test_tsk1(int argc, char *argv[])
 	
 	return 0;
 }
-
-// for test 2
-
-
-
-
-
-
-
 #endif
 
 /* ã‚·ã‚¹ãƒ†ãƒ ãƒ»ã‚¿ã‚¹ã‚¯ã¨ãƒ¦ãƒ¼ã‚¶ãƒ»ã‚¿ã‚¹ã‚¯ã®èµ·å‹• */
 static int start_threads(int argc, char *argv[])
 {
-	// ƒyƒŠƒtƒFƒ‰ƒ‹‰Šú‰»
+	// periferal initialize
 	usart_init();
 	i2c_wrapper_init();
 	sai_init();
@@ -122,26 +113,26 @@ static int start_threads(int argc, char *argv[])
 	octospi_init();
 	spi_init();
 	
-	// ƒfƒoƒCƒX‰Šú‰»
-	bt_dev_init();
+	// device initialize
+	//bt_dev_init();
 	msp2807_init();
 	//pcm3060_init();
 	//LCD_dev_init();
 	//gysfdmaxb_init();
 	
-	// ƒ}ƒl[ƒWƒƒ‰Šú‰»
+	// manager initialize
 	wav_init();
 	cyc_init();
 	flash_mng_init();
 	ts_mng_init();
 	
-	// ƒAƒvƒŠ‰Šú‰»
+	// app initialize
 	console_init();
 	//sound_app_init();
 	//lcd_apl_init();
 	test_init();
 	
-	// ƒRƒ}ƒ“ƒhİ’è
+	// command setting
 	//bt_dev_set_cmd();
 	//sound_app_set_cmd();
 	//pcm3060_set_cmd();
@@ -149,7 +140,7 @@ static int start_threads(int argc, char *argv[])
 	//gysfdmaxb_set_cmd();
 	flash_mng_set_cmd();
 	
-	// ƒtƒ‰ƒbƒVƒ…ƒ}ƒl[ƒWƒƒƒI[ƒvƒ“
+	// flash manager open
 	flash_mng_open(FLASH_MNG_KIND_W25Q20EW);
 	
 	//kz_run(BTN_dev_main, "BTN_dev_main",  2, 0x1000, 0, NULL);
@@ -167,7 +158,7 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
 
 	
-	// —Dæ“x‚ğÅ’á‚É‚·‚é
+	// deprioritize
 	kz_chpri(15); 
 	
 	//CTL_MSG_init();

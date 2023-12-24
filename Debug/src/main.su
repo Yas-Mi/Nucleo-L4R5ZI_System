@@ -1,3 +1,2 @@
-main.c:83:12:test_tsk1	24	static
-main.c:114:12:start_threads	16	static
-main.c:183:5:main	16	static
+main.c:105:12:start_threads	16	static
+main.c:174:5:main	16	static

@@ -288,7 +288,6 @@ MSP2807_OPEN_EXIT:
 int32_t msp2807_close(void)
 {
 	MSP2807_CTL *this = &msp2807_ctl;
-	int32_t ret;
 	
 	// アイドルでなければ終了
 	if (this->lcd_state != ST_IDLE) {
@@ -308,8 +307,7 @@ int32_t msp2807_close(void)
 	this->lcd_state = ST_INITIALIZED;
 	this->touch_state = ST_INITIALIZED;
 	
-MSP2807_CLOSE_EXIT:
-	return ret;
+	return E_OK;
 }
 
 // 描画関数
@@ -317,8 +315,6 @@ int32_t msp2807_write(uint16_t *disp_data)
 {
 	MSP2807_CTL *this = &msp2807_ctl;
 	uint8_t snd_data[2];
-	uint32_t x, y;
-	uint16_t pixel;
 	int32_t ret;
 	
 	// IDLEでなければ終了
@@ -497,7 +493,6 @@ MSP2807_GET_TOUCH_POS_EXIT:
 // ペンの状態を取得
 MSP2807_PEN_STATE msp2807_get_touch_state(void)
 {
-	MSP2807_CTL *this = &msp2807_ctl;
 	const MSP2807_GPIO_CFG *cfg;
 	MSP2807_PEN_STATE ret_state = MSP2807_PEN_STATE_RELEASE;
 	GPIO_PinState state;
