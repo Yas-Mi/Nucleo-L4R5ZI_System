@@ -1,4 +1,4 @@
-debug.c:49:6:dbg_init	16	static
-debug.c:59:6:dbg_save_int_info	40	static
-debug.c:93:6:dbg_save_tsk_info	32	static
-debug.c:107:6:dbg_save_dispatch_tsk_info	32	static
+debug.c:49:6:dbg_init	8	static
+debug.c:59:6:dbg_save_int_info	24	static
+debug.c:93:6:dbg_save_tsk_info	16	static
+debug.c:107:6:dbg_save_dispatch_tsk_info	24	static

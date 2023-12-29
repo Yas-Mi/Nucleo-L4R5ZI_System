@@ -1,2 +1,2 @@
-main.c:105:12:start_threads	16	static
+main.c:105:12:start_threads	8	static
 main.c:174:5:main	16	static

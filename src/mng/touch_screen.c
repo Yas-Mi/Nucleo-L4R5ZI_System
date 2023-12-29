@@ -31,8 +31,8 @@
 #define EVENT_MAX		(2)
 
 // マクロ
-#define CHECK_TOUCH_STATE_PERIOD	(25)	// タッチ状態のチェック周期
-#define CHECK_TOUCH_STATE_CNT		(2)		// タッチ状態のチェック回数
+#define CHECK_TOUCH_STATE_PERIOD	(30)	// タッチ状態のチェック周期
+#define CHECK_TOUCH_STATE_CNT		(3)		// タッチ状態のチェック回数
 #define TS_TOUCHED					((1 << CHECK_TOUCH_STATE_CNT) - 1)
 											// タッチ確定
 #define AVERAGE_CNT					(2)		// 何回分の平均値をとるか
