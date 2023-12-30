@@ -174,15 +174,15 @@ static int start_threads(int argc, char *argv[])
 
 int main(void)
 {	
-	// ƒNƒƒbƒN‰Šú‰»
+	// clockã®åˆæœŸåŒ–
 	periferal_clock_init();
-	// ƒsƒ“İ’è‰Šú‰»
+	// ãƒ”ãƒ³ãƒ•ã‚¡ãƒ³ã‚¯ã‚·ãƒ§ãƒ³ã®è¨­å®š
 	pin_function_init();
 	
-	// OS ƒXƒ^[ƒg
+	// OS start
 	kz_start(start_threads, "idle", 0, 0x1000, 0, NULL);
 	
-	// ‚±‚±‚É‚Í‹A‚Á‚Ä‚±‚È‚¢
+	// ã“ã“ã«ã¯æˆ»ã£ã¦ã“ãªã„
 	
 	return 0;
 }

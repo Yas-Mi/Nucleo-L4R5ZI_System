@@ -1,4 +1,5 @@
-wav.c:84:13:wav_local_init	8	static
-wav.c:228:13:bt_dev_callback	16	static
-wav.c:302:6:wav_init	8	static
-wav.c:316:9:wav_open	24	static
+wav.c:84:13:wav_local_init	16	static
+wav.c:99:16:data_analysis	32	static
+wav.c:228:13:bt_dev_callback	32	static
+wav.c:302:6:wav_init	16	static
+wav.c:316:9:wav_open	32	static

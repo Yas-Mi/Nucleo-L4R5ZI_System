@@ -1,8 +1,9 @@
+flash_mng.c:47:9:flash_mng_init	24	static
+flash_mng.c:77:9:flash_mng_open	32	static
+flash_mng.c:112:9:flash_mng_erace	32	static
+flash_mng.c:152:9:flash_mng_write	40	static
+flash_mng.c:197:9:flash_mng_read	40	static
+flash_mng.c:242:13:flash_mng_cmd_write	4	static
 flash_mng.c:247:13:flash_mng_cmd_erace	16	static
-flash_mng.c:260:13:flash_mng_cmd_read	32	static
-flash_mng.c:47:9:flash_mng_init	8	static
-flash_mng.c:77:9:flash_mng_open	8	static
-flash_mng.c:112:9:flash_mng_erace	16	static
-flash_mng.c:152:9:flash_mng_write	16	static
-flash_mng.c:197:9:flash_mng_read	16	static
+flash_mng.c:260:13:flash_mng_cmd_read	24	static
 flash_mng.c:292:6:flash_mng_set_cmd	16	static
