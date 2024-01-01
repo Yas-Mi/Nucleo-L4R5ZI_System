@@ -215,7 +215,7 @@ static int32_t w25q20ew_quad_enable(void)
 		console_str_send("write enable wait error\n");
 		goto QUAD_ENABLE_EXIT;
 	}
-	// quad enable設定
+	// QuadEnable設定
 	status |= FLASH_STATUS_2_QE;
 	ret = w25q20ew_cmd_write_status_2(&status);
 	if (ret != E_OK) {

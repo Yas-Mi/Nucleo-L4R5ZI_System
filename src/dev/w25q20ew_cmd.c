@@ -65,8 +65,8 @@ static const OCTOSPI_COM_CFG cmd_config_tbl[CMD_MAX] = {
 	{ 0xBB,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_FAST_READ_DUAL_IO
 	{ 0xEB,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_FAST_READ_QUAD_IO
 	{ 0x77,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_SET_BURST_WITH_WRAP
-	{ 0x02,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_PAGE_PROGRAM
-	{ 0x32,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_QUAD_INPUT_PAGE_PROGRAM
+	{ 0x02,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_24BIT,	OCTOSPI_IF_SINGLE,	0,				OCTOSPI_IF_SINGLE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_PAGE_PROGRAM
+	{ 0x32,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_24BIT,	OCTOSPI_IF_SINGLE,	0,				OCTOSPI_IF_QUAD,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_QUAD_INPUT_PAGE_PROGRAM
 	{ 0x20,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_24BIT,	OCTOSPI_IF_SINGLE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_SECTOR_ERACE
 	{ 0x52,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_32KB_BLOCK_ERASE
 	{ 0xD8,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_64KB_BLOCK_ERASE
@@ -127,19 +127,37 @@ int32_t w25q20ew_cmd_write_enable(void)
 // 書き込み関数 (*)シングルピン
 int32_t w25q20ew_cmd_write_single(uint32_t addr, uint8_t *data, uint8_t size)
 {
+	OCTOSPI_COM_CFG cfg;
+	int32_t ret;
 	
-	return 0;
+	// コマンド情報を取得
+	memcpy(&cfg, &(cmd_config_tbl[CMD_PAGE_PROGRAM]), sizeof(OCTOSPI_COM_CFG));
+	cfg.addr = addr;
+	
+	// 送信
+	ret = octospi_send(W25Q20EW_OCTOSPI_CH, &cfg, data, size);
+	
+	return ret;
 }
 
 // 書き込み関数 (*)クアッドピン
 int32_t w25q20ew_cmd_write_quad(uint32_t addr, uint8_t *data, uint8_t size)
 {
+	OCTOSPI_COM_CFG cfg;
+	int32_t ret;
 	
-	return 0;
+	// コマンド情報を取得
+	memcpy(&cfg, &(cmd_config_tbl[CMD_QUAD_INPUT_PAGE_PROGRAM]), sizeof(OCTOSPI_COM_CFG));
+	cfg.addr = addr;
+	
+	// 送信
+	ret = octospi_send(W25Q20EW_OCTOSPI_CH, &cfg, data, size);
+	
+	return ret;
 }
 
 
-// イレース関数
+// イレース関数 (*)Sector Erase : 指定したaddrを含むSectorをEraseする
 int32_t w25q20ew_cmd_erase(uint32_t addr)
 {
 	OCTOSPI_COM_CFG cfg;
@@ -226,7 +244,7 @@ int32_t w25q20ew_cmd_write_status_2(uint8_t *data)
 	cmd_cfg = &(cmd_config_tbl[CMD_WRITE_STATUS_REGISTER_2]);
 	
 	// 受信
-	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, data, sizeof(uint8_t));
+	ret = octospi_send(W25Q20EW_OCTOSPI_CH, cmd_cfg, data, sizeof(uint8_t));
 	
 	return ret;
 }
