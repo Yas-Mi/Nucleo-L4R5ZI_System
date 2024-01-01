@@ -124,12 +124,20 @@ int32_t w25q20ew_cmd_write_enable(void)
 	return ret;
 }
 
-// 書き込み関数
-int32_t w25q20ew_cmd_write(uint32_t addr, uint8_t *data, uint8_t size)
+// 書き込み関数 (*)シングルピン
+int32_t w25q20ew_cmd_write_single(uint32_t addr, uint8_t *data, uint8_t size)
 {
 	
 	return 0;
 }
+
+// 書き込み関数 (*)クアッドピン
+int32_t w25q20ew_cmd_write_quad(uint32_t addr, uint8_t *data, uint8_t size)
+{
+	
+	return 0;
+}
+
 
 // イレース関数
 int32_t w25q20ew_cmd_erase(uint32_t addr)
@@ -178,14 +186,44 @@ int32_t w25q20ew_cmd_read_single(uint32_t addr, uint8_t *data, uint8_t size)
 	return ret;
 }
 
-// ステータスリード
-int32_t w25q20ew_cmd_read_status(uint8_t *data)
+// ステータスリード1
+int32_t w25q20ew_cmd_read_status_1(uint8_t *data)
 {
 	const OCTOSPI_COM_CFG *cmd_cfg;
 	int32_t ret;
 	
 	// コマンド情報を取得
 	cmd_cfg = &(cmd_config_tbl[CMD_READ_STATUS_REGISTER_1]);
+	
+	// 受信
+	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, data, sizeof(uint8_t));
+	
+	return ret;
+}
+
+// ステータスリード2
+int32_t w25q20ew_cmd_read_status_2(uint8_t *data)
+{
+	const OCTOSPI_COM_CFG *cmd_cfg;
+	int32_t ret;
+	
+	// コマンド情報を取得
+	cmd_cfg = &(cmd_config_tbl[CMD_READ_STATUS_REGISTER_2]);
+	
+	// 受信
+	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, data, sizeof(uint8_t));
+	
+	return ret;
+}
+
+// ステータスライト2
+int32_t w25q20ew_cmd_write_status_2(uint8_t *data)
+{
+	const OCTOSPI_COM_CFG *cmd_cfg;
+	int32_t ret;
+	
+	// コマンド情報を取得
+	cmd_cfg = &(cmd_config_tbl[CMD_WRITE_STATUS_REGISTER_2]);
 	
 	// 受信
 	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, cmd_cfg, data, sizeof(uint8_t));
