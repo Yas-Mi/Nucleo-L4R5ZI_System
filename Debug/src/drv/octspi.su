@@ -7,8 +7,8 @@ octspi.c:359:13:pin_config	32	static
 octspi.c:380:16:wait_status	32	static
 octspi.c:398:6:octospi_init	16	static
 octspi.c:416:9:octospi_open	32	static
-octspi.c:543:9:octospi_memory_mapped	32	static
-octspi.c:587:9:octospi_close	24	static
-octspi.c:621:16:octospi_proc	40	static
-octspi.c:758:9:octospi_send	40	static
-octspi.c:788:9:octospi_recv	40	static
+octspi.c:543:9:octospi_memory_mapped	40	static
+octspi.c:634:9:octospi_close	24	static
+octspi.c:668:16:octospi_proc	40	static
+octspi.c:805:9:octospi_send	40	static
+octspi.c:835:9:octospi_recv	40	static

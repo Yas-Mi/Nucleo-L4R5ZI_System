@@ -61,7 +61,7 @@ static const OCTOSPI_COM_CFG cmd_config_tbl[CMD_MAX] = {
 	{ 0x03,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_24BIT,	OCTOSPI_IF_SINGLE,	0,				OCTOSPI_IF_SINGLE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_READ_DATA
 	{ 0x0B,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_FAST_READ
 	{ 0x3B,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_FAST_READ_DUAL_OUTPUT
-	{ 0x6B,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_FAST_READ_QUAD_OUTPUT
+	{ 0x6B,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_24BIT,	OCTOSPI_IF_SINGLE,	8,				OCTOSPI_IF_QUAD,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_FAST_READ_QUAD_OUTPUT
 	{ 0xBB,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_FAST_READ_DUAL_IO
 	{ 0xEB,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_FAST_READ_QUAD_IO
 	{ 0x77,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_SET_BURST_WITH_WRAP
@@ -83,6 +83,12 @@ static const OCTOSPI_COM_CFG cmd_config_tbl[CMD_MAX] = {
 	{ 0x44,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_ERASE_SECURITY_REGISTER
 	{ 0x42,		OCTOSPI_SZ_8BIT,	OCTOSPI_IF_SINGLE,		0,				OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0,				OCTOSPI_IF_NONE,	OCTOSPI_SZ_MAX,		OCTOSPI_IF_NONE,	0 },	// CMD_PROGRAM_SECURITY_REGISTER
 };
+
+// メモリマップドパラメータ
+// read
+static const OCTOSPI_COM_CFG *read_cfg = &cmd_config_tbl[CMD_FAST_READ_QUAD_IO];
+// write
+static const OCTOSPI_COM_CFG *write_cfg = &cmd_config_tbl[CMD_QUAD_INPUT_PAGE_PROGRAM];
 
 // SFDPヘッダ
 typedef struct {
@@ -188,7 +194,7 @@ int32_t w25q20ew_cmd_write_disable(void)
 	return ret;
 }
 
-// 読み込み関数
+// 読み込み関数 (*)シングルピン
 int32_t w25q20ew_cmd_read_single(uint32_t addr, uint8_t *data, uint8_t size)
 {
 	OCTOSPI_COM_CFG cfg;
@@ -200,6 +206,33 @@ int32_t w25q20ew_cmd_read_single(uint32_t addr, uint8_t *data, uint8_t size)
 	
 	// 受信
 	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, &cfg, data, size);
+	
+	return ret;
+}
+
+// 読み込み関数 (*)Quadピン
+int32_t w25q20ew_cmd_read_quad(uint32_t addr, uint8_t *data, uint8_t size)
+{
+	OCTOSPI_COM_CFG cfg;
+	int32_t ret;
+	
+	// コマンド情報を取得
+	memcpy(&cfg, &(cmd_config_tbl[CMD_FAST_READ_QUAD_OUTPUT]), sizeof(OCTOSPI_COM_CFG));
+	cfg.addr = addr;
+	
+	// 受信
+	ret = octospi_recv(W25Q20EW_OCTOSPI_CH, &cfg, data, size);
+	
+	return ret;
+}
+
+// メモリマップド関数
+int32_t w25q20ew_cmd_set_memory_mapped(void)
+{
+	int32_t ret;
+	
+	// 受信
+	ret = octospi_memory_mapped(W25Q20EW_OCTOSPI_CH, read_cfg, write_cfg);
 	
 	return ret;
 }

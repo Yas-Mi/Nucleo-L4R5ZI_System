@@ -43,6 +43,10 @@ static const FLASH_MNG_FUNC fls_mng_func_tbl[FLASH_MNG_KIND_MAX] =
 	// ここに他のFLASHを追加していく
 };
 
+// デバッグ用のRAM
+#define FLASH_MNG_BUFF_SIZE		(4*1024)
+static uint8_t flash_mng_buff[FLASH_MNG_BUFF_SIZE];
+
 // 初期化関数
 int32_t flash_mng_init(void)
 {
@@ -241,7 +245,15 @@ int32_t flash_mng_read(uint32_t kind, uint32_t addr, uint8_t *data, uint32_t siz
 // コマンド
 static void flash_mng_cmd_write(void)
 {
+	int32_t ret;
 	
+	// メモリの初期化
+	memset(flash_mng_buff, 0x5A, sizeof(flash_mng_buff));
+	
+	ret = flash_mng_write(FLASH_MNG_KIND_W25Q20EW, 0, flash_mng_buff, FLASH_MNG_BUFF_SIZE);
+	if (ret != E_OK) {
+		console_str_send("flash_mng_write error\n");
+	}
 }
 
 static void flash_mng_cmd_erace(void)
@@ -254,9 +266,6 @@ static void flash_mng_cmd_erace(void)
 	}
 }
 
-// デバッグ用のRAM
-#define FLASH_MNG_BUFF_SIZE		(4*1024)
-static uint8_t flash_mng_buff[FLASH_MNG_BUFF_SIZE];
 static void flash_mng_cmd_read(void)
 {
 	int32_t ret;
@@ -265,7 +274,7 @@ static void flash_mng_cmd_read(void)
 	// 初期化
 	memset(flash_mng_buff, 0, sizeof(flash_mng_buff));
 	
-	ret = flash_mng_read(FLASH_MNG_KIND_W25Q20EW, 0, flash_mng_buff, 4*1024);
+	ret = flash_mng_read(FLASH_MNG_KIND_W25Q20EW, 0, flash_mng_buff, FLASH_MNG_BUFF_SIZE);
 	if (ret != E_OK) {
 		console_str_send("flash_mng_erace error\n");
 		return;
@@ -300,5 +309,9 @@ void flash_mng_set_cmd(void)
 	// コマンドの設定
 	cmd.input = "flash_mng read";
 	cmd.func = flash_mng_cmd_read;
+	console_set_command(&cmd);
+	// コマンドの設定
+	cmd.input = "flash_mng write";
+	cmd.func = flash_mng_cmd_write;
 	console_set_command(&cmd);
 }

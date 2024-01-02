@@ -544,6 +544,7 @@ int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
+	uint32_t tmp_ccr = 0UL;
 	
 	// チャネルは正常？
 	if (ch >= OCTOSPI_CH_MAX) {
@@ -566,19 +567,65 @@ int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_
 	// チャネル情報を取得
 	octspi_base_addr = get_reg(ch);
 	
+	/*
+		マニュアルに記載されている流れ
+		1. Specify the frame timing in OCTOSPI_TCR for read operation.
+		2. Specify the frame format in OCTOSPI_CCR for read operation.
+		3. Specify the instruction in OCTOSPI_IR.
+		4. Specify the optional alternate byte to be sent right after the address phase in OCTOSPI_ABR for read operation.
+		5. Specify the frame timing in OCTOSPI_WTCR for write operation.
+		6. Specify the frame format in OCTOSPI_WCCR for write operation.
+		7. Specify the instruction in OCTOSPI_WIR.
+		8. Specify the optional alternate byte to be sent right after the address phase in OCTOSPI_WABR for read operation.
+	*/
+	
 	// メモリマップドモードに設定
 	octspi_base_addr->cr &= 0xCFFFFFFF;
 	octspi_base_addr->cr |= CR_FMODE(FMODE_MEMORY_MAPPED);
 	
-	// タイムアウト設定
-	octspi_base_addr->lptr = 
-	
 	// リード設定 (*) リードはIRレジスタとCCRレジスタ
-	// ダミーサイクルの設定
+	// TCR設定
 	octspi_base_addr->tcr |= read_cfg->dummy_cycle;
 	
+	// CCR設定
+	// データ
+	tmp_ccr |= CCR_DMODE(read_cfg->data_if);
+	// オルタナティブデータ
+	if (read_cfg->alternate_all_size > 0) {
+		octspi_base_addr->abr = read_cfg->alternate_all_size;
+		tmp_ccr |= CCR_ABSIZE(read_cfg->alternate_size) | CCR_ABMODE(read_cfg->alternate_if);
+	}
+	// アドレス
+	if ((read_cfg->addr_if != OCTOSPI_IF_NONE) && (read_cfg->addr_if != OCTOSPI_IF_MAX)) {
+		tmp_ccr |= CCR_ADSIZE(read_cfg->addr_size) | CCR_ADMODE(read_cfg->addr_if);
+	}
+	// 命令
+	tmp_ccr |= CCR_ISIZE(read_cfg->inst_size) | CCR_IMODE(read_cfg->inst_if);
+	// 設定
+	octspi_base_addr->ccr = tmp_ccr;
+	
+	// 初期化
+	tmp_ccr = 0UL;
+	
 	// ライト設定 (*) ライトはWIRレジスタとWCCRレジスタ
-	// 今のところライトはインダイレクトモードで行うため、設定はしない
+	// TCR設定
+	octspi_base_addr->wtcr |= write_cfg->dummy_cycle;
+	
+	// データ
+	tmp_ccr |= CCR_DMODE(write_cfg->data_if);
+	// オルタナティブデータ
+	if (write_cfg->alternate_all_size > 0) {
+		octspi_base_addr->wabr = write_cfg->alternate_all_size;
+		tmp_ccr |= CCR_ABSIZE(write_cfg->alternate_size) | CCR_ABMODE(write_cfg->alternate_if);
+	}
+	// アドレス
+	if ((write_cfg->addr_if != OCTOSPI_IF_NONE) && (write_cfg->addr_if != OCTOSPI_IF_MAX)) {
+		tmp_ccr |= CCR_ADSIZE(write_cfg->addr_size) | CCR_ADMODE(write_cfg->addr_if);
+	}
+	// 命令
+	tmp_ccr |= CCR_ISIZE(write_cfg->inst_size) | CCR_IMODE(write_cfg->inst_if);
+	// 設定
+	octspi_base_addr->wccr = tmp_ccr;
 	
 	return E_OK;
 }

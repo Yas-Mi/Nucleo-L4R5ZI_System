@@ -347,6 +347,9 @@ int32_t w25q20ew_write(uint32_t addr, uint8_t *data, uint8_t size)
 			goto WRITE_EXIT;
 		}
 		
+#else
+		console_str_send("no write access\n");
+		
 #endif
 		// 書き込み完了待ち
 		ret = w25q20ew_polling_read_status_1(FLASH_STATUS_1_BUSY, 0, W25Q20EW_TIMEOUT);
@@ -370,7 +373,7 @@ int32_t w25q20ew_write(uint32_t addr, uint8_t *data, uint8_t size)
 		current_addr += current_size;
 		data += current_size;
 		current_size = ((current_addr + W25Q20EW_1PAGE_SIZE) > end_addr) ? (end_addr - current_addr) : W25Q20EW_1PAGE_SIZE;
-	
+		
 	} while (current_addr < end_addr);
 	
 WRITE_EXIT:
@@ -472,12 +475,26 @@ int32_t w25q20ew_read(uint32_t addr, uint8_t *data, uint8_t size)
 #elif READ_ACCESS_QUAD		// QUADアクセス
 	// まだQUADは作ってない
 	
+#else
+	console_str_send("no read access\n");
+	
 #endif
 	
 READ_END:
 	
 	// 状態を更新
 	this->state = ST_IDLE;
+	
+	return ret;
+}
+
+// メモリマップドモード
+int32_t w25q20ew_set_memory_mappd(void)
+{
+	int32_t ret;
+	
+	// シングルアクセス
+	ret = w25q20ew_cmd_set_memory_mapped();
 	
 	return ret;
 }
