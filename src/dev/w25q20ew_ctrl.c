@@ -265,6 +265,11 @@ int32_t w25q20ew_open(void)
 	W25Q20EW_CTL *this = &w25q20ew_ctl;
 	int32_t ret;
 	
+	// 初期化済みでなければ終了
+	if (this->state != ST_INITIALIZED) {
+		return -1;
+	}
+	
 	// octospiオープン
 	ret = octospi_open(W25Q20EW_OCTOSPI_CH, &open_par);
 	if (ret != E_OK) {
@@ -282,6 +287,29 @@ int32_t w25q20ew_open(void)
 	
 	// 状態の更新
 	this->state = ST_IDLE;
+	
+	return E_OK;
+}
+
+// クローズ関数
+int32_t w25q20ew_close(void)
+{
+	W25Q20EW_CTL *this = &w25q20ew_ctl;
+	int32_t ret;
+	
+	// アイドルでなければ終了
+	if (this->state != ST_IDLE) {
+		return -1;
+	}
+	
+	// octospiクローズ
+	ret = octospi_close(W25Q20EW_OCTOSPI_CH);
+	if (ret != E_OK) {
+		return ret;
+	}
+	
+	// 状態の更新
+	this->state = ST_INITIALIZED;
 	
 	return E_OK;
 }
@@ -473,7 +501,11 @@ int32_t w25q20ew_read(uint32_t addr, uint8_t *data, uint8_t size)
 	}
 	
 #elif READ_ACCESS_QUAD		// QUADアクセス
-	// まだQUADは作ってない
+	// QUADアクセス
+	ret = w25q20ew_cmd_read_quad(addr, data, size);
+	if (ret != E_OK) {
+		goto READ_END;
+	}
 	
 #else
 	console_str_send("no read access\n");
