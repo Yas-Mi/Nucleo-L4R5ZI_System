@@ -17,9 +17,44 @@
 
 // マクロ
 #define W25Q20EW_POLLING_PERIOD		(1)				// 値をチェックするポーリング周期
-#define W25Q20EW_TIMEOUT			(10)			// タイムアウト時間
+#define W25Q20EW_TIMEOUT			(100)			// タイムアウト時間
 
 // デバイス情報
+/*
+=====Sector======
++---------------+0x010000
+|               |
+| sector15(4KB) |
+|               |
++---------------+0x00F000
+|               |
+| sector14(4KB) |
+|               |
++---------------+0x00E000
+        …       
++---------------+0x001000
+|               |
+| sector0(4KB)  |
+|               |
++---------------+0x000000
+
+=====Block======
++----------------+0x800000
+|                |
+| block127(64KB) |
+|                |
++----------------+0x7F0000
+|                |
+| block126(64KB) |
+|                |
++----------------+0x7E0000
+        …       
++----------------+0x010000
+|                |
+| block0(64KB)   |1Page=256byte
+|                |
++----------------+0x000000
+*/
 #define W25Q20EW_START_ADDRESS		(0x00000000)	// 先頭アドレス
 #define W25Q20EW_END_ADDRESS		(0x0003FFFF)	// 終了アドレス
 #define W25Q20EW_MEM_SIZE			(256*1024)		// デバイスのメモリサイズ
@@ -53,6 +88,14 @@
 #define ST_RUNNING			(3)		// 実行中
 #define ST_MAX				(4)
 
+// アクセス定義
+#define READ_ACCESS_SINGLE
+//#define READ_ACCESS_DUAL
+//#define READ_ACCESS_QUAD
+#define WRITE_ACCESS_SINGLE
+//#define WRITE_ACCESS_DUAL
+//#define WRITE_ACCESS_QUAD
+
 // 制御用ブロック
 typedef struct {
 	uint32_t			state;					// 状態
@@ -76,8 +119,44 @@ static const OCTOSPI_OPEN open_par = {
 	FALSE,							// SIOOは使用しない
 };
 
-// ポーリングでリードレジスタの値をチェック
-static int32_t w25q20ew_polling_read_status(uint32_t bit, uint32_t flag, uint32_t timeout)
+// ポーリングでリードレジスタ1の値をチェック
+static int32_t w25q20ew_polling_read_status_1(uint32_t bit, uint32_t flag, uint32_t timeout)
+{
+	uint8_t expected_status = 0;
+	uint8_t status = 0;
+	uint32_t cnt;
+	int32_t ret = E_TMOUT;
+	int32_t cmd_ret;
+	
+	// ポーリング用にカウンタを計算
+	cnt = timeout/W25Q20EW_POLLING_PERIOD;
+	if (cnt == 1) {
+		cnt = 1;
+	}
+	
+	// 期待するステータスを設定
+	if (flag != 0) {
+		expected_status = bit;
+	}
+	
+	// ポーリング
+	while(cnt-- > 0) {
+		// ステータス受信
+		cmd_ret = w25q20ew_cmd_read_status_1(&status);
+		// 期待した値であれば終了
+		if ((cmd_ret == E_OK) && ((status & bit) == expected_status)) {
+			ret = E_OK;
+			break;
+		}
+		// ディレイ
+		kz_tsleep(W25Q20EW_POLLING_PERIOD);
+	}
+	
+	return ret;
+}
+
+// ポーリングでリードレジスタ2の値をチェック
+static int32_t w25q20ew_polling_read_status_2(uint32_t bit, uint32_t flag, uint32_t timeout)
 {
 	uint8_t expected_status;
 	uint8_t status = 0;
@@ -92,12 +171,14 @@ static int32_t w25q20ew_polling_read_status(uint32_t bit, uint32_t flag, uint32_
 	}
 	
 	// 期待するステータスを設定
-	expected_status = (flag << (bit - 1));
+	if (flag != 0) {
+		expected_status = bit;
+	}
 	
 	// ポーリング
 	while(cnt-- > 0) {
 		// ステータス受信
-		cmd_ret = w25q20ew_cmd_read_status(&status);
+		cmd_ret = w25q20ew_cmd_read_status_2(&status);
 		// 期待した値であれば終了
 		if ((cmd_ret == E_OK) && ((status & bit) == expected_status)) {
 			ret = E_OK;
@@ -106,6 +187,64 @@ static int32_t w25q20ew_polling_read_status(uint32_t bit, uint32_t flag, uint32_
 		// ディレイ
 		kz_tsleep(W25Q20EW_POLLING_PERIOD);
 	}
+	
+	return ret;
+}
+
+// Quad通信有効化
+static int32_t w25q20ew_quad_enable(void)
+{
+	uint8_t status = 0;
+	int32_t ret;
+	
+	// まずは現状のステータスの値を取得
+	ret = w25q20ew_cmd_read_status_2(&status);
+	if (ret != E_OK) {
+		goto QUAD_ENABLE_EXIT;
+	}
+	// すでにQuadEnableだったら終了
+	if ((status & FLASH_STATUS_2_QE) != 0) {
+		console_str_send("already quad enable\n");
+		goto QUAD_ENABLE_EXIT;
+	}
+	// ライトイネーブル
+	ret = w25q20ew_cmd_write_enable();
+	if (ret != E_OK) {
+		console_str_send("write enable error\n");
+		goto QUAD_ENABLE_EXIT;
+	}
+	// ライトイネーブル有効待ち
+	ret = w25q20ew_polling_read_status_1(FLASH_STATUS_1_WEL, 1, W25Q20EW_TIMEOUT);
+	if (ret != E_OK) {
+		console_str_send("write enable wait error\n");
+		goto QUAD_ENABLE_EXIT;
+	}
+	// QuadEnable設定
+	status |= FLASH_STATUS_2_QE;
+	ret = w25q20ew_cmd_write_status_2(&status);
+	if (ret != E_OK) {
+		goto QUAD_ENABLE_EXIT;
+	}
+	// QuadEnable有効待ち
+	ret = w25q20ew_polling_read_status_2(FLASH_STATUS_2_QE, 1, W25Q20EW_TIMEOUT);
+	if (ret != E_OK) {
+		console_str_send("quad enable wait error\n");
+		goto QUAD_ENABLE_EXIT;
+	}
+	// ライトディセーブル
+	ret = w25q20ew_cmd_write_disable();
+	if (ret != E_OK) {
+		console_str_send("write disable error\n");
+		goto QUAD_ENABLE_EXIT;
+	}
+	// ライトディセーブル有効待ち
+	ret = w25q20ew_polling_read_status_1(FLASH_STATUS_1_WEL, 0, W25Q20EW_TIMEOUT);
+	if (ret != E_OK) {
+		console_str_send("write disable wait error\n");
+		goto QUAD_ENABLE_EXIT;
+	}
+	
+QUAD_ENABLE_EXIT:
 	
 	return ret;
 }
@@ -124,10 +263,16 @@ int32_t w25q20ew_init(void)
 	return E_OK;
 }
 
+// オープン関数
 int32_t w25q20ew_open(void)
 {
 	W25Q20EW_CTL *this = &w25q20ew_ctl;
 	int32_t ret;
+	
+	// 初期化済みでなければ終了
+	if (this->state != ST_INITIALIZED) {
+		return -1;
+	}
 	
 	// octospiオープン
 	ret = octospi_open(W25Q20EW_OCTOSPI_CH, &open_par);
@@ -135,16 +280,50 @@ int32_t w25q20ew_open(void)
 		return ret;
 	}
 	
+#if defined(WRITE_ACCESS_QUAD) || defined(READ_ACCESS_QUAD) 
+	// quadアクセスを有効にする
+	ret = w25q20ew_quad_enable();
+	if (ret != E_OK) {
+		console_str_send("quade enable error\n");
+		goto WRITE_EXIT;
+	}
+#endif
+	
 	// 状態の更新
 	this->state = ST_IDLE;
 	
 	return E_OK;
 }
 
-// 書き込み関数
-int32_t w25q20ew_write(uint32_t addr, uint8_t *data, uint8_t size)
+// クローズ関数
+int32_t w25q20ew_close(void)
 {
 	W25Q20EW_CTL *this = &w25q20ew_ctl;
+	int32_t ret;
+	
+	// アイドルでなければ終了
+	if (this->state != ST_IDLE) {
+		return -1;
+	}
+	
+	// octospiクローズ
+	ret = octospi_close(W25Q20EW_OCTOSPI_CH);
+	if (ret != E_OK) {
+		return ret;
+	}
+	
+	// 状態の更新
+	this->state = ST_INITIALIZED;
+	
+	return E_OK;
+}
+
+// 書き込み関数
+int32_t w25q20ew_write(uint32_t addr, uint8_t *data, uint32_t size)
+{
+	W25Q20EW_CTL *this = &w25q20ew_ctl;
+	uint32_t end_addr, current_size, current_addr;
+	int32_t ret;
 	
 	// NULLの場合はエラーを返して終了
 	if (data == NULL) {
@@ -158,22 +337,91 @@ int32_t w25q20ew_write(uint32_t addr, uint8_t *data, uint8_t size)
 	// 状態を更新
 	this->state = ST_RUNNING;
 	
-	// ★あとで実装
+	// 256byte境界をまたいで書くことはできないため、またぐ場合は分割して送信
 	
+	// 次の256byte境界までのサイズを計算
+	current_size = W25Q20EW_1PAGE_SIZE - (addr % W25Q20EW_1PAGE_SIZE);
+	if (current_size > size) {
+		current_size = size;
+	}
+	
+	// アドレスの初期化
+	current_addr = addr;
+	end_addr = addr + size;
+	
+	// 書き込み
+	do {
+		// ライトイネーブル
+		ret = w25q20ew_cmd_write_enable();
+		if (ret != E_OK) {
+			console_str_send("write enable error\n");
+			goto WRITE_EXIT;
+		}
+		// ライトイネーブル有効待ち
+		ret = w25q20ew_polling_read_status_1(FLASH_STATUS_1_WEL, 1, W25Q20EW_TIMEOUT);
+		if (ret != E_OK) {
+			console_str_send("write enable wait error\n");
+			goto WRITE_EXIT;
+		}
+#ifdef WRITE_ACCESS_SINGLE	// シングルアクセス
+		// 書き込み
+		ret = w25q20ew_cmd_write_single(current_addr, data, current_size);
+		if (ret != E_OK) {
+			console_str_send("write single error\n");
+			goto WRITE_EXIT;
+		}
+		
+#elif WRITE_ACCESS_DUAL		// Quadアクセス
+		// 書き込み
+		ret = w25q20ew_cmd_write_quad(current_addr, data, current_size);
+		if (ret != E_OK) {
+			console_str_send("quad enable error\n");
+			goto WRITE_EXIT;
+		}
+		
+#else
+		console_str_send("no write access\n");
+		
+#endif
+		// 書き込み完了待ち
+		ret = w25q20ew_polling_read_status_1(FLASH_STATUS_1_BUSY, 0, W25Q20EW_TIMEOUT);
+		if (ret != E_OK) {
+			console_str_send("busy wait error\n");
+			goto WRITE_EXIT;
+		}
+		// ライトディセーブル
+		ret = w25q20ew_cmd_write_disable();
+		if (ret != E_OK) {
+			console_str_send("write disable error\n");
+			goto WRITE_EXIT;
+		}
+		// ライトディセーブル有効待ち
+		ret = w25q20ew_polling_read_status_1(FLASH_STATUS_1_WEL, 0, W25Q20EW_TIMEOUT);
+		if (ret != E_OK) {
+			console_str_send("write disable wait error\n");
+			goto WRITE_EXIT;
+		}
+		// アドレスとサイズを更新
+		current_addr += current_size;
+		data += current_size;
+		current_size = ((current_addr + W25Q20EW_1PAGE_SIZE) > end_addr) ? (end_addr - current_addr) : W25Q20EW_1PAGE_SIZE;
+		
+	} while (current_addr < end_addr);
+	
+WRITE_EXIT:
 	// 状態を更新
 	this->state = ST_IDLE;
 	
-	return 0;
+	return E_OK;
 }
 
 // イレース関数
 int32_t w25q20ew_erase(uint32_t addr)
 {
 	W25Q20EW_CTL *this = &w25q20ew_ctl;
-	OCTOSPI_COM_CFG cfg;
 	int32_t ret;
 	
-	// アイドル出なければ終了
+	// アイドルでなければ終了
 	if (this->state != ST_IDLE) {
 		return E_PAR;
 	}
@@ -192,39 +440,39 @@ int32_t w25q20ew_erase(uint32_t addr)
 		console_str_send("write enable error\n");
 		goto ERASE_EXIT;
 	}
-	
+	//kz_tsleep(1);
 	// ライトイネーブル有効待ち
-	ret = w25q20ew_polling_read_status(FLASH_STATUS_1_WEL, 1, W25Q20EW_TIMEOUT);
+	ret = w25q20ew_polling_read_status_1(FLASH_STATUS_1_WEL, 1, W25Q20EW_TIMEOUT);
 	if (ret != E_OK) {
-		console_str_send("write enable wait 1 error\n");
+		console_str_send("write enable wait error\n");
 		goto ERASE_EXIT;
 	}
-	
+	//kz_tsleep(1);
 	// イレース
 	ret = w25q20ew_cmd_erase(addr);
 	if (ret != E_OK) {
 		console_str_send("erace error\n");
 		goto ERASE_EXIT;
 	}
-	
+	//kz_tsleep(1);
 	// イレース完了待ち
-	ret = w25q20ew_polling_read_status(FLASH_STATUS_1_BUSY, 0, W25Q20EW_TIMEOUT);
+	ret = w25q20ew_polling_read_status_1(FLASH_STATUS_1_BUSY, 0, W25Q20EW_TIMEOUT);
 	if (ret != E_OK) {
-		console_str_send("write enable wait 1 error\n");
+		console_str_send("busy wait error\n");
 		goto ERASE_EXIT;
 	}
-	
+	//kz_tsleep(1);
 	// ライトディセーブル
 	ret = w25q20ew_cmd_write_disable();
 	if (ret != E_OK) {
 		console_str_send("write disable error\n");
 		goto ERASE_EXIT;
 	}
-	
+	//kz_tsleep(1);
 	// ライトディセーブル有効待ち
-	ret = w25q20ew_polling_read_status(FLASH_STATUS_1_WEL, 0, W25Q20EW_TIMEOUT);
+	ret = w25q20ew_polling_read_status_1(FLASH_STATUS_1_WEL, 0, W25Q20EW_TIMEOUT);
 	if (ret != E_OK) {
-		console_str_send("write enable wait 1 error\n");
+		console_str_send("write disable wait error\n");
 		goto ERASE_EXIT;
 	}
 	
@@ -237,10 +485,9 @@ ERASE_EXIT:
 }
 
 // 読み込み関数
-int32_t w25q20ew_read(uint32_t addr, uint8_t *data, uint8_t size)
+int32_t w25q20ew_read(uint32_t addr, uint8_t *data, uint32_t size)
 {
 	W25Q20EW_CTL *this = &w25q20ew_ctl;
-	OCTOSPI_COM_CFG cfg;
 	int32_t ret;
 	
 	// NULLの場合はエラーを返して終了
@@ -255,19 +502,40 @@ int32_t w25q20ew_read(uint32_t addr, uint8_t *data, uint8_t size)
 	// 状態を更新
 	this->state = ST_RUNNING;
 	
-#ifdef READ_ACCESS_SINGLE	// // シングルアクセス
+#ifdef READ_ACCESS_SINGLE	// シングルアクセス
 	// シングルアクセス
 	ret = w25q20ew_cmd_read_single(addr, data, size);
+	if (ret != E_OK) {
+		goto READ_END;
+	}
+	
+#elif READ_ACCESS_QUAD		// QUADアクセス
+	// QUADアクセス
+	ret = w25q20ew_cmd_read_quad(addr, data, size);
+	if (ret != E_OK) {
+		goto READ_END;
+	}
 	
 #else
-	// アクセス終了
-	goto ACCESS_END;
+	console_str_send("no read access\n");
+	
 #endif
 	
-ACCESS_END:
+READ_END:
 	
 	// 状態を更新
 	this->state = ST_IDLE;
+	
+	return ret;
+}
+
+// メモリマップドモード
+int32_t w25q20ew_set_memory_mappd(void)
+{
+	int32_t ret;
+	
+	// シングルアクセス
+	ret = w25q20ew_cmd_set_memory_mapped();
 	
 	return ret;
 }
@@ -277,7 +545,6 @@ ACCESS_END:
 int32_t w25q20ew_get_devise_id(uint8_t *id)
 {
 	W25Q20EW_CTL *this = &w25q20ew_ctl;
-	const OCTOSPI_COM_CFG *cmd_cfg;
 	int32_t ret;
 	
 	// アイドルでなければ終了
@@ -382,8 +649,6 @@ static void w25q20ew_ctrl_cmd_get_sfdp(void)
 // コマンド
 static void w25q20ew_ctrl_cmd_write_enable(void)
 {
-	const OCTOSPI_COM_CFG *cmd_cfg;
-	uint8_t status = 0;
 	int32_t ret;
 	
 	// ライトイネーブル
@@ -414,14 +679,13 @@ WRITE_DISABLE_EXIT:
 	return;
 }
 
-static void w25q20ew_ctrl_cmd_read_status(void)
+static void w25q20ew_ctrl_cmd_read_status_1(void)
 {
-	const OCTOSPI_COM_CFG *cmd_cfg;
 	uint8_t status = 0;
 	int32_t ret;
 	
 	// ステータス取得
-	ret = w25q20ew_cmd_read_status(&status);
+	ret = w25q20ew_cmd_read_status_1(&status);
 	if (ret != E_OK) {
 		console_str_send("status read error\n");
 		goto READ_STATUS_EXIT;
@@ -475,8 +739,8 @@ static void w25q20ew_ctrl_cmd_read(void)
 			k = i*16+j;
 			if (j == 0) {
 				// アドレス表示
-				//console_str_send("0x");
-				//console_val_send_hex(k, 2);
+				console_str_send("0x");
+				console_val_send_hex(k, 2);
 				console_str_send(" |");
 			}
 			console_str_send(" ");
@@ -507,8 +771,8 @@ void w25q20ew_set_cmd(void)
 	cmd.input = "w25q20ew write disable";
 	cmd.func = w25q20ew_ctrl_cmd_write_disable;
 	console_set_command(&cmd);
-	cmd.input = "w25q20ew read status";
-	cmd.func = w25q20ew_ctrl_cmd_read_status;
+	cmd.input = "w25q20ew read status1";
+	cmd.func = w25q20ew_ctrl_cmd_read_status_1;
 	console_set_command(&cmd);
 	cmd.input = "w25q20ew erace";
 	cmd.func = w25q20ew_ctrl_cmd_erace;
