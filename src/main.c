@@ -51,7 +51,7 @@ SOFTWARE.
 #include "pcm3060.h"
 #include "lcd_dev.h"
 #include "MSP2807.h"
-
+#include "mcp2515.h"
 // manager
 #include "wav.h"
 #include "cyc.h"
@@ -61,6 +61,7 @@ SOFTWARE.
 #include "console.h"
 #include "sound_app.h"
 #include "lcd_app.h"
+#include "loading_app.h"
 /* Private macro */
 /* Private variables */
 /* Private function prototypes */
@@ -102,6 +103,21 @@ static int test_tsk1(int argc, char *argv[])
 }
 #endif
 
+#if 0
+// for test 2 
+static int test_tsk2(int argc, char *argv[])
+{	
+	while(1) {
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
+		kz_tsleep(1000);
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
+		kz_tsleep(1000);
+	}
+	
+	return 0;
+}
+#endif
+
 /* システム・タスクとユーザ・タスクの起動 */
 static int start_threads(int argc, char *argv[])
 {
@@ -115,23 +131,25 @@ static int start_threads(int argc, char *argv[])
 	spi_init();
 	
 	// device initialize
-	//bt_dev_init();
+	bt_dev_init();
 	msp2807_init();
 	//pcm3060_init();
 	//LCD_dev_init();
 	//gysfdmaxb_init();
+	mcp2515_dev_init();
 	
 	// manager initialize
-	wav_init();
+	//wav_init();
 	cyc_init();
 	flash_mng_init();
-	ts_mng_init();
+	//ts_mng_init();
 	
 	// app initialize
 	console_init();
 	//sound_app_init();
 	//lcd_apl_init();
-	test_init();
+	//test_app_init();
+	loading_app_init();
 	
 	// command setting
 	//bt_dev_set_cmd();
@@ -140,9 +158,8 @@ static int start_threads(int argc, char *argv[])
 	w25q20ew_set_cmd();
 	//gysfdmaxb_set_cmd();
 	flash_mng_set_cmd();
-	
-	// flash manager open
-	flash_mng_open(FLASH_MNG_KIND_W25Q20EW);
+	loading_app_set_cmd();
+	mcp2515_set_cmd();
 	
 	//kz_run(BTN_dev_main, "BTN_dev_main",  2, 0x1000, 0, NULL);
 	//kz_run(console_main, "console",  3, 0x1000, 0, NULL);
@@ -157,7 +174,7 @@ static int start_threads(int argc, char *argv[])
 	//kz_run(flash_main, "flash",  2, 0x200, 0, NULL);
 	//kz_run(BTN_dev_main, "BTN_dev_main",  3, 0x1000, 0, NULL);
 	//kz_run(test_tsk1, "test_tsk1",  3, 0x1000, 0, NULL);
-
+	//kz_run(test_tsk2, "test_tsk1",  3, 0x100, 0, NULL);
 	
 	// deprioritize
 	kz_chpri(15); 

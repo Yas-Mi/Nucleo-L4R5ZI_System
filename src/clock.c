@@ -56,6 +56,8 @@ static void SystemClock_Config(void)
 	{
 		Error_Handler();
 	}
+	HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_SYSCLK, RCC_MCODIV_8
+	);
 }
 
 // 外部公開関数
@@ -100,7 +102,7 @@ void periferal_clock_init(void)
 	
 	// OCTOSPIクロックの設定
 	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_OSPI;
-	PeriphClkInit.OspiClockSelection = RCC_OSPICLKSOURCE_SYSCLK;
+	PeriphClkInit.OspiClockSelection = RCC_OSPICLKSOURCE_MSI;
 	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
 	{
 		Error_Handler();

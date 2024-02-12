@@ -285,3 +285,17 @@ uint8_t num2ascii(uint8_t val)
 	
 	return ret_char;
 }
+
+// アスキーから整数に変換
+uint8_t hex2num(char str)
+{
+	uint8_t ret_val = 0xFF;
+	
+	if (('0' <= str) && (str <= '9')) {
+		ret_val = str - 0x30;
+	} else if (('A' <= str) && (str <= 'F')){
+		ret_val = str - 0x37;
+	}
+	
+	return ret_val;
+}

@@ -276,7 +276,7 @@ static int test_app_main(int argc, char *argv[])
 }
 
 // 初期化
-void test_init(void)
+void test_app_init(void)
 {
 	TEST2_CTL *this = &test2_ctl;
 	

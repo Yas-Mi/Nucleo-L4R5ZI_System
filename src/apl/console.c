@@ -1,4 +1,7 @@
 #include <console.h>
+#include <string.h>
+#include <stdio.h>
+#include "str_util.h"
 #include "usart.h"
 #include "defines.h"
 #include "kozos.h"
@@ -10,6 +13,7 @@
 #define CONOLE_CMD_NUM		(32U)		// 設定できるコマンドの数
 #define CONSOLE_USART_CH	USART_CH1	// 使用するUSARTのチャネル
 #define CONSOLE_BAUDRATE	(115200)	// コンソールのボーレート
+#define CONSOLE_ARG_MAX		(10)		// 引数の個数の最大値
 
 // 制御ブロック
 typedef struct {
@@ -54,7 +58,11 @@ static void console_analysis(uint8_t data)
 {
 	CONSOLE_CTL *this = &console_ctl;
 	COMMAND_INFO *cmd_info;
-	uint8_t i;
+	uint8_t i, j;
+	uint8_t argc = 0;
+	char *argv[CONSOLE_ARG_MAX];
+	uint8_t base_pos = 0;
+	uint8_t sp_pos = 0;
 	
 	switch (data) {
 		case '\t':	// tab
@@ -75,9 +83,26 @@ static void console_analysis(uint8_t data)
 			// コマンドに設定されている？
 			for (i = 0; i < this->cmd_idx; i++) {
 				cmd_info = &(this->cmd_info[i]);
-				// コマンド実行
-				if (!strcmp(this->buf, cmd_info->input)) {
-					cmd_info->func();
+				// コマンド名が一致した
+				if (memcmp(this->buf, cmd_info->input, strlen(cmd_info->input)) == 0) {
+					// 引数解析 (*) 先頭に空白は絶対に入れないこと！！
+					for (j = 0; j < CONSOLE_ARG_MAX; j++) {
+						// 空白を検索
+						sp_pos = find_str(' ', &(this->buf[base_pos]));
+						// 引数設定
+						argv[argc++] = &(this->buf[base_pos]);
+						// 空白がなかった
+						if (sp_pos == 0) {
+							break;
+						}
+						// 空白をNULL文字に設定
+						this->buf[base_pos+sp_pos] = '\0';
+						// 検索開始位置を更新 
+						base_pos += sp_pos + 1;
+					}
+					// コマンド実行
+					cmd_info->func(argc, argv);
+					break;
 				}
 			}
 			// その他あればここで処理する
@@ -123,7 +148,6 @@ static int console_main(int argc, char *argv[])
 void console_init(void)
 {
 	CONSOLE_CTL *this;
-	int32_t ret;
 	
 	// 制御ブロックの取得
 	this = &console_ctl;
@@ -138,7 +162,7 @@ void console_init(void)
 	this->msg_id = MSGBOX_ID_CONSOLE;
 
 	// USARTのオープン
-	ret = usart_open(CONSOLE_USART_CH, CONSOLE_BAUDRATE);
+	usart_open(CONSOLE_USART_CH, CONSOLE_BAUDRATE);
 	
 	return;
 }
@@ -162,7 +186,6 @@ uint8_t console_str_send(char *data)
 uint8_t console_val_send(uint8_t data)
 {
 	int32_t ret;
-	uint8_t len;
 	uint8_t hundreds, tens_place, ones_place;
 	uint8_t snd_data[4];
 	
@@ -176,18 +199,15 @@ uint8_t console_val_send(uint8_t data)
 	
 	// 3桁？
 	if (hundreds != 0) {
-		len = 4;
 		snd_data[0] = val2ascii(hundreds);
 		snd_data[1] = val2ascii(tens_place);
 		snd_data[2] = val2ascii(ones_place);
 	// 2桁?
 	} else if (tens_place != 0) {
-		len = 3;
 		snd_data[0] = val2ascii(tens_place);
 		snd_data[1] = val2ascii(ones_place);
 	// 1桁？
 	} else {
-		len = 2;
 		snd_data[0] = val2ascii(ones_place);
 	}
 	
@@ -246,13 +266,12 @@ uint8_t console_val_send_u16(uint16_t data)
 // (*) https://qiita.com/kaiyou/items/93af0fe0d49ff21fe20a
 int32_t console_val_send_hex(uint8_t data, uint8_t digit)
 {
-	int32_t n, i, j;
+	int32_t i, j;
 	uint8_t temp;
 	int32_t num[10];
 	char answer[10];
 	char snd_data[10];
 	int32_t ret;
-	uint8_t pad_num;
 	
 	if (digit == 0) {
 		return -1;
@@ -284,6 +303,46 @@ int32_t console_val_send_hex(uint8_t data, uint8_t digit)
 	
 	// 送信
 	ret = console_str_send(snd_data);
+	
+	return ret;
+}
+
+// コンソールへ数値(16進数)を送信する関数(32bit版)
+int32_t console_val_send_hex_ex(uint32_t data, uint8_t digit)
+{
+	char tmp_data[16];
+	char snd_data[8+1];
+	int len;
+	int8_t sft_size;
+	int32_t ret;
+	
+	// 8より大きい桁は意味わからん
+	if (digit > 8) {
+		return -1;
+	}
+	
+	// 初期化
+	memset(snd_data, '0', sizeof(snd_data));
+	
+	// 16進数に変換
+	len = sprintf(tmp_data, "%x", data);
+	
+	// シフトする数を計算
+	sft_size = digit - len;
+	
+	// 送信データを作成
+	if (sft_size >= 0) {
+		memcpy(&(snd_data[sft_size]), tmp_data, len);
+		snd_data[digit] = '\0';
+	} else {
+		memcpy(snd_data, tmp_data, len);
+		snd_data[len] = '\0';
+	}
+	
+	// 送信
+	ret = console_str_send(snd_data);
+	
+	return ret;
 }
 
 // コマンドを設定する関数
@@ -315,12 +374,11 @@ int32_t console_set_command(COMMAND_INFO *cmd_info)
 // 割込みで文字列を出す関数
 void console_output_for_int(char *str)
 {
-	int32_t ret;
 	uint8_t len;
 	
 	// 文字列の長さを取得
 	len = strlen((char*)str);
 	
 	// 送信
-	ret = usart_send_for_int(CONSOLE_USART_CH, str, len);
+	usart_send_for_int(CONSOLE_USART_CH, str, len);
 }

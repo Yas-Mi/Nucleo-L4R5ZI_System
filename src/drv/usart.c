@@ -136,20 +136,6 @@ static const USART_CFG usart_cfg[USART_CH_MAX] =
 #define get_int_prio(ch)	(usart_cfg[ch].int_priority)		// 割り込み優先度取得マクロ
 #define get_clk_no(ch)		(usart_cfg[ch].clk)					// クロック定義取得マクロ
 
-// fifoの空き数を取得する関数
-static uint16_t get_fifo_empty_num(uint16_t r_idx, uint16_t w_idx)
-{
-	uint16_t empty_num;
-	
-	if (r_idx > w_idx) {
-		empty_num = r_idx - w_idx;
-	} else {
-		empty_num = ((USART_BUF_SIZE - w_idx) + r_idx);
-	}
-	
-	return empty_num;
-}
-
 /* 割込み共通ハンドラ */
 static void usart_common_handler(USART_CH ch){
 	USART_CTL *this;
@@ -180,16 +166,6 @@ static void usart_common_handler(USART_CH ch){
 			buf_info->buf[buf_info->w_idx] = data;
 			// ライトインデックスを進める
 			buf_info->w_idx = (buf_info->w_idx + 1U) & (USART_BUF_SIZE - 1U);
-			// 寝ているタスクがあれば起こす
-			if (this->rcv_tsk_id != 0) {
-				// 読みたいサイズ分受信した？
-				if ((buf_info->w_idx - buf_info->r_idx) >= this->read_size) {
-					// 読みたいサイズをクリア
-					this->read_size = 0;
-					// 寝ているタスクを起こす
-					kx_wakeup(this->rcv_tsk_id);
-				}
-			}
 		}
 	}
 	
@@ -203,16 +179,6 @@ static void usart_common_handler(USART_CH ch){
 			usart_base_addr->tdr = buf_info->buf[buf_info->r_idx];
 			// リードインデックスを進める
 			buf_info->r_idx = (buf_info->r_idx + 1U) & (USART_BUF_SIZE - 1U);
-			// 寝ているタスクがあれば起こす
-			if (this->snd_tsk_id != 0) {
-				// 送信したいサイズ分空いた？
-				if (get_fifo_empty_num(buf_info->r_idx, buf_info->w_idx) >= this->send_size) {
-					// 読みたいサイズをクリア
-					this->send_size = 0;
-					// 寝ているタスクを起こす
-					kx_wakeup(this->snd_tsk_id);
-				}
-			}
 		// 送信リングバッファにデータがない場合
 		} else {
 			// 割込みを無効にする
@@ -354,7 +320,6 @@ int32_t usart_send(USART_CH ch, uint8_t *data, uint32_t size)
 {
 	USART_CTL *this;
 	RING_BUF *buf_info;
-	uint32_t i;
 	volatile struct stm32l4_usart *usart_base_addr;
 	
 	// チャネル番号が範囲外の場合エラーを返して終了
@@ -375,35 +340,37 @@ int32_t usart_send(USART_CH ch, uint8_t *data, uint32_t size)
 		return -1;
 	}
 	
-	// リングバッファ情報取得
-	buf_info = &(this->s_buf);
-	
-	// 送信リングバッファに空きがない場合、エラーを返して終了
-	if (get_fifo_empty_num(buf_info->r_idx, buf_info->w_idx) < size) {
-		// 送信サイズを設定
-		this->send_size = size;
-		// タスクIDを取得
-		this->snd_tsk_id = kz_getid();
-		// 空くまで寝る
-		kz_sleep();
+	// 全部送りきるまで終わらない
+	while (1) {
+		// 割込み禁止
+		INTR_DISABLE;
+		// バッファ情報取得
+		buf_info = &(this->s_buf);
+		
+		do {
+			// 空いていればどんどん詰める
+			if ((buf_info->w_idx + 1) != buf_info->r_idx) {
+				buf_info->buf[buf_info->w_idx] = *(data++);
+				buf_info->w_idx = (buf_info->w_idx + 1) & (USART_BUF_SIZE - 1);
+				size--;
+			} else {
+				break;
+			}
+		} while(size > 0);
+		
+		// USARTの割り込み有効
+		usart_base_addr = get_reg(ch);
+		usart_base_addr->cr3 |= CR3_TXFTIE;
+		
+		// 割込み禁止解除
+		INTR_ENABLE;
+		
+		// もうなかったら終わり
+		if (size == 0) break;
+		
+		// 10msウェイト
+		kz_tsleep(10);
 	}
-	
-	// 割込み禁止
-	INTR_DISABLE;
-	
-	for (i = 0; i < size; i++) {
-		// 送信用リングバッファに送信データを設定
-		buf_info->buf[buf_info->w_idx] = *(data++);
-		// ライトインデックスを進める
-		buf_info->w_idx = (buf_info->w_idx + 1U) & (USART_BUF_SIZE - 1U);
-	}
-	
-	// 割込み禁止解除
-	INTR_ENABLE;
-	
-	// USARTの割り込み有効
-	usart_base_addr = get_reg(ch);
-	usart_base_addr->cr3 |= CR3_TXFTIE;
 	
 	return 0;
 }
@@ -413,7 +380,6 @@ int32_t usart_recv(USART_CH ch, uint8_t *data, uint32_t size)
 {
 	USART_CTL *this;
 	RING_BUF *buf_info;
-	uint32_t i;
 	uint32_t cnt;
 	
 	// チャネル番号が範囲外の場合エラーを返して終了
@@ -434,41 +400,40 @@ int32_t usart_recv(USART_CH ch, uint8_t *data, uint32_t size)
 		return -1;
 	}
 	
-	// リングバッファ情報取得
-	buf_info = &(this->r_buf);
-	
-	// FIFOに格納されているデータの数を取得
-	cnt = buf_info->w_idx - buf_info->r_idx;
-	
-	// 受信サイズをクリア
-	this->read_size = 0;
-	
-	// 読みたいサイズ分ない場合、sleepする
-	if (cnt < size) {
-		// 受信サイズを設定
-		this->read_size = size - cnt;
-		// タスクIDを取得
-		this->rcv_tsk_id = kz_getid();
-		// 読みたいサイズ分受信するまで寝る
-		kz_sleep();
+	// 読みたいサイズ分読むまで終わらない
+	while(1) {
+		// 割込み禁止
+		INTR_DISABLE;
+		// リングバッファ情報取得
+		buf_info = &(this->r_buf);
+		
+		// FIFOに格納されているデータの数を取得
+		cnt = buf_info->w_idx - buf_info->r_idx;
+		if (cnt > size) {
+			cnt = size;
+		}
+		
+		while (cnt--) {
+			// 受信用リングバッファからデータを取得
+			*data = buf_info->buf[buf_info->r_idx];
+			// リードインデックスを進める
+			buf_info->r_idx = (buf_info->r_idx + 1U) & (USART_BUF_SIZE - 1U);
+			// サイズを減算
+			size--;
+		}
+		
+		// 割込み禁止解除
+		INTR_ENABLE;
+		
+		// もうなかったら終わり
+		if (size == 0) break;
+			
+		// 10msウェイト
+		kz_tsleep(10);
+		
 	}
 	
-	// 割込み禁止
-	INTR_DISABLE;
-	
-	for (i = 0; i < size; i++) {
-		// 受信用リングバッファからデータを取得
-		*data = buf_info->buf[buf_info->r_idx];
-		// リードインデックスを進める
-		buf_info->r_idx = (buf_info->r_idx + 1U) & (USART_BUF_SIZE - 1U);
-		// データのポインタを進める
-		data++;
-	}
-	
-	// 割込み禁止解除
-	INTR_ENABLE;
-	
-	return cnt;
+	return E_OK;
 }
 
 int32_t usart_send_for_int(USART_CH ch, uint8_t *data, uint32_t size)

@@ -5,6 +5,7 @@
  *      Author: ronald
  */
 #include <string.h>
+#include <stdlib.h>
 #include "defines.h"
 #include "kozos.h"
 #include "console.h"
@@ -302,43 +303,92 @@ int32_t flash_mng_set_memory_mapped(uint32_t kind)
 	return ret;
 }
 
-// コマンド
-static void flash_mng_cmd_write(void)
+// ====コマンド====
+// 書き込みコマンド
+// argv[0] : flash_mng
+// argv[1] : write
+// argv[2] : addr
+// argv[3] : size
+// argv[4] : val
+static void flash_mng_cmd_write(int argc, char *argv[])
 {
 	int32_t ret;
+	uint32_t addr;
+	uint32_t size;
+	uint8_t val;
+	
+	// 引数チェック
+	if (argc < 5) {
+		console_str_send("flash_mng write <addr> <size> <val>\n");
+		return;
+	}
+	
+	// 引数設定
+	addr = atoi(argv[2]);
+	size = atoi(argv[3]);
+	val = atoi(argv[4]);
+	
+	// サイズチェック
+	if (size >= FLASH_MNG_BUFF_SIZE) {
+		console_str_send("Size should be set to 10 or less\n");
+	}
 	
 	// メモリの初期化
-	memset(flash_mng_buff, 0x5A, sizeof(flash_mng_buff));
+	memset(flash_mng_buff, val, sizeof(flash_mng_buff));
 	
-	ret = flash_mng_write(FLASH_MNG_KIND_W25Q20EW, 0, flash_mng_buff, FLASH_MNG_BUFF_SIZE);
+	ret = flash_mng_write(FLASH_MNG_KIND_W25Q20EW, addr, flash_mng_buff, size);
 	if (ret != E_OK) {
 		console_str_send("flash_mng_write error\n");
 	}
 }
 
-static void flash_mng_cmd_erace(void)
+// 消去コマンド
+// argv[0] : flash_mng
+// argv[1] : erace
+// argv[2] : addr
+static void flash_mng_cmd_erace(int argc, char *argv[])
 {
 	int32_t ret;
+	uint32_t addr;
 	
-	ret = flash_mng_erace(FLASH_MNG_KIND_W25Q20EW, 0);
+	// 引数チェック
+	if (argc < 3) {
+		console_str_send("flash_mng write <addr>\n");
+		return;
+	}
+	
+	// 引数設定
+	addr = atoi(argv[2]);
+	
+	ret = flash_mng_erace(FLASH_MNG_KIND_W25Q20EW, addr);
 	if (ret != E_OK) {
 		console_str_send("flash_mng_erace error\n");
 	}
 }
 
-static void flash_mng_cmd_read(void)
+// 読み込みコマンド
+// argv[0] : flash_mng
+// argv[1] : read
+// argv[2] : addr
+static void flash_mng_cmd_read(int argc, char *argv[])
 {
 	int32_t ret;
 	uint32_t i, j, k;
+	uint8_t data = 0;
+	uint32_t base_addr;
+	uint32_t size;
 	
-	// 初期化
-	memset(flash_mng_buff, 0, sizeof(flash_mng_buff));
+#if 0
 	
-	ret = flash_mng_read(FLASH_MNG_KIND_W25Q20EW, 0, flash_mng_buff, FLASH_MNG_BUFF_SIZE);
-	if (ret != E_OK) {
-		console_str_send("flash_mng_erace error\n");
+	// 引数チェック
+	if (argc < 3) {
+		console_str_send("flash_mng read <addr>\n");
 		return;
 	}
+	
+	// 引数設定
+	base_addr = atoi(argv[2]);
+	
 	// 表示
 	console_str_send("==================== read ============================\n");
 	console_str_send("     |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
@@ -346,6 +396,13 @@ static void flash_mng_cmd_read(void)
 	for (i = 0; i < 16; i++) {
 		for (j = 0; j < 16; j++) {
 			k = i*16+j;
+			// データ取得
+			ret = flash_mng_read(FLASH_MNG_KIND_W25Q20EW, (base_addr + k), &data, 1);
+			if (ret != E_OK) {
+				console_str_send("flash_mng_erace error\n");
+				return;
+			}
+			
 			if (j == 0) {
 				// アドレス表示
 				console_str_send("0x");
@@ -353,10 +410,53 @@ static void flash_mng_cmd_read(void)
 				console_str_send(" |");
 			}
 			console_str_send(" ");
-			console_val_send_hex(flash_mng_buff[k], 2);
+			console_val_send_hex(data, 2);
 		}
 		console_str_send("\n");
 	}
+#endif
+	
+	// 引数チェック
+	if (argc < 4) {
+		console_str_send("flash_mng read <addr> <size>\n");
+		return;
+	}
+	
+	// 引数設定
+	base_addr = atoi(argv[2]);
+	size = atoi(argv[3]);
+	
+	// 表示
+	console_str_send("==================== read ============================\n");
+	console_str_send("     |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
+	console_str_send("------------------------------------------------------\n");
+	for (i = 0; i < 16; i++) {
+		for (j = 0; j < 16; j++) {
+			k = i*16+j;
+			// 指定サイズ超えたら終了
+			if (size <= k) goto EXIT;
+			
+			// データ取得
+			ret = flash_mng_read(FLASH_MNG_KIND_W25Q20EW, (base_addr + k), &data, 1);
+			if (ret != E_OK) {
+				console_str_send("flash_mng_erace error\n");
+				return;
+			}
+			
+			if (j == 0) {
+				// アドレス表示
+				console_str_send("0x");
+				console_val_send_hex(k, 2);
+				console_str_send(" |");
+			}
+			console_str_send(" ");
+			console_val_send_hex(data, 2);
+		}
+		console_str_send("\n");
+	}
+EXIT:
+	console_str_send("\n");
+	return;
 }
 
 static void flash_mng_cmd_set_mem_mapped(void)
@@ -369,20 +469,33 @@ static void flash_mng_cmd_set_mem_mapped(void)
 	}
 }
 
-static void flash_mng_cmdt_mem_mapped_read(void)
+static void flash_mng_cmdt_mem_mapped_read(int argc, char *argv[])
 {
 	uint8_t *base_addr = (uint8_t*)0x90000000;
 	uint32_t i, j, k;
+	uint32_t ofst;
+	
+	// 引数チェック
+	if (argc < 3) {
+		console_str_send("flash_mng read <addr> <byte access 0: 1byte access 1: 4byte access>\n");
+		return;
+	}
+	
+	ofst = atoi(argv[2]);
+	
+	base_addr = base_addr + ofst;
 	
 	// 表示
 	console_str_send("==================== read ============================\n");
 	console_str_send("     |  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F\n");
 	console_str_send("------------------------------------------------------\n");
 	for (i = 0; i < 16; i++) {
-		for (j = 0; j < FLASH_MNG_BUFF_SIZE/16; j++) {
+		for (j = 0; j < 16; j++) {
 			k = i*16+j;
 			if (j == 0) {
 				// アドレス表示
+				console_str_send("0x");
+				console_val_send_hex(k, 2);
 				console_str_send(" |");
 			}
 			console_str_send(" ");

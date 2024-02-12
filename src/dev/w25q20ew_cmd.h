@@ -18,6 +18,7 @@ extern int32_t w25q20ew_cmd_wait_wel(uint32_t flag, uint32_t timeout);
 extern int32_t w25q20ew_cmd_write_single(uint32_t addr, uint8_t *data, uint32_t size);
 extern int32_t w25q20ew_cmd_write_quad(uint32_t addr, uint8_t *data, uint32_t size);
 extern int32_t w25q20ew_cmd_erase(uint32_t addr);
+extern int32_t w25q20ew_cmd_chip_erase(void);
 extern int32_t w25q20ew_cmd_wait_wr_proc(uint32_t timeout);
 extern int32_t w25q20ew_cmd_read_single(uint32_t addr, uint8_t *data, uint32_t size);
 extern int32_t w25q20ew_cmd_read_quad(uint32_t addr, uint8_t *data, uint32_t size);

@@ -19,23 +19,23 @@
 
 #include "octspi.h"
 
-// 共通マクロ
+// common macro
 #define BUF_SIZE	(256)
 #define FIFO_SIZE	(32)
-#define TIMEOUT		(100000)	// 100000サイクル
+#define TIMEOUT		(100000)	// 100000cycle
 
-// 状態
-#define ST_NOT_INTIALIZED	(0U)	// 未初期化
-#define ST_INTIALIZED		(1U)	// 初期化済
-#define ST_OPENED			(2U)	// オープン済
-#define ST_RUN				(3U)	// 実行中
+// state
+#define ST_NOT_INTIALIZED	(0U)	// not initialize
+#define ST_INTIALIZED		(1U)	// initialized
+#define ST_OPENED			(2U)	// opened
+#define ST_RUN				(3U)	// running
 
-/* OCTSPI ベースレジスタ */
+/* OCTSPI base register addr */
 #define OCTSPI1_BASE_ADDR (0xA0001000)
 #define OCTSPI2_BASE_ADDR (0xA0001400)
 #define OCTSPIM_BASE_ADDR (0x50061C00)
 
-// レジスタ定義
+// register define
 // OCTOSPI
 // CR
 #define CR_DMM				(1UL << 6)
@@ -55,6 +55,11 @@
 #define DCR1_CKMODE			(1UL << 0)
 // DCR2
 #define DCR2_PRESCALER(v)	(((v) & 0xFF) << 0)
+// DCR3
+#define DCR3_CSBOUND(v)		(((v) & 0x1F) << 16)
+#define DCR3_MAXTRAN(v)		(((v) & 0xFF) << 0)
+// DCR4
+#define DCR4_REFRESH(v)		(((v) & 0xFFFFFFFF) << 0)
 // CCR
 #define CCR_SIOO			(1UL << 31)
 #define CCR_DQSE			(1UL << 29)
@@ -100,13 +105,13 @@
 #define PCR_IOHEN		(1UL << 24)
 #define PCR_IOHSRC(v)	(((v) & 0x3) << 25)
 
-// レジスタ設定値
+// register setting val
 #define FMODE_INDIRECT_WRITE				(0)
 #define FMODE_INDIRECT_READ					(1)
 #define FMODE_AUTOMATIC_STATUS_POLLING		(2)
 #define FMODE_MEMORY_MAPPED					(3)
 
-/* OCTSPIレジスタ情報 */
+/* OCTSPI register info */
 struct stm32l4_octspi {
 	volatile uint32_t cr;           /* ofs:0x0000 */
 	volatile uint32_t reserved0;    /* ofs:0x0004 */
@@ -248,85 +253,67 @@ struct stm32l4_octspim {
 	volatile uint32_t p2cr;         /* ofs:0x0008 */
 };
 
-// プロトタイプ
+// prototype
 static void opctspi1_handler(void);
 static void opctspi2_handler(void);
 
-/* チャンネル固有情報 */
+/* channel info */
 typedef struct {
-	volatile struct stm32l4_octspi *octspi_base_addr;	// ベースレジスタ octspi
-	IRQn_Type irq_type;									// 割込みタイプ
-	INT_HANDLER handler;								// 割込みハンドラ
-	uint32_t	vec_no;									// 割込み番号
-	uint32_t	int_priority;							// 割込み優先度
-	uint32_t	clk;									// クロック定義
+	volatile struct stm32l4_octspi *octspi_base_addr;	// OCTSPI base register addr
+	IRQn_Type irq_type;									// interrupt type
+	INT_HANDLER handler;								// interrupt handler
+	uint32_t	vec_no;									// interrupt number
+	uint32_t	int_priority;							// priority
+	uint32_t	clk;									// clcok define
 } OCTSPI_CFG;
 
-/* ピンの種類 */
-typedef enum {
-	OCTOSPI_PIN_TYPE_NCS = 0,	// CS
-	OCTOSPI_PIN_TYPE_CLK,		// CLK
-	OCTOSPI_PIN_TYPE_NCLK,		// CLK反転
-	OCTOSPI_PIN_TYPE_DQS,		// DQS
-	OCTOSPI_PIN_TYPE_IO1,		// IO1
-	OCTOSPI_PIN_TYPE_IO2,		// IO2
-	OCTOSPI_PIN_TYPE_IO3,		// IO3
-	OCTOSPI_PIN_TYPE_IO4,		// IO4
-	// とりあえずquadまでサポート 8pinなんてそんなないでしょう
-//	OCTOSPI_PIN_TYPE_IO5,		// IO5
-//	OCTOSPI_PIN_TYPE_IO6,		// IO6
-//	OCTOSPI_PIN_TYPE_IO7,		// IO7
-//	OCTOSPI_PIN_TYPE_IO8,		// IO8
-	OCTOSPI_PIN_TYPE_MAX
-} OCTOSPI_PIN_TYPE;
-
-/* チャネル固有情報テーブル */
+/* channel info table */
 static const OCTSPI_CFG octspi_cfg[OCTOSPI_CH_MAX] =
 {
 	{(volatile struct stm32l4_octspi*)OCTSPI1_BASE_ADDR,	OCTOSPI1_IRQn,		opctspi1_handler,	OCTOSPI1_GLOBAL_INTERRUPT_NO,	INTERRPUT_PRIORITY_5,	RCC_PERIPHCLK_OSPI},
 	{(volatile struct stm32l4_octspi*)OCTSPI2_BASE_ADDR,	OCTOSPI2_IRQn,		opctspi2_handler,	OCTOSPI2_GLOBAL_INTERRUPT_NO,	INTERRPUT_PRIORITY_5,	RCC_PERIPHCLK_OSPI},
 };
-#define get_reg(ch)			(octspi_cfg[ch].octspi_base_addr)		// レジスタ取得マクロ
-#define get_ire_type(ch)	(octspi_cfg[ch].irq_type)				// 割込みタイプ取得マクロ
-#define get_handler(ch)		(octspi_cfg[ch].handler)				// 割り込みハンドラ取得マクロ
-#define get_vec_no(ch)		(octspi_cfg[ch].vec_no)					// 割り込み番号取得マクロ
-#define get_int_prio(ch)	(octspi_cfg[ch].int_priority)			// 割り込み優先度取得マクロ
-#define get_clk_no(ch)		(octspi_cfg[ch].clk)					// クロック定義取得マクロ
+#define get_reg(ch)			(octspi_cfg[ch].octspi_base_addr)		// get base register addr
+#define get_ire_type(ch)	(octspi_cfg[ch].irq_type)				// get interrupt type
+#define get_handler(ch)		(octspi_cfg[ch].handler)				// get interrupt handler
+#define get_vec_no(ch)		(octspi_cfg[ch].vec_no)					// get interrupt number
+#define get_int_prio(ch)	(octspi_cfg[ch].int_priority)			// get priority
+#define get_clk_no(ch)		(octspi_cfg[ch].clk)					// get clcok define
 
-/* OCTSPI制御ブロック */
+/* OCTSPI control info */
 typedef struct {
-	OCTOSPI_CH			ch;				// チャンネル
-	uint32_t			status;			// 状態
-	uint8_t				*data;			// データ
-	uint32_t			data_size;		// データサイズ
+	OCTOSPI_CH			ch;				// channel
+	uint32_t			status;			// state
+	uint8_t				*data;			// data
+	uint32_t			data_size;		// data size
 } OCTSPI_CTL;
 static OCTSPI_CTL octspi_ctl[OCTOSPI_CH_MAX];
 #define get_myself(n) (&octspi_ctl[(n)])
 
-// 割込み共通ハンドラ
+// common interrupt handler
 void opctspi_common_handler(uint32_t ch)
 {
-	// 今のところ使用しない
+	// not used
 }
 
-// 割込みハンドラ CH1
+// interrupt handler CH1
 static void opctspi1_handler(void) {
 	opctspi_common_handler(OCTOSPI_CH_1);
 }
 
-// 割込みハンドラ CH2
+// interrupt handler CH2
 static void opctspi2_handler(void) {
 	opctspi_common_handler(OCTOSPI_CH_2);
 }
 
-// 指数取得関数
+// get expornent
 static uint8_t get_expornent(uint32_t value)
 {
 	uint8_t i;
 	uint32_t base = 1;
 	uint8_t expornent = 0;
 	
-	/* 256乗まで */
+	/* up to 256 */
 	for (i = 1; i < 256; i++) {
 		base = base * 2;
 		if (base >= value) {
@@ -338,16 +325,16 @@ static uint8_t get_expornent(uint32_t value)
 	return expornent;
 }
 
-// クロック設定
+// clock setting
 static void set_clk(OCTOSPI_CH ch, uint32_t clk)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr = get_reg(ch);
 	uint32_t octospi_clk;
 	uint32_t prescale;
 	
-	// OCTOSPIクロックを取得
+	// get octospi clok
 	octospi_clk = HAL_RCCEx_GetPeriphCLKFreq(get_clk_no(ch));
-	// プリスケーラを計算
+	// calc prescaler
 	prescale = octospi_clk/clk;
 	if (prescale == 0) {
 		prescale = 1;
@@ -356,7 +343,7 @@ static void set_clk(OCTOSPI_CH ch, uint32_t clk)
 	octspi_base_addr->dcr2 = DCR2_PRESCALER(prescale);
 }
 
-// ピン設定
+// pin function setting
 static void pin_config(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 {
 	volatile struct stm32l4_octspim *octspim_base_addr = (volatile struct stm32l4_octspim*)OCTSPIM_BASE_ADDR;
@@ -374,7 +361,8 @@ static void pin_config(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 	pcr_reg = (uint32_t*)pcr_tbl[ch];
 	
 	// とりあえず全ポート有効
-	*pcr_reg |= (PCR_IOHEN | PCR_IOLEN | PCR_NCSEN | PCR_CLKEN);
+	//*pcr_reg |= (PCR_IOHEN | PCR_IOLEN | PCR_NCSEN | PCR_CLKEN);
+	*pcr_reg |= (PCR_IOLEN | PCR_NCSEN | PCR_CLKEN);
 }
 
 // 指定ステータスがセットされるまで待つ
@@ -516,7 +504,7 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 	octspi_base_addr->dcr1 = DCR1_MTYP(par->mem_type) | DCR1_DEVSIZE(get_expornent(par->size) - 1) | (par->clk_mode & DCR1_CKMODE);
 	
 	// DCR3設定
-	// ★ 今のところ未使用
+	//octspi_base_addr->dcr3 = DCR3_CSBOUND(3);
 	
 	// DCR4設定 refleshの間隔
 	// ★ 今のところ未使用
@@ -535,10 +523,10 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 	set_clk(ch, par->clk);
 	
 	// DQSとSSIOの設定
-	if (par->dqs_used != FALSE) {
+	if (par->ssio_used != FALSE) {
 		octspi_base_addr->ccr |= CCR_SIOO;
 	}
-	if (par->ssio_used != FALSE) {
+	if (par->dqs_used != FALSE) {
 		octspi_base_addr->ccr |= CCR_DQSE;
 	}
 	
@@ -583,6 +571,12 @@ int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_
 		return E_PAR;
 	}
 	
+	// BUSYフラグをチェック
+	if (wait_status_clear(ch, SR_BUSY, TIMEOUT) != E_OK) {
+		console_str_send("octospi busy wait error\n");
+		return E_TMOUT;
+	}
+	
 	// チャネル情報を取得
 	octspi_base_addr = get_reg(ch);
 	
@@ -598,13 +592,25 @@ int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_
 		8. Specify the optional alternate byte to be sent right after the address phase in OCTOSPI_WABR for read operation.
 	*/
 	
+	//octspi_base_addr->dcr3 = DCR3_CSBOUND(3);
+	
+	//octspi_base_addr->dcr4 = DCR4_REFRESH(47);
+	
 	// メモリマップドモードに設定
 	octspi_base_addr->cr &= 0xCFFFFFFF;
 	octspi_base_addr->cr |= CR_FMODE(FMODE_MEMORY_MAPPED);
 	
+	// まずは各レジスタの初期化
+	octspi_base_addr->tcr = 0x00000000;
+	octspi_base_addr->ccr = 0x00000000;
+	
+	// タイムアウト設定
+	//octspi_base_addr->lptr |= 0x00000020;
+	
 	// リード設定 (*) リードはIRレジスタとCCRレジスタ
 	// TCR設定
 	octspi_base_addr->tcr |= read_cfg->dummy_cycle;
+	//octspi_base_addr->tcr |= TCR_SSHIFT;
 	
 	// CCR設定
 	// データ
@@ -620,12 +626,19 @@ int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_
 	}
 	// 命令
 	tmp_ccr |= CCR_ISIZE(read_cfg->inst_size) | CCR_IMODE(read_cfg->inst_if);
+	// その他設定
+	//tmp_ccr |= CCR_SIOO;
 	// 設定
 	octspi_base_addr->ccr = tmp_ccr;
+	
+	// 命令の設定
+	octspi_base_addr->ir = read_cfg->inst;
 	
 	// 初期化
 	tmp_ccr = 0UL;
 	
+	// ライトはインダイレクトモードで実行するため設定しない
+#if 0
 	// ライト設定 (*) ライトはWIRレジスタとWCCRレジスタ
 	// TCR設定
 	octspi_base_addr->wtcr |= write_cfg->dummy_cycle;
@@ -645,7 +658,7 @@ int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_
 	tmp_ccr |= CCR_ISIZE(write_cfg->inst_size) | CCR_IMODE(write_cfg->inst_if);
 	// 設定
 	octspi_base_addr->wccr = tmp_ccr;
-	
+#endif
 	return E_OK;
 }
 
@@ -729,6 +742,7 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 		
 		// ダミーサイクルの設定
 		octspi_base_addr->tcr |= cfg->dummy_cycle;
+		//octspi_base_addr->tcr |= TCR_SSHIFT;
 		
 		// フォーマットの設定
 		// データ
@@ -776,6 +790,8 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 				
 				// データの送受信
 				while (this->data_size-- > 0) {
+					// 10msウェイト
+					//kz_tsleep(10);
 					// FIFOに空きがある/データがある？
 					if (wait_status_set(ch, SR_FTF, TIMEOUT) != E_OK) {
 						return E_TMOUT;

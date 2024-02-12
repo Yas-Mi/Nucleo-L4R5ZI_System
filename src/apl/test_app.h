@@ -7,6 +7,6 @@
 #ifndef TEST_APP_H_
 #define TEST_APP_H_
 
-extern void test_init(void);
+extern void test_app_init(void);
 
 #endif /* TEST_APP_H_ */

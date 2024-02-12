@@ -34,7 +34,7 @@ typedef enum {
 	BT_BAUDRATE_TYPE_MAX,
 } BT_BAUDRATE_TYPE;
 
-typedef void (*BT_RCV_CALLBACK)(uint8_t *data, void *vp);	// 受信コールバック
+typedef void (*BT_RCV_CALLBACK)(uint8_t data, void *vp);	// 受信コールバック
 
 extern int32_t bt_dev_init(void);
 extern int32_t bt_dev_reg_callback(BT_RCV_CALLBACK callback, void* callback_vp);
