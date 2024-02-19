@@ -102,7 +102,7 @@ void periferal_clock_init(void)
 	
 	// OCTOSPIクロックの設定
 	PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_OSPI;
-	PeriphClkInit.OspiClockSelection = RCC_OSPICLKSOURCE_MSI;
+	PeriphClkInit.OspiClockSelection = RCC_OSPICLKSOURCE_SYSCLK;
 	if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
 	{
 		Error_Handler();

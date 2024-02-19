@@ -21,6 +21,7 @@ extern int32_t w25q20ew_cmd_erase(uint32_t addr);
 extern int32_t w25q20ew_cmd_chip_erase(void);
 extern int32_t w25q20ew_cmd_wait_wr_proc(uint32_t timeout);
 extern int32_t w25q20ew_cmd_read_single(uint32_t addr, uint8_t *data, uint32_t size);
+extern int32_t w25q20ew_cmd_read_dual(uint32_t addr, uint8_t *data, uint32_t size);
 extern int32_t w25q20ew_cmd_read_quad(uint32_t addr, uint8_t *data, uint32_t size);
 extern int32_t w25q20ew_cmd_set_memory_mapped(void);
 extern int32_t w25q20ew_cmd_read_status_1(uint8_t *data);
@@ -29,5 +30,6 @@ extern int32_t w25q20ew_cmd_write_status_2(uint8_t *data);
 extern int32_t w25q20ew_cmd_get_devise_id(uint8_t *id);
 extern int32_t w25q20ew_cmd_get_sfdp(uint8_t *sfdp);
 extern int32_t w25q20ew_cmd_write_disable(void);
+extern int32_t w25q20ew_cmd_reset(void);
 
 #endif /* DEV_W25Q20EW_CMD_H_ */

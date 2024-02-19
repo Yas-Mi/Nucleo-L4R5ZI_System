@@ -9,6 +9,8 @@
 #include "console.h"
 #include "intr.h"
 #include "octspi.h"
+#include "stm32l4r5xx.h"
+#include "stm32l4xx_hal_ospi.h"
 #include <string.h>
 
 #include "w25q20ew_cmd.h"
@@ -56,13 +58,13 @@
 |                |
 +----------------+0x000000
 */
-#define W25Q20EW_START_ADDRESS		(0x00000000)	// 先頭アドレス
-#define W25Q20EW_END_ADDRESS		(0x0003FFFF)	// 終了アドレス
-#define W25Q20EW_MEM_SIZE			(256*1024)		// デバイスのメモリサイズ
-#define W25Q20EW_1PAGE_SIZE			(256)			// 1ページのサイズ
-#define W25Q20EW_SECTOR_SIZE		(4*1024)		// セクターサイズ
+#define W25Q20EW_START_ADDRESS		(0x00000000)		// 先頭アドレス
+#define W25Q20EW_END_ADDRESS		(0x0003FFFF)		// 終了アドレス
+#define W25Q20EW_MEM_SIZE			(8*1024*1024)		// デバイスのメモリサイズ
+#define W25Q20EW_1PAGE_SIZE			(256)				// 1ページのサイズ
+#define W25Q20EW_SECTOR_SIZE		(4*1024)			// セクターサイズ
 #define W25Q20EW_BLOCK_SIZE			(16*W25Q20EW_SECTOR_SIZE)	
-													// ブロックサイズ
+														// ブロックサイズ
 // フラッシュ ビット定義
 // ステータスレジスタ
 #define FLASH_STATUS_1_BUSY		(1 << 0)
@@ -102,12 +104,14 @@ typedef struct {
 	uint32_t			state;					// 状態
 	W25Q20EW_CALLBACK	callback;				// コールバック
 	void				*callback_vp;			// コールバックパラメータ
+	// sample
+	OSPI_HandleTypeDef	OSPINORHandle;
 } W25Q20EW_CTL;
 static W25Q20EW_CTL w25q20ew_ctl;
 
 // OCTOSPIオープンパラメータ
 static const OCTOSPI_OPEN open_par = {
-	250*1000,						// 1kHz
+	1*1000*1000,					// 1kHz
 	OCTOSPI_OPE_MODE_INDIRECT,		// インダイレクトモード
 	OCTOSPI_IF_QUAD,				// クアッド通信
 	OCTOSPI_MEM_STANDARD,			// スタンダード
@@ -320,6 +324,75 @@ int32_t w25q20ew_init(void)
 	
 	return E_OK;
 }
+// 参考:http://blog.taniho.net/2019/12/STM32%E3%81%A7QuadSPI%E6%8E%A5%E7%B6%9A%E3%81%AEwinbond-NOR-Flash%E3%82%92%E4%BD%BF%E3%81%86/
+int32_t open_quad(void)
+{
+	W25Q20EW_CTL *this = &w25q20ew_ctl;
+	
+	this->OSPINORHandle.Instance = OCTOSPI1;
+	
+	// Deinit
+	if (HAL_OSPI_DeInit(&(this->OSPINORHandle)) != HAL_OK)
+	{
+		return -1;
+	}
+	
+	// set parameter
+	this->OSPINORHandle.Init.FifoThreshold         = 4;
+	this->OSPINORHandle.Init.DualQuad              = HAL_OSPI_DUALQUAD_DISABLE;
+	this->OSPINORHandle.Init.DeviceSize            = 12; /* 512 MBits */
+	this->OSPINORHandle.Init.ChipSelectHighTime    = 2;
+	this->OSPINORHandle.Init.FreeRunningClock      = HAL_OSPI_FREERUNCLK_DISABLE;
+	this->OSPINORHandle.Init.ClockMode             = HAL_OSPI_CLOCK_MODE_0;
+	this->OSPINORHandle.Init.ClockPrescaler        = 2; /* OctoSPI clock = 120MHz / ClockPrescaler = 60MHz */
+	this->OSPINORHandle.Init.SampleShifting        = HAL_OSPI_SAMPLE_SHIFTING_NONE;
+	this->OSPINORHandle.Init.MemoryType            = HAL_OSPI_MEMTYPE_MICRON;
+	this->OSPINORHandle.Init.DelayHoldQuarterCycle = HAL_OSPI_DHQC_DISABLE;
+	this->OSPINORHandle.Init.ChipSelectBoundary    = 0;
+	this->OSPINORHandle.Init.DelayBlockBypass      = HAL_OSPI_DELAY_BLOCK_BYPASSED;
+	
+	// initialize
+	if (HAL_OSPI_Init(&(this->OSPINORHandle)) != HAL_OK)
+	{
+		return -1;
+	}
+	
+	return E_OK;
+}
+
+int32_t read_quad(uint32_t addr, uint8_t *data, uint32_t size)
+{
+	W25Q20EW_CTL *this = &w25q20ew_ctl;
+	OSPI_RegularCmdTypeDef sCommand;
+	
+	memset(&sCommand, 0, sizeof(sCommand));
+	sCommand.OperationType      = HAL_OSPI_OPTYPE_COMMON_CFG;
+	sCommand.FlashId            = HAL_OSPI_FLASH_ID_1;
+	sCommand.InstructionMode    = HAL_OSPI_INSTRUCTION_1_LINE;
+	sCommand.InstructionDtrMode = HAL_OSPI_INSTRUCTION_DTR_DISABLE;
+	sCommand.InstructionSize    = HAL_OSPI_INSTRUCTION_8_BITS;
+	sCommand.Instruction        = 0x6B;
+	sCommand.AddressMode        = HAL_OSPI_ADDRESS_1_LINE;
+	sCommand.AddressDtrMode     = HAL_OSPI_ADDRESS_DTR_DISABLE;
+	sCommand.AddressSize        = HAL_OSPI_ADDRESS_24_BITS;
+	sCommand.Address            = addr;
+	sCommand.AlternateBytesMode = HAL_OSPI_ALTERNATE_BYTES_NONE;
+	sCommand.DataMode           = HAL_OSPI_DATA_4_LINES;
+	sCommand.DataDtrMode        = HAL_OSPI_DATA_DTR_DISABLE;
+	sCommand.DummyCycles        = 8;
+	sCommand.NbData             = size;
+	sCommand.DQSMode            = HAL_OSPI_DQS_DISABLE;
+	sCommand.SIOOMode           = HAL_OSPI_SIOO_INST_EVERY_CMD;
+	if (HAL_OSPI_Command(&(this->OSPINORHandle), &sCommand, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
+		console_str_send("HAL_OSPI_Command error\n");
+	}
+	if (HAL_OSPI_Receive(&(this->OSPINORHandle), data, HAL_OSPI_TIMEOUT_DEFAULT_VALUE) != HAL_OK) {
+		console_str_send("HAL_OSPI_Receive error\n");
+	}
+	
+	return E_OK;
+}
+
 
 // オープン関数
 int32_t w25q20ew_open(void)
@@ -331,9 +404,12 @@ int32_t w25q20ew_open(void)
 	if (this->state != ST_INITIALIZED) {
 		return -1;
 	}
-	
+#if 1
 	// octospiオープン
 	ret = octospi_open(W25Q20EW_OCTOSPI_CH, &open_par);
+#else
+	ret = open_quad();
+#endif
 	if (ret != E_OK) {
 		return ret;
 	}
@@ -637,9 +713,20 @@ int32_t w25q20ew_read(uint32_t addr, uint8_t *data, uint32_t size)
 		goto READ_END;
 	}
 	
+#elif defined(READ_ACCESS_DUAL)		// DUALアクセス
+	// DUALアクセス
+	ret = w25q20ew_cmd_read_dual(addr, data, size);
+	if (ret != E_OK) {
+		goto READ_END;
+	}
+	
 #elif defined(READ_ACCESS_QUAD)		// QUADアクセス
 	// QUADアクセス
+#if 1
 	ret = w25q20ew_cmd_read_quad(addr, data, size);
+#else
+	ret = read_quad(addr, data, size);
+#endif
 	if (ret != E_OK) {
 		goto READ_END;
 	}
@@ -950,6 +1037,19 @@ static void w25q20ew_ctrl_cmd_access(int argc, char *argv[])
 	return;
 }
 
+static void w25q20ew_ctrl_cmd_rest(int argc, char *argv[])
+{
+	int32_t ret;
+	
+	// リセット
+	ret = w25q20ew_cmd_reset();
+	if (ret != E_OK) {
+		console_str_send("reset error\n");
+	}
+	
+	return;
+}
+
 // コマンド設定関数
 void w25q20ew_set_cmd(void)
 {
@@ -986,4 +1086,9 @@ void w25q20ew_set_cmd(void)
 	cmd.input = "w25q20ew access";
 	cmd.func = w25q20ew_ctrl_cmd_access;
 	console_set_command(&cmd);
+	cmd.input = "w25q20ew rest";
+	cmd.func = w25q20ew_ctrl_cmd_rest;
+	console_set_command(&cmd);
 }
+
+

@@ -285,7 +285,7 @@ typedef struct {
 	OCTOSPI_CH			ch;				// channel
 	uint32_t			status;			// state
 	uint8_t				*data;			// data
-	uint32_t			data_size;		// data size
+	int32_t				data_size;		// data size
 } OCTSPI_CTL;
 static OCTSPI_CTL octspi_ctl[OCTOSPI_CH_MAX];
 #define get_myself(n) (&octspi_ctl[(n)])
@@ -334,12 +334,13 @@ static void set_clk(OCTOSPI_CH ch, uint32_t clk)
 	
 	// get octospi clok
 	octospi_clk = HAL_RCCEx_GetPeriphCLKFreq(get_clk_no(ch));
+	
 	// calc prescaler
 	prescale = octospi_clk/clk;
 	if (prescale == 0) {
 		prescale = 1;
 	}
-	// レジスタ設定
+	// set prescaler
 	octspi_base_addr->dcr2 = DCR2_PRESCALER(prescale);
 }
 
@@ -353,28 +354,27 @@ static void pin_config(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 	};
 	uint32_t *pcr_reg;
 	
-	// OCTOSPIMの設定
-	// マルチプレックスモードは使用しない
+	// set OCTOSPIM
+	// not set CR
 	//octspim_base_addr->cr =
 	
-	// pcrレジスタ取得
+	// get pcr base register
 	pcr_reg = (uint32_t*)pcr_tbl[ch];
 	
-	// とりあえず全ポート有効
-	//*pcr_reg |= (PCR_IOHEN | PCR_IOLEN | PCR_NCSEN | PCR_CLKEN);
-	*pcr_reg |= (PCR_IOLEN | PCR_NCSEN | PCR_CLKEN);
+	// enable all port
+	*pcr_reg |= (PCR_IOHEN | PCR_IOLEN | PCR_NCSEN | PCR_CLKEN);
+	//*pcr_reg |= (PCR_IOLEN | PCR_NCSEN | PCR_CLKEN);
 }
 
-// 指定ステータスがセットされるまで待つ
+// wait until a specific bit is set
 static int32_t wait_status_set(OCTOSPI_CH ch, uint32_t bit, uint32_t timeout)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	
-	// ベースレジスタ取得
+	// get base address
 	octspi_base_addr = get_reg(ch);
 	
 	while((octspi_base_addr->sr & bit) == 0) {
-		// タイムアウト発生
 		if (timeout-- == 0) {
 			return E_TMOUT;
 		}
@@ -383,16 +383,15 @@ static int32_t wait_status_set(OCTOSPI_CH ch, uint32_t bit, uint32_t timeout)
 	return E_OK;
 }
 
-// 指定ステータスがクリアされるまで待つ
+// wait until a specific bit is clear
 static int32_t wait_status_clear(OCTOSPI_CH ch, uint32_t bit, uint32_t timeout)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	
-	// ベースレジスタ取得
+	// get base address
 	octspi_base_addr = get_reg(ch);
 	
 	while((octspi_base_addr->sr & bit) != 0) {
-		// タイムアウト発生
 		if (timeout-- == 0) {
 			return E_TMOUT;
 		}
@@ -401,128 +400,77 @@ static int32_t wait_status_clear(OCTOSPI_CH ch, uint32_t bit, uint32_t timeout)
 	return E_OK;
 }
 
-// 初期化関数
+// Init
 void octospi_init(void)
 {
 	OCTSPI_CTL *this;
 	uint8_t ch;
 	
 	for (ch = 0; ch < OCTOSPI_CH_MAX; ch++) {
-		// 制御ブロック取得
+		// get ctx
 		this = get_myself(ch);
-		// 制御ブロック初期化
+		// initialize ctx
 		memset(this, 0, sizeof(OCTSPI_CTL));
-		// 割込みハンドラ登録
+		// set interrupt handler
 		kz_setintr(get_vec_no(ch), get_handler(ch));
-		// 状態を更新
+		// update state
 		this->status = ST_INTIALIZED;
 	}
 }
 
-// オープン関数
+// Open
 int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
 	
-	// チャネルは正常？
+	// check channel
 	if (ch >= OCTOSPI_CH_MAX) {
 		return E_PAR;
 	}
 	
-	// メモリタイプチェック
+	// check mem_type
 	if (par->mem_type >= OCTOSPI_MEM_MAX) {
 		return E_PAR;
 	}
 	
-	// インタフェースチェック (*) 今のところ、OCTOは未サポート
+	// check interface
 	if (par->interface >= OCTOSPI_IF_OCTO) {
 		return E_PAR;
 	}
 	
-	// コンテキストを取得
+	// get ctx
 	this = get_myself(ch);
 	
-	// 初期化済みでなければ終了
+	// exit if not initialized
 	if (this->status != ST_INTIALIZED) {
 		return E_PAR;
 	}
 	
-	// チャネル情報を取得
+	// get base address
 	octspi_base_addr = get_reg(ch);
 	
-	/*
-		サンプルの流れ
-			HAL_OSPI_Init
-				DCR1
-				DCR3
-				DCR4
-				CR   : FIFOの設定
-				DCR2 : クロックの設定
-				CR   : デュアルクアッドモードの設定
-				TCR  : SSFIFT、遅延の設定
-				Enable OCTOSPI
-			HAL_OSPI_Command
-				DQS、SSIO設定
-				オルタナティブ設定 ABR→CCR
-				ダミーサイクル設定 TCR
-				データがある場合はDLRを設定
-				IR、AD、DATA関連のCCRを設定
-				
-		BSP_OSPI_NOR_Write
-	*/
+	// set DCR1
+	octspi_base_addr->dcr1 = DCR1_MTYP(par->mem_type) | DCR1_DEVSIZE(get_expornent(par->size) - 1) | (par->clk_mode & DCR1_CKMODE)
+	;
 	
-	/*
-		Regular-command Mode (FMODE = 00、01)
-		1. OCTOSPI_DLRにread/writeのサイズを指定
-		2. OCTOSPI_TCRにフレームタイミングを指定
-		3. OCTOSPI_CCRにフレームフォーマットを指定
-		4. OCTOSPI_IRに命令を指定
-		5. OCTOSPI_ABRにアドレス後に送信されるalternateデータを指定する
-		6. OCTOSPI_ARにアドレスを指定
-		7. 必要ならDMAを有効にする
-		8. OCTOSPI_DRを使用して、FIFOからデータを送信/受信する
-	*/
-	
-	/*
-		Automatic status-polling Mode (FMODE = 10)
-	*/
-	
-	/*
-		Memory-mapped Mode (FMODE = 10)
-		1. OCTOSPI_TCRにレームタイミングを指定
-		2. OCTOSPI_CCRにフレームフォーマットを指定
-		3. OCTOSPI_IRに命令を指定
-		4. OCTOSPI_ABRにアドレス後に送信されるalternateデータを指定する
-		5. OCTOSPI_WTCRにフレームタイミングを設定
-		6. OCTOSPI_WCCRにフレームフォーマットを設定
-		7. OCTOSPI_WIRに命令を指定
-		8. OCTOSPI_WABRにアドレス後に送信されるalternateデータを指定する
-	*/
-	
-	// DCR1の設定
-	octspi_base_addr->dcr1 = DCR1_MTYP(par->mem_type) | DCR1_DEVSIZE(get_expornent(par->size) - 1) | (par->clk_mode & DCR1_CKMODE);
-	
-	// DCR3設定
+	// set DCR3
 	//octspi_base_addr->dcr3 = DCR3_CSBOUND(3);
 	
-	// DCR4設定 refleshの間隔
-	// ★ 今のところ未使用
+	// set DCR4 (*)not used reflesh
 	
-	// CR設定
-	// FTHRESはFIFOの半分を設定
+	// set CR
 	//octspi_base_addr->cr |= CR_FTHRES(FIFO_SIZE/2);
-	// 今はとりあえず1つでもあったらFTFが立つように設定
-	// デュアルモード設定？
+	// for now, FTF is set when one or more data is stored in the FIFO.
+	// set dual_mode
 	if (par->dual_mode != FALSE) {
 		octspi_base_addr->cr |= CR_DMM;
 	}
 	
-	// クロック設定
-	// DCR2設定
+	// set DCR2
 	set_clk(ch, par->clk);
 	
-	// DQSとSSIOの設定
+	// set DQS and SSIO
 	if (par->ssio_used != FALSE) {
 		octspi_base_addr->ccr |= CCR_SIOO;
 	}
@@ -530,58 +478,58 @@ int32_t octospi_open(OCTOSPI_CH ch, OCTOSPI_OPEN *par)
 		octspi_base_addr->ccr |= CCR_DQSE;
 	}
 	
-	// ピン設定
+	// set pin config
 	pin_config(ch, par);
 	
-	// OCTOSPI有効
+	// enable OCTOSPI
 	octspi_base_addr->cr |= CR_EN;
 	
-    // 割り込み設定
+    // set NVIC
 	HAL_NVIC_SetPriority(get_ire_type(ch), get_int_prio(ch), 0);
 	HAL_NVIC_EnableIRQ(get_ire_type(ch));
 	
-	// 状態を更新
+	// update state
 	this->status = ST_OPENED;
 	
 	return E_OK;
 }
 
-// メモリマップドモード設定関数 (*)オープン関数を呼んでから呼ぶ必要あり
+// set memory mapped mode
 int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_COM_CFG *write_cfg)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
 	uint32_t tmp_ccr = 0UL;
 	
-	// チャネルは正常？
+	// check channel
 	if (ch >= OCTOSPI_CH_MAX) {
 		return E_PAR;
 	}
 	
-	// NULLだったら終了
+	// check parameter
 	if ((read_cfg == NULL) || (write_cfg == NULL)) {
 		return E_PAR;
 	}
 	
-	// コンテキストを取得
+	// get ctx
 	this = get_myself(ch);
 	
-	// オープン済みでなければ終了
+	// exit if not opened
 	if (this->status != ST_OPENED) {
 		return E_PAR;
 	}
 	
-	// BUSYフラグをチェック
+	// wait until BUSY bit is cleared
 	if (wait_status_clear(ch, SR_BUSY, TIMEOUT) != E_OK) {
 		console_str_send("octospi busy wait error\n");
 		return E_TMOUT;
 	}
 	
-	// チャネル情報を取得
+	// get base address
 	octspi_base_addr = get_reg(ch);
 	
 	/*
-		マニュアルに記載されている流れ
+		Setup procedure described in the manual
 		1. Specify the frame timing in OCTOSPI_TCR for read operation.
 		2. Specify the frame format in OCTOSPI_CCR for read operation.
 		3. Specify the instruction in OCTOSPI_IR.
@@ -596,118 +544,94 @@ int32_t octospi_memory_mapped(OCTOSPI_CH ch, OCTOSPI_COM_CFG *read_cfg, OCTOSPI_
 	
 	//octspi_base_addr->dcr4 = DCR4_REFRESH(47);
 	
-	// メモリマップドモードに設定
+	// set mode
 	octspi_base_addr->cr &= 0xCFFFFFFF;
 	octspi_base_addr->cr |= CR_FMODE(FMODE_MEMORY_MAPPED);
 	
-	// まずは各レジスタの初期化
+	// initialize TCR and CCR
 	octspi_base_addr->tcr = 0x00000000;
 	octspi_base_addr->ccr = 0x00000000;
 	
-	// タイムアウト設定
+	// set LPTR
 	//octspi_base_addr->lptr |= 0x00000020;
 	
-	// リード設定 (*) リードはIRレジスタとCCRレジスタ
-	// TCR設定
+	// set TCR
 	octspi_base_addr->tcr |= read_cfg->dummy_cycle;
 	//octspi_base_addr->tcr |= TCR_SSHIFT;
 	
-	// CCR設定
-	// データ
+	// set data
 	tmp_ccr |= CCR_DMODE(read_cfg->data_if);
-	// オルタナティブデータ
+	
+	// set alternate byte
 	if (read_cfg->alternate_all_size > 0) {
 		octspi_base_addr->abr = read_cfg->alternate_all_size;
 		tmp_ccr |= CCR_ABSIZE(read_cfg->alternate_size) | CCR_ABMODE(read_cfg->alternate_if);
 	}
-	// アドレス
+	// set addr
 	if ((read_cfg->addr_if != OCTOSPI_IF_NONE) && (read_cfg->addr_if != OCTOSPI_IF_MAX)) {
 		tmp_ccr |= CCR_ADSIZE(read_cfg->addr_size) | CCR_ADMODE(read_cfg->addr_if);
 	}
-	// 命令
+	// set instruction
 	tmp_ccr |= CCR_ISIZE(read_cfg->inst_size) | CCR_IMODE(read_cfg->inst_if);
-	// その他設定
 	//tmp_ccr |= CCR_SIOO;
-	// 設定
+	
+	// set CCR
 	octspi_base_addr->ccr = tmp_ccr;
 	
-	// 命令の設定
+	// set read instruction
 	octspi_base_addr->ir = read_cfg->inst;
 	
-	// 初期化
-	tmp_ccr = 0UL;
+	// MemoryMappedMode is not used for write
 	
-	// ライトはインダイレクトモードで実行するため設定しない
-#if 0
-	// ライト設定 (*) ライトはWIRレジスタとWCCRレジスタ
-	// TCR設定
-	octspi_base_addr->wtcr |= write_cfg->dummy_cycle;
-	
-	// データ
-	tmp_ccr |= CCR_DMODE(write_cfg->data_if);
-	// オルタナティブデータ
-	if (write_cfg->alternate_all_size > 0) {
-		octspi_base_addr->wabr = write_cfg->alternate_all_size;
-		tmp_ccr |= CCR_ABSIZE(write_cfg->alternate_size) | CCR_ABMODE(write_cfg->alternate_if);
-	}
-	// アドレス
-	if ((write_cfg->addr_if != OCTOSPI_IF_NONE) && (write_cfg->addr_if != OCTOSPI_IF_MAX)) {
-		tmp_ccr |= CCR_ADSIZE(write_cfg->addr_size) | CCR_ADMODE(write_cfg->addr_if);
-	}
-	// 命令
-	tmp_ccr |= CCR_ISIZE(write_cfg->inst_size) | CCR_IMODE(write_cfg->inst_if);
-	// 設定
-	octspi_base_addr->wccr = tmp_ccr;
-#endif
 	return E_OK;
 }
 
-// クローズ関数
+// Close
 int32_t octospi_close(OCTOSPI_CH ch)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
 	
-	// チャネルは正常？
+	// check channel
 	if (ch >= OCTOSPI_CH_MAX) {
 		return E_PAR;
 	}
 	
-	// コンテキストを取得
+	// get ctx
 	this = get_myself(ch);
 	
-	// オープン済みでなければ終了
+	// exit if not opend
 	if (this->status != ST_OPENED) {
 		return E_PAR;
 	}
 		
-	// チャネル情報を取得
+	// get base address
 	octspi_base_addr = get_reg(ch);
 	
-	// OCTOSPI無効
+	// disable CR
 	octspi_base_addr->cr &= ~CR_EN;
 	
-	// 割り込み無効
+	// disable NVIC
 	HAL_NVIC_DisableIRQ(get_ire_type(ch));
 	
-	// 状態を更新
+	// update state
 	this->status = ST_INTIALIZED;
 	
 	return E_OK;
 }
 
-// 送受信処理
+// read/write proc
 static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, uint8_t *data, uint32_t size)
 {
 	volatile struct stm32l4_octspi *octspi_base_addr;
 	OCTSPI_CTL *this;
 	uint32_t tmp_ccr = 0UL;
 	
-	// コンテキストを取得
+	// get ctx
 	this = get_myself(ch);
 	
 	/*
-		マニュアルに記載されている流れ
+		Setup procedure described in the manual
 		1. Specify a number of data bytes to read or write in OCTOSPI_DLR.
 		2. Specify the frame timing in OCTOSPI_TCR.
 		3. Specify the frame format in OCTOSPI_CCR.
@@ -720,184 +644,183 @@ static int32_t octospi_proc(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint32_t mode, 
 		If neither the address register (OCTOSPI_AR) nor the data register (OCTOSPI_DR) need
 	*/
 	
-	// ベースレジスタ取得
+	// get base address
 	octspi_base_addr = get_reg(ch);
 	
-	// BUSYフラグをチェック
+	// wait until BUSY bit is cleared
 	if (wait_status_clear(ch, SR_BUSY, TIMEOUT) != E_OK) {
 		console_str_send("octospi busy wait error\n");
 		return E_TMOUT;
 	}
 	
-	// モードをクリア
+	// set mode
 	octspi_base_addr->cr &= 0xCFFFFFFF;
-	// モードの設定
 	octspi_base_addr->cr |= CR_FMODE(mode);
 	
-	// インダイレクトモード
+	// Indirect Mode
 	if ((mode == FMODE_INDIRECT_WRITE)||(mode == FMODE_INDIRECT_READ)) {
-		// まずは各レジスタの初期化
+		// initialize TCR and CCR
 		octspi_base_addr->tcr = 0x00000000;
 		octspi_base_addr->ccr = 0x00000000;
 		
-		// ダミーサイクルの設定
+		// set TCR
 		octspi_base_addr->tcr |= cfg->dummy_cycle;
 		//octspi_base_addr->tcr |= TCR_SSHIFT;
 		
-		// フォーマットの設定
-		// データ
+		// set data info
 		if (size > 0) {
-			// サイズの設定
 			octspi_base_addr->dlr = size - 1;
 			tmp_ccr |= CCR_DMODE(cfg->data_if);
 		}
-		// オルタナティブデータ
+		// set alternate info
 		if (cfg->alternate_all_size > 0) {
 			octspi_base_addr->abr = cfg->alternate_all_size;
 			tmp_ccr |= CCR_ABSIZE(cfg->alternate_size) | CCR_ABMODE(cfg->alternate_if);
 		}
-		// アドレス
+		// set addr info
 		if ((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) {
 			tmp_ccr |= CCR_ADSIZE(cfg->addr_size) | CCR_ADMODE(cfg->addr_if);
 		}
 		
-		// 命令
+		// set instruction info
 		tmp_ccr |= CCR_ISIZE(cfg->inst_size) | CCR_IMODE(cfg->inst_if);
 		
-		// CCRの設定
+		// set CCR
 		octspi_base_addr->ccr = tmp_ccr;
 		
-		// 命令の設定
+		// set instruction
 		octspi_base_addr->ir = cfg->inst;
 		
-		// アドレス、データどちらもない
-		// (*) 命令レジスタに命令を書いたタイミングで送信される
+		// no address and no data
 		if (((cfg->addr_if == OCTOSPI_IF_NONE) || (cfg->addr_if == OCTOSPI_IF_MAX)) && (size == 0)) {
 			;
-		// アドレス、データどっちかはある
+		// either address or data
 		} else {
-			// アドレスがある？
+			// set address
 			if ((cfg->addr_if != OCTOSPI_IF_NONE) && (cfg->addr_if != OCTOSPI_IF_MAX)) {
-				// アドレスの設定
 				octspi_base_addr->ar = cfg->addr;
 			}
-			// データがある？
+			// set data
 			if (size > 0) {
-				// データポインタを設定
+				// remember data pointer and size
 				this->data = data;
-				// データサイズを設定
 				this->data_size = size;
 				
-				// データの送受信
+				// execute read/write for data size
 				while (this->data_size-- > 0) {
-					// 10msウェイト
-					//kz_tsleep(10);
-					// FIFOに空きがある/データがある？
-					if (wait_status_set(ch, SR_FTF, TIMEOUT) != E_OK) {
+					// Check if there is one or more data in the FIFO
+					if (wait_status_set(ch, (SR_FTF | SR_TCF), TIMEOUT) != E_OK) {
 						return E_TMOUT;
 					}
-					// ライト？
+					// indirect mode write
 					if (mode == FMODE_INDIRECT_WRITE) {
-						// データを設定
+						// 1 byte write
 						octspi_base_addr->dr.byte[0] = *(this->data++);
 						
-					// リード？
+					// indirect mode read
 					} else {
-						// データを取得
+						// 1 byte read
 						*(this->data++) = octspi_base_addr->dr.byte[0];
 						
 					}
 				}
 			}
 		}
-		// データ送信が終わるまで待つ
+		// wait until transmission is complete.
 		if (wait_status_set(ch, SR_TCF, TIMEOUT) != 0) {
 			return E_TMOUT;
 		}
-		// 送信完了フラグをクリア
+		// clear transmission completion flag
 		octspi_base_addr->fcr |= FCR_CTCF;
 		
-		// エラー発生？
+		// check error flags
 		if ((octspi_base_addr->sr & SR_TEF) != 0) {
-			// エラーをクリアして終了
+			// clear error flags
 			octspi_base_addr->fcr |= FCR_CTEF;
 			return E_STS;
 			
 		}
 		
-	// オートマティックステータスポーリングモード
+		// wait until BUSY bit is cleared
+		if (wait_status_clear(ch, SR_BUSY, TIMEOUT) != E_OK) {
+			console_str_send("octospi busy wait error\n");
+			return E_TMOUT;
+		}
+		
+	// Status Polling Mode
 	} else if (mode == FMODE_AUTOMATIC_STATUS_POLLING) {
-		// ★後で実装
-	// メモリマップドモード
-	} else if (mode == FMODE_MEMORY_MAPPED) {
-		// メモリマップドモードでは呼ばれない
+		// not used
 		;
-	// その他
+	// Memory Mapped Mode
+	} else if (mode == FMODE_MEMORY_MAPPED) {
+		// not used
+		;
+		
+	// Other
 	} else {
 		;
 	}
 	
-	// 割り込み有効は使用しない
-	//octspi_base_addr->cr |= (CR_TCIE | CR_TEIE);
-	
 	return E_OK;
 }
 
+// Send
 int32_t octospi_send(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
 {
 	OCTSPI_CTL *this;
 	int32_t ret;
 	
-	// チャネルは正常？
+	// check channel
 	if (ch >= OCTOSPI_CH_MAX) {
 		return -1;
 	}
 	
-	// コンテキストを取得
+	// get ctx
 	this = get_myself(ch);
 	
-	// オープン済みでなければ終了
+	// exit if not opened
 	if (this->status != ST_OPENED) {
 		return E_PAR;
 	}
 	
-	// 状態を更新
+	// update state
 	this->status = ST_RUN;
 	
-	// 送信処理
+	// execute write
 	ret = octospi_proc(ch, cfg, FMODE_INDIRECT_WRITE, data, size);
 	
-	// 状態を更新
+	// update state
 	this->status = ST_OPENED;
 	
 	return ret;
 }
 
+// Read
 int32_t octospi_recv(OCTOSPI_CH ch, OCTOSPI_COM_CFG *cfg, uint8_t *data, uint32_t size)
 {
 	OCTSPI_CTL *this;
 	int32_t ret;
 	
-	// チャネルは正常？
+	// check channel
 	if (ch >= OCTOSPI_CH_MAX) {
 		return -1;
 	}
 	
-	// コンテキストを取得
+	// get ctx
 	this = get_myself(ch);
 	
-	// オープン済みでなければ終了
+	// exit if not opened
 	if (this->status != ST_OPENED) {
 		return -1;
 	}
 	
-	// 状態を更新
+	// update state
 	this->status = ST_RUN;
 	
-	// 受信処理
+	// execute read
 	ret = octospi_proc(ch, cfg, FMODE_INDIRECT_READ, data, size);
 	
-	// 状態を更新
+	// update state
 	this->status = ST_OPENED;
 	
 	return ret;

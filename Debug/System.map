@@ -5293,9 +5293,15 @@ Discarded input sections
                 0x00000000       0x44 src\dev\w25q20ew_cmd.o
  .text.w25q20ew_cmd_read_single
                 0x00000000       0x44 src\dev\w25q20ew_cmd.o
+ .text.w25q20ew_cmd_read_dual
+                0x00000000       0x44 src\dev\w25q20ew_cmd.o
  .text          0x00000000        0x0 src\dev\w25q20ew_ctrl.o
  .data          0x00000000        0x0 src\dev\w25q20ew_ctrl.o
  .bss           0x00000000        0x0 src\dev\w25q20ew_ctrl.o
+ .text.open_quad
+                0x00000000       0x98 src\dev\w25q20ew_ctrl.o
+ .text.read_quad
+                0x00000000       0xb8 src\dev\w25q20ew_ctrl.o
  .text          0x00000000        0x0 src\drv\dma.o
  .data          0x00000000        0x0 src\drv\dma.o
  .bss           0x00000000        0x0 src\drv\dma.o
@@ -6001,7 +6007,7 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../l
                 0x08000000                g_pfnVectors
                 0x080001bc                . = ALIGN (0x4)
 
-.text           0x080001bc     0xa154
+.text           0x080001bc     0xa1e8
                 0x080001bc                . = ALIGN (0x4)
  *(.text)
  .text          0x080001bc       0x40 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
@@ -6179,787 +6185,793 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../l
                 0x08004a3a       0xb4 src\clock.o
  *fill*         0x08004aee        0x2 
  .text.periferal_clock_init
-                0x08004af0      0x3a0 src\clock.o
+                0x08004af0      0x39c src\clock.o
                 0x08004af0                periferal_clock_init
  .text.msp2807_init
-                0x08004e90       0x30 src\dev\MSP2807.o
-                0x08004e90                msp2807_init
+                0x08004e8c       0x30 src\dev\MSP2807.o
+                0x08004e8c                msp2807_init
  .text.bt_dev_msg_connected
-                0x08004ec0       0x1c src\dev\bt_dev.o
+                0x08004ebc       0x1c src\dev\bt_dev.o
  .text.bt_dev_msg_unconnected
-                0x08004edc       0x2c src\dev\bt_dev.o
+                0x08004ed8       0x2c src\dev\bt_dev.o
  .text.bt_dev_connected
-                0x08004f08       0x40 src\dev\bt_dev.o
+                0x08004f04       0x40 src\dev\bt_dev.o
  .text.bt_dev_unconnected
-                0x08004f48       0x40 src\dev\bt_dev.o
+                0x08004f44       0x40 src\dev\bt_dev.o
  .text.bt_dev_msg_check_sts
-                0x08004f88       0x9c src\dev\bt_dev.o
+                0x08004f84       0x9c src\dev\bt_dev.o
  .text.send_data
-                0x08005024       0x24 src\dev\bt_dev.o
+                0x08005020       0x24 src\dev\bt_dev.o
  .text.cmd_check
-                0x08005048       0x2c src\dev\bt_dev.o
+                0x08005044       0x2c src\dev\bt_dev.o
  .text.cmd_version
-                0x08005074       0x2c src\dev\bt_dev.o
+                0x08005070       0x2c src\dev\bt_dev.o
  .text.cmd_name
-                0x080050a0       0x40 src\dev\bt_dev.o
+                0x0800509c       0x40 src\dev\bt_dev.o
  .text.cmd_baudrate
-                0x080050e0       0x64 src\dev\bt_dev.o
- .text.cmd_pin  0x08005144       0x4c src\dev\bt_dev.o
+                0x080050dc       0x64 src\dev\bt_dev.o
+ .text.cmd_pin  0x08005140       0x4c src\dev\bt_dev.o
  .text.bt_dev_msg_send
-                0x08005190       0x54 src\dev\bt_dev.o
+                0x0800518c       0x54 src\dev\bt_dev.o
  .text.bt_dev_rcv_main
-                0x080051e4       0x54 src\dev\bt_dev.o
+                0x080051e0       0x54 src\dev\bt_dev.o
  .text.bt_dev_sts_main
-                0x08005238       0xa0 src\dev\bt_dev.o
+                0x08005234       0xa0 src\dev\bt_dev.o
  .text.bt_dev_init
-                0x080052d8       0xa8 src\dev\bt_dev.o
-                0x080052d8                bt_dev_init
+                0x080052d4       0xa8 src\dev\bt_dev.o
+                0x080052d4                bt_dev_init
  .text.bt_dev_reg_callback
-                0x08005380       0x40 src\dev\bt_dev.o
-                0x08005380                bt_dev_reg_callback
+                0x0800537c       0x40 src\dev\bt_dev.o
+                0x0800537c                bt_dev_reg_callback
  .text.bt_dev_check_sts
-                0x080053c0       0x3c src\dev\bt_dev.o
-                0x080053c0                bt_dev_check_sts
+                0x080053bc       0x3c src\dev\bt_dev.o
+                0x080053bc                bt_dev_check_sts
  .text.can_reset
-                0x080053fc       0x24 src\dev\mcp2515.o
+                0x080053f8       0x24 src\dev\mcp2515.o
  .text.can_reg_read
-                0x08005420       0x3c src\dev\mcp2515.o
+                0x0800541c       0x3c src\dev\mcp2515.o
  .text.mcp2515_init
-                0x0800545c       0x2c src\dev\mcp2515.o
+                0x08005458       0x2c src\dev\mcp2515.o
  .text.mcp2515_dev_init
-                0x08005488       0x34 src\dev\mcp2515.o
-                0x08005488                mcp2515_dev_init
+                0x08005484       0x34 src\dev\mcp2515.o
+                0x08005484                mcp2515_dev_init
  .text.mcp2515_dev_open
-                0x080054bc       0x7c src\dev\mcp2515.o
-                0x080054bc                mcp2515_dev_open
+                0x080054b8       0x7c src\dev\mcp2515.o
+                0x080054b8                mcp2515_dev_open
  .text.mcp2515_cmd_open
-                0x08005538       0x2c src\dev\mcp2515.o
+                0x08005534       0x2c src\dev\mcp2515.o
  .text.mcp2515_cmd_read_reg
-                0x08005564       0x7c src\dev\mcp2515.o
+                0x08005560       0x7c src\dev\mcp2515.o
  .text.mcp2515_set_cmd
-                0x080055e0       0x40 src\dev\mcp2515.o
-                0x080055e0                mcp2515_set_cmd
+                0x080055dc       0x40 src\dev\mcp2515.o
+                0x080055dc                mcp2515_set_cmd
  .text.w25q20ew_cmd_write_enable
-                0x08005620       0x28 src\dev\w25q20ew_cmd.o
-                0x08005620                w25q20ew_cmd_write_enable
+                0x0800561c       0x28 src\dev\w25q20ew_cmd.o
+                0x0800561c                w25q20ew_cmd_write_enable
  .text.w25q20ew_cmd_write_single
-                0x08005648       0x44 src\dev\w25q20ew_cmd.o
-                0x08005648                w25q20ew_cmd_write_single
+                0x08005644       0x44 src\dev\w25q20ew_cmd.o
+                0x08005644                w25q20ew_cmd_write_single
  .text.w25q20ew_cmd_erase
-                0x0800568c       0x40 src\dev\w25q20ew_cmd.o
-                0x0800568c                w25q20ew_cmd_erase
+                0x08005688       0x40 src\dev\w25q20ew_cmd.o
+                0x08005688                w25q20ew_cmd_erase
  .text.w25q20ew_cmd_chip_erase
-                0x080056cc       0x28 src\dev\w25q20ew_cmd.o
-                0x080056cc                w25q20ew_cmd_chip_erase
+                0x080056c8       0x28 src\dev\w25q20ew_cmd.o
+                0x080056c8                w25q20ew_cmd_chip_erase
  .text.w25q20ew_cmd_write_disable
-                0x080056f4       0x28 src\dev\w25q20ew_cmd.o
-                0x080056f4                w25q20ew_cmd_write_disable
+                0x080056f0       0x28 src\dev\w25q20ew_cmd.o
+                0x080056f0                w25q20ew_cmd_write_disable
  .text.w25q20ew_cmd_read_quad
-                0x0800571c       0x44 src\dev\w25q20ew_cmd.o
-                0x0800571c                w25q20ew_cmd_read_quad
+                0x08005718       0x44 src\dev\w25q20ew_cmd.o
+                0x08005718                w25q20ew_cmd_read_quad
  .text.w25q20ew_cmd_set_memory_mapped
-                0x08005760       0x2c src\dev\w25q20ew_cmd.o
-                0x08005760                w25q20ew_cmd_set_memory_mapped
+                0x0800575c       0x2c src\dev\w25q20ew_cmd.o
+                0x0800575c                w25q20ew_cmd_set_memory_mapped
  .text.w25q20ew_cmd_read_status_1
-                0x0800578c       0x28 src\dev\w25q20ew_cmd.o
-                0x0800578c                w25q20ew_cmd_read_status_1
+                0x08005788       0x28 src\dev\w25q20ew_cmd.o
+                0x08005788                w25q20ew_cmd_read_status_1
  .text.w25q20ew_cmd_read_status_2
-                0x080057b4       0x28 src\dev\w25q20ew_cmd.o
-                0x080057b4                w25q20ew_cmd_read_status_2
+                0x080057b0       0x28 src\dev\w25q20ew_cmd.o
+                0x080057b0                w25q20ew_cmd_read_status_2
  .text.w25q20ew_cmd_write_status_2
-                0x080057dc       0x28 src\dev\w25q20ew_cmd.o
-                0x080057dc                w25q20ew_cmd_write_status_2
+                0x080057d8       0x28 src\dev\w25q20ew_cmd.o
+                0x080057d8                w25q20ew_cmd_write_status_2
  .text.w25q20ew_cmd_get_devise_id
-                0x08005804       0x28 src\dev\w25q20ew_cmd.o
-                0x08005804                w25q20ew_cmd_get_devise_id
+                0x08005800       0x28 src\dev\w25q20ew_cmd.o
+                0x08005800                w25q20ew_cmd_get_devise_id
  .text.w25q20ew_cmd_get_sfdp
-                0x0800582c       0x2c src\dev\w25q20ew_cmd.o
-                0x0800582c                w25q20ew_cmd_get_sfdp
+                0x08005828       0x2c src\dev\w25q20ew_cmd.o
+                0x08005828                w25q20ew_cmd_get_sfdp
+ .text.w25q20ew_cmd_reset
+                0x08005854       0x44 src\dev\w25q20ew_cmd.o
+                0x08005854                w25q20ew_cmd_reset
  .text.w25q20ew_polling_read_status_1
-                0x08005858       0x7a src\dev\w25q20ew_ctrl.o
+                0x08005898       0x7a src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_polling_read_status_2
-                0x080058d2       0x7a src\dev\w25q20ew_ctrl.o
+                0x08005912       0x7a src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_quad_enable
-                0x0800594c       0xe4 src\dev\w25q20ew_ctrl.o
+                0x0800598c       0xe4 src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_quad_disable
-                0x08005a30       0xe4 src\dev\w25q20ew_ctrl.o
+                0x08005a70       0xe4 src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_init
-                0x08005b14       0x28 src\dev\w25q20ew_ctrl.o
-                0x08005b14                w25q20ew_init
+                0x08005b54       0x28 src\dev\w25q20ew_ctrl.o
+                0x08005b54                w25q20ew_init
  .text.w25q20ew_open
-                0x08005b3c       0x80 src\dev\w25q20ew_ctrl.o
-                0x08005b3c                w25q20ew_open
+                0x08005b7c       0x80 src\dev\w25q20ew_ctrl.o
+                0x08005b7c                w25q20ew_open
  .text.w25q20ew_close
-                0x08005bbc       0x40 src\dev\w25q20ew_ctrl.o
-                0x08005bbc                w25q20ew_close
+                0x08005bfc       0x40 src\dev\w25q20ew_ctrl.o
+                0x08005bfc                w25q20ew_close
  .text.w25q20ew_write
-                0x08005bfc      0x140 src\dev\w25q20ew_ctrl.o
-                0x08005bfc                w25q20ew_write
+                0x08005c3c      0x140 src\dev\w25q20ew_ctrl.o
+                0x08005c3c                w25q20ew_write
  .text.w25q20ew_erase
-                0x08005d3c       0xe8 src\dev\w25q20ew_ctrl.o
-                0x08005d3c                w25q20ew_erase
+                0x08005d7c       0xe8 src\dev\w25q20ew_ctrl.o
+                0x08005d7c                w25q20ew_erase
  .text.w25q20ew_chip_erase
-                0x08005e24       0xd8 src\dev\w25q20ew_ctrl.o
-                0x08005e24                w25q20ew_chip_erase
+                0x08005e64       0xd8 src\dev\w25q20ew_ctrl.o
+                0x08005e64                w25q20ew_chip_erase
  .text.w25q20ew_read
-                0x08005efc       0x54 src\dev\w25q20ew_ctrl.o
-                0x08005efc                w25q20ew_read
+                0x08005f3c       0x54 src\dev\w25q20ew_ctrl.o
+                0x08005f3c                w25q20ew_read
  .text.w25q20ew_set_memory_mappd
-                0x08005f50       0x16 src\dev\w25q20ew_ctrl.o
-                0x08005f50                w25q20ew_set_memory_mappd
- *fill*         0x08005f66        0x2 
+                0x08005f90       0x16 src\dev\w25q20ew_ctrl.o
+                0x08005f90                w25q20ew_set_memory_mappd
+ *fill*         0x08005fa6        0x2 
  .text.w25q20ew_get_devise_id
-                0x08005f68       0x3c src\dev\w25q20ew_ctrl.o
-                0x08005f68                w25q20ew_get_devise_id
+                0x08005fa8       0x3c src\dev\w25q20ew_ctrl.o
+                0x08005fa8                w25q20ew_get_devise_id
  .text.w25q20ew_get_sfdp
-                0x08005fa4       0x3c src\dev\w25q20ew_ctrl.o
-                0x08005fa4                w25q20ew_get_sfdp
+                0x08005fe4       0x3c src\dev\w25q20ew_ctrl.o
+                0x08005fe4                w25q20ew_get_sfdp
  .text.w25q20ew_ctrl_cmd_get_device_id
-                0x08005fe0       0x6c src\dev\w25q20ew_ctrl.o
+                0x08006020       0x6c src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_ctrl_cmd_get_sfdp
-                0x0800604c       0xf0 src\dev\w25q20ew_ctrl.o
+                0x0800608c       0xf0 src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_ctrl_cmd_write_enable
-                0x0800613c       0x34 src\dev\w25q20ew_ctrl.o
+                0x0800617c       0x34 src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_ctrl_cmd_write_disable
-                0x08006170       0x34 src\dev\w25q20ew_ctrl.o
+                0x080061b0       0x34 src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_ctrl_cmd_read_status_1
-                0x080061a4       0x4c src\dev\w25q20ew_ctrl.o
+                0x080061e4       0x4c src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_ctrl_cmd_read_status_2
-                0x080061f0       0x4c src\dev\w25q20ew_ctrl.o
+                0x08006230       0x4c src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_ctrl_cmd_erace
-                0x0800623c       0x2c src\dev\w25q20ew_ctrl.o
+                0x0800627c       0x2c src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_ctrl_cmd_chip_erace
-                0x08006268       0x3c src\dev\w25q20ew_ctrl.o
+                0x080062a8       0x3c src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_ctrl_cmd_read
-                0x080062a4       0xd4 src\dev\w25q20ew_ctrl.o
+                0x080062e4       0xd4 src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_ctrl_cmd_access
-                0x08006378       0x70 src\dev\w25q20ew_ctrl.o
+                0x080063b8       0x70 src\dev\w25q20ew_ctrl.o
+ .text.w25q20ew_ctrl_cmd_rest
+                0x08006428       0x2c src\dev\w25q20ew_ctrl.o
  .text.w25q20ew_set_cmd
-                0x080063e8      0x100 src\dev\w25q20ew_ctrl.o
-                0x080063e8                w25q20ew_set_cmd
+                0x08006454      0x118 src\dev\w25q20ew_ctrl.o
+                0x08006454                w25q20ew_set_cmd
  .text.dma_common_handler
-                0x080064e8      0x114 src\drv\dma.o
+                0x0800656c      0x114 src\drv\dma.o
  .text.dma1_handler
-                0x080065fc        0xe src\drv\dma.o
-                0x080065fc                dma1_handler
+                0x08006680        0xe src\drv\dma.o
+                0x08006680                dma1_handler
  .text.dma2_handler
-                0x0800660a        0xe src\drv\dma.o
-                0x0800660a                dma2_handler
+                0x0800668e        0xe src\drv\dma.o
+                0x0800668e                dma2_handler
  .text.dma3_handler
-                0x08006618        0xe src\drv\dma.o
-                0x08006618                dma3_handler
+                0x0800669c        0xe src\drv\dma.o
+                0x0800669c                dma3_handler
  .text.dma4_handler
-                0x08006626        0xe src\drv\dma.o
-                0x08006626                dma4_handler
+                0x080066aa        0xe src\drv\dma.o
+                0x080066aa                dma4_handler
  .text.dma5_handler
-                0x08006634        0xe src\drv\dma.o
-                0x08006634                dma5_handler
+                0x080066b8        0xe src\drv\dma.o
+                0x080066b8                dma5_handler
  .text.dma6_handler
-                0x08006642        0xe src\drv\dma.o
-                0x08006642                dma6_handler
+                0x080066c6        0xe src\drv\dma.o
+                0x080066c6                dma6_handler
  .text.dma7_handler
-                0x08006650        0xe src\drv\dma.o
-                0x08006650                dma7_handler
- *fill*         0x0800665e        0x2 
+                0x080066d4        0xe src\drv\dma.o
+                0x080066d4                dma7_handler
+ *fill*         0x080066e2        0x2 
  .text.dma_init
-                0x08006660       0x74 src\drv\dma.o
-                0x08006660                dma_init
+                0x080066e4       0x74 src\drv\dma.o
+                0x080066e4                dma_init
  .text.dma_open
-                0x080066d4       0xcc src\drv\dma.o
-                0x080066d4                dma_open
+                0x08006758       0xcc src\drv\dma.o
+                0x08006758                dma_open
  .text.dma_start_ex
-                0x080067a0      0x33c src\drv\dma.o
-                0x080067a0                dma_start_ex
+                0x08006824      0x33c src\drv\dma.o
+                0x08006824                dma_start_ex
  .text.dma_stop
-                0x08006adc       0xa8 src\drv\dma.o
-                0x08006adc                dma_stop
+                0x08006b60       0xa8 src\drv\dma.o
+                0x08006b60                dma_stop
  .text.I2C1_EV_IRQHandler
-                0x08006b84       0x28 src\drv\i2c_wrapper.o
+                0x08006c08       0x28 src\drv\i2c_wrapper.o
  .text.I2C1_ER_IRQHandler
-                0x08006bac       0x28 src\drv\i2c_wrapper.o
+                0x08006c30       0x28 src\drv\i2c_wrapper.o
  .text.I2C2_EV_IRQHandler
-                0x08006bd4       0x28 src\drv\i2c_wrapper.o
+                0x08006c58       0x28 src\drv\i2c_wrapper.o
  .text.I2C2_ER_IRQHandler
-                0x08006bfc       0x28 src\drv\i2c_wrapper.o
+                0x08006c80       0x28 src\drv\i2c_wrapper.o
  .text.i2c_wrapper_init
-                0x08006c24       0xa0 src\drv\i2c_wrapper.o
-                0x08006c24                i2c_wrapper_init
+                0x08006ca8       0xa0 src\drv\i2c_wrapper.o
+                0x08006ca8                i2c_wrapper_init
  .text.opctspi_common_handler
-                0x08006cc4       0x14 src\drv\octspi.o
-                0x08006cc4                opctspi_common_handler
+                0x08006d48       0x14 src\drv\octspi.o
+                0x08006d48                opctspi_common_handler
  .text.opctspi1_handler
-                0x08006cd8        0xe src\drv\octspi.o
+                0x08006d5c        0xe src\drv\octspi.o
  .text.opctspi2_handler
-                0x08006ce6        0xe src\drv\octspi.o
+                0x08006d6a        0xe src\drv\octspi.o
  .text.get_expornent
-                0x08006cf4       0x3e src\drv\octspi.o
- *fill*         0x08006d32        0x2 
- .text.set_clk  0x08006d34       0x60 src\drv\octspi.o
+                0x08006d78       0x3e src\drv\octspi.o
+ *fill*         0x08006db6        0x2 
+ .text.set_clk  0x08006db8       0x60 src\drv\octspi.o
  .text.pin_config
-                0x08006d94       0x4c src\drv\octspi.o
+                0x08006e18       0x48 src\drv\octspi.o
  .text.wait_status_set
-                0x08006de0       0x50 src\drv\octspi.o
+                0x08006e60       0x50 src\drv\octspi.o
  .text.wait_status_clear
-                0x08006e30       0x50 src\drv\octspi.o
+                0x08006eb0       0x50 src\drv\octspi.o
  .text.octospi_init
-                0x08006e80       0x70 src\drv\octspi.o
-                0x08006e80                octospi_init
+                0x08006f00       0x70 src\drv\octspi.o
+                0x08006f00                octospi_init
  .text.octospi_open
-                0x08006ef0      0x158 src\drv\octspi.o
-                0x08006ef0                octospi_open
+                0x08006f70      0x158 src\drv\octspi.o
+                0x08006f70                octospi_open
  .text.octospi_memory_mapped
-                0x08007048      0x174 src\drv\octspi.o
-                0x08007048                octospi_memory_mapped
+                0x080070c8      0x168 src\drv\octspi.o
+                0x080070c8                octospi_memory_mapped
  .text.octospi_close
-                0x080071bc       0x80 src\drv\octspi.o
-                0x080071bc                octospi_close
+                0x08007230       0x80 src\drv\octspi.o
+                0x08007230                octospi_close
  .text.octospi_proc
-                0x0800723c      0x238 src\drv\octspi.o
+                0x080072b0      0x258 src\drv\octspi.o
  .text.octospi_send
-                0x08007474       0x60 src\drv\octspi.o
-                0x08007474                octospi_send
+                0x08007508       0x60 src\drv\octspi.o
+                0x08007508                octospi_send
  .text.octospi_recv
-                0x080074d4       0x60 src\drv\octspi.o
-                0x080074d4                octospi_recv
+                0x08007568       0x60 src\drv\octspi.o
+                0x08007568                octospi_recv
  .text.sai_common_handler
-                0x08007534      0x100 src\drv\sai.o
+                0x080075c8      0x100 src\drv\sai.o
  .text.sai1_handler
-                0x08007634        0xe src\drv\sai.o
-                0x08007634                sai1_handler
- *fill*         0x08007642        0x2 
+                0x080076c8        0xe src\drv\sai.o
+                0x080076c8                sai1_handler
+ *fill*         0x080076d6        0x2 
  .text.sai_init
-                0x08007644       0x80 src\drv\sai.o
-                0x08007644                sai_init
+                0x080076d8       0x80 src\drv\sai.o
+                0x080076d8                sai_init
  .text.spi_common_handler
-                0x080076c4      0x148 src\drv\spi.o
+                0x08007758      0x148 src\drv\spi.o
  .text.spi1_handler
-                0x0800780c        0xe src\drv\spi.o
-                0x0800780c                spi1_handler
+                0x080078a0        0xe src\drv\spi.o
+                0x080078a0                spi1_handler
  .text.spi2_handler
-                0x0800781a        0xe src\drv\spi.o
-                0x0800781a                spi2_handler
+                0x080078ae        0xe src\drv\spi.o
+                0x080078ae                spi2_handler
  .text.spi3_handler
-                0x08007828        0xe src\drv\spi.o
-                0x08007828                spi3_handler
+                0x080078bc        0xe src\drv\spi.o
+                0x080078bc                spi3_handler
  .text.dma_callback
-                0x08007836       0x36 src\drv\spi.o
- .text.calc_br  0x0800786c       0x70 src\drv\spi.o
+                0x080078ca       0x36 src\drv\spi.o
+ .text.calc_br  0x08007900       0x70 src\drv\spi.o
  .text.spi_disable
-                0x080078dc       0xa4 src\drv\spi.o
+                0x08007970       0xa4 src\drv\spi.o
  .text.set_config
-                0x08007980       0x9c src\drv\spi.o
+                0x08007a14       0x9c src\drv\spi.o
  .text.spi_init
-                0x08007a1c       0x94 src\drv\spi.o
-                0x08007a1c                spi_init
+                0x08007ab0       0x94 src\drv\spi.o
+                0x08007ab0                spi_init
  .text.spi_open
-                0x08007ab0       0xe4 src\drv\spi.o
-                0x08007ab0                spi_open
+                0x08007b44       0xe4 src\drv\spi.o
+                0x08007b44                spi_open
  .text.spi_send_recv
-                0x08007b94       0xe8 src\drv\spi.o
-                0x08007b94                spi_send_recv
+                0x08007c28       0xe8 src\drv\spi.o
+                0x08007c28                spi_send_recv
  .text.usart_common_handler
-                0x08007c7c       0xfc src\drv\usart.o
+                0x08007d10       0xfc src\drv\usart.o
  .text.usart1_handler
-                0x08007d78        0xe src\drv\usart.o
-                0x08007d78                usart1_handler
+                0x08007e0c        0xe src\drv\usart.o
+                0x08007e0c                usart1_handler
  .text.usart2_handler
-                0x08007d86        0xe src\drv\usart.o
-                0x08007d86                usart2_handler
+                0x08007e1a        0xe src\drv\usart.o
+                0x08007e1a                usart2_handler
  .text.usart3_handler
-                0x08007d94        0xe src\drv\usart.o
-                0x08007d94                usart3_handler
- *fill*         0x08007da2        0x2 
+                0x08007e28        0xe src\drv\usart.o
+                0x08007e28                usart3_handler
+ *fill*         0x08007e36        0x2 
  .text.calc_brr
-                0x08007da4       0x3c src\drv\usart.o
+                0x08007e38       0x3c src\drv\usart.o
  .text.usart_init
-                0x08007de0       0x78 src\drv\usart.o
-                0x08007de0                usart_init
+                0x08007e74       0x78 src\drv\usart.o
+                0x08007e74                usart_init
  .text.usart_open
-                0x08007e58       0xfc src\drv\usart.o
-                0x08007e58                usart_open
+                0x08007eec       0xfc src\drv\usart.o
+                0x08007eec                usart_open
  .text.usart_send
-                0x08007f54       0xdc src\drv\usart.o
-                0x08007f54                usart_send
+                0x08007fe8       0xdc src\drv\usart.o
+                0x08007fe8                usart_send
  .text.usart_recv
-                0x08008030       0xc4 src\drv\usart.o
-                0x08008030                usart_recv
+                0x080080c4       0xc4 src\drv\usart.o
+                0x080080c4                usart_recv
  .text.start_threads
-                0x080080f4       0x56 src\main.o
- *fill*         0x0800814a        0x2 
- .text.main     0x0800814c       0x34 src\main.o
-                0x0800814c                main
+                0x08008188       0x56 src\main.o
+ *fill*         0x080081de        0x2 
+ .text.main     0x080081e0       0x34 src\main.o
+                0x080081e0                main
  .text.dbg_init
-                0x08008180       0x38 src\misc\debug.o
-                0x08008180                dbg_init
+                0x08008214       0x38 src\misc\debug.o
+                0x08008214                dbg_init
  .text.dbg_save_int_info
-                0x080081b8      0x178 src\misc\debug.o
-                0x080081b8                dbg_save_int_info
+                0x0800824c      0x178 src\misc\debug.o
+                0x0800824c                dbg_save_int_info
  .text.dbg_save_tsk_info
-                0x08008330       0xa0 src\misc\debug.o
-                0x08008330                dbg_save_tsk_info
+                0x080083c4       0xa0 src\misc\debug.o
+                0x080083c4                dbg_save_tsk_info
  .text.dbg_save_dispatch_tsk_info
-                0x080083d0       0xdc src\misc\debug.o
-                0x080083d0                dbg_save_dispatch_tsk_info
+                0x08008464       0xdc src\misc\debug.o
+                0x08008464                dbg_save_dispatch_tsk_info
  .text.find_str
-                0x080084ac       0x38 src\misc\str_util.o
-                0x080084ac                find_str
- .text.hex2num  0x080084e4       0x42 src\misc\str_util.o
-                0x080084e4                hex2num
- *fill*         0x08008526        0x2 
+                0x08008540       0x38 src\misc\str_util.o
+                0x08008540                find_str
+ .text.hex2num  0x08008578       0x42 src\misc\str_util.o
+                0x08008578                hex2num
+ *fill*         0x080085ba        0x2 
  .text.cycmsg_main
-                0x08008528       0x58 src\mng\cyc.o
-                0x08008528                cycmsg_main
+                0x080085bc       0x58 src\mng\cyc.o
+                0x080085bc                cycmsg_main
  .text.set_cyclic_message
-                0x08008580       0x64 src\mng\cyc.o
-                0x08008580                set_cyclic_message
+                0x08008614       0x64 src\mng\cyc.o
+                0x08008614                set_cyclic_message
  .text.cyc_init
-                0x080085e4       0x4c src\mng\cyc.o
-                0x080085e4                cyc_init
+                0x08008678       0x4c src\mng\cyc.o
+                0x08008678                cyc_init
  .text.flash_mng_init
-                0x08008630       0x68 src\mng\flash_mng.o
-                0x08008630                flash_mng_init
+                0x080086c4       0x68 src\mng\flash_mng.o
+                0x080086c4                flash_mng_init
  .text.flash_mng_open
-                0x08008698       0x68 src\mng\flash_mng.o
-                0x08008698                flash_mng_open
+                0x0800872c       0x68 src\mng\flash_mng.o
+                0x0800872c                flash_mng_open
  .text.flash_mng_erace
-                0x08008700       0x6c src\mng\flash_mng.o
-                0x08008700                flash_mng_erace
+                0x08008794       0x6c src\mng\flash_mng.o
+                0x08008794                flash_mng_erace
  .text.flash_mng_write
-                0x0800876c       0x80 src\mng\flash_mng.o
-                0x0800876c                flash_mng_write
+                0x08008800       0x80 src\mng\flash_mng.o
+                0x08008800                flash_mng_write
  .text.flash_mng_read
-                0x080087ec       0x84 src\mng\flash_mng.o
-                0x080087ec                flash_mng_read
+                0x08008880       0x84 src\mng\flash_mng.o
+                0x08008880                flash_mng_read
  .text.flash_mng_set_memory_mapped
-                0x08008870       0x6c src\mng\flash_mng.o
-                0x08008870                flash_mng_set_memory_mapped
+                0x08008904       0x6c src\mng\flash_mng.o
+                0x08008904                flash_mng_set_memory_mapped
  .text.flash_mng_cmd_write
-                0x080088dc       0x94 src\mng\flash_mng.o
+                0x08008970       0x94 src\mng\flash_mng.o
  .text.flash_mng_cmd_erace
-                0x08008970       0x4c src\mng\flash_mng.o
+                0x08008a04       0x4c src\mng\flash_mng.o
  .text.flash_mng_cmd_read
-                0x080089bc      0x110 src\mng\flash_mng.o
+                0x08008a50      0x110 src\mng\flash_mng.o
  .text.flash_mng_cmd_set_mem_mapped
-                0x08008acc       0x28 src\mng\flash_mng.o
+                0x08008b60       0x28 src\mng\flash_mng.o
  .text.flash_mng_cmdt_mem_mapped_read
-                0x08008af4       0xd8 src\mng\flash_mng.o
+                0x08008b88       0xd8 src\mng\flash_mng.o
  .text.flash_mng_set_cmd
-                0x08008bcc       0x88 src\mng\flash_mng.o
-                0x08008bcc                flash_mng_set_cmd
+                0x08008c60       0x88 src\mng\flash_mng.o
+                0x08008c60                flash_mng_set_cmd
  .text._dispatch
-                0x08008c54       0x2a src\os\dispatch.o
-                0x08008c54                _dispatch
+                0x08008ce8       0x2a src\os\dispatch.o
+                0x08008ce8                _dispatch
  .text._dispatch_int
-                0x08008c7e        0x6 src\os\dispatch.o
-                0x08008c7e                _dispatch_int
+                0x08008d12        0x6 src\os\dispatch.o
+                0x08008d12                _dispatch_int
  .text.vec_common
-                0x08008c84       0x14 src\os\intr.o
-                0x08008c84                vec_common
+                0x08008d18       0x14 src\os\intr.o
+                0x08008d18                vec_common
  .text.NVIC_SetPriority
-                0x08008c98       0x54 src\os\kozos.o
+                0x08008d2c       0x54 src\os\kozos.o
  .text.SysTick_Config
-                0x08008cec       0x44 src\os\kozos.o
+                0x08008d80       0x44 src\os\kozos.o
  .text.getcurrent
-                0x08008d30       0x84 src\os\kozos.o
+                0x08008dc4       0x84 src\os\kozos.o
  .text.putcurrent
-                0x08008db4       0x94 src\os\kozos.o
+                0x08008e48       0x94 src\os\kozos.o
  .text.thread_end
-                0x08008e48        0xc src\os\kozos.o
+                0x08008edc        0xc src\os\kozos.o
  .text.thread_init
-                0x08008e54       0x24 src\os\kozos.o
+                0x08008ee8       0x24 src\os\kozos.o
  .text.thread_run
-                0x08008e78      0x288 src\os\kozos.o
+                0x08008f0c      0x288 src\os\kozos.o
  .text.thread_exit
-                0x08009100       0x34 src\os\kozos.o
+                0x08009194       0x34 src\os\kozos.o
  .text.thread_wait
-                0x08009134        0xe src\os\kozos.o
+                0x080091c8        0xe src\os\kozos.o
  .text.thread_sleep
-                0x08009142       0x10 src\os\kozos.o
- *fill*         0x08009152        0x2 
+                0x080091d6       0x10 src\os\kozos.o
+ *fill*         0x080091e6        0x2 
  .text.thread_wakeup
-                0x08009154       0x24 src\os\kozos.o
+                0x080091e8       0x24 src\os\kozos.o
  .text.thread_getid
-                0x08009178       0x14 src\os\kozos.o
+                0x0800920c       0x14 src\os\kozos.o
  .text.thread_chpri
-                0x0800918c       0x30 src\os\kozos.o
+                0x08009220       0x30 src\os\kozos.o
  .text.thread_kmalloc
-                0x080091bc       0x1c src\os\kozos.o
+                0x08009250       0x1c src\os\kozos.o
  .text.thread_kmfree
-                0x080091d8       0x1c src\os\kozos.o
- .text.sendmsg  0x080091f4       0x5e src\os\kozos.o
- .text.recvmsg  0x08009252       0x74 src\os\kozos.o
- *fill*         0x080092c6        0x2 
+                0x0800926c       0x1c src\os\kozos.o
+ .text.sendmsg  0x08009288       0x5e src\os\kozos.o
+ .text.recvmsg  0x080092e6       0x74 src\os\kozos.o
+ *fill*         0x0800935a        0x2 
  .text.thread_send
-                0x080092c8       0x58 src\os\kozos.o
+                0x0800935c       0x58 src\os\kozos.o
  .text.thread_recv
-                0x08009320       0x5c src\os\kozos.o
+                0x080093b4       0x5c src\os\kozos.o
  .text.thread_setintr
-                0x0800937c       0x2c src\os\kozos.o
+                0x08009410       0x2c src\os\kozos.o
  .text.thread_tsleep
-                0x080093a8       0x4c src\os\kozos.o
+                0x0800943c       0x4c src\os\kozos.o
  .text.call_functions
-                0x080093f4      0x158 src\os\kozos.o
+                0x08009488      0x158 src\os\kozos.o
  .text.syscall_proc
-                0x0800954c       0x22 src\os\kozos.o
- *fill*         0x0800956e        0x2 
+                0x080095e0       0x22 src\os\kozos.o
+ *fill*         0x08009602        0x2 
  .text.srvcall_proc
-                0x08009570       0x28 src\os\kozos.o
+                0x08009604       0x28 src\os\kozos.o
  .text.schedule
-                0x08009598       0x50 src\os\kozos.o
+                0x0800962c       0x50 src\os\kozos.o
  .text.syscall_intr
-                0x080095e8       0x24 src\os\kozos.o
+                0x0800967c       0x24 src\os\kozos.o
  .text.thread_intr
-                0x0800960c       0x84 src\os\kozos.o
-                0x0800960c                thread_intr
+                0x080096a0       0x84 src\os\kozos.o
+                0x080096a0                thread_intr
  .text.kz_start
-                0x08009690       0xd0 src\os\kozos.o
-                0x08009690                kz_start
+                0x08009724       0xd0 src\os\kozos.o
+                0x08009724                kz_start
  .text.kz_sysdown
-                0x08009760       0x10 src\os\kozos.o
-                0x08009760                kz_sysdown
+                0x080097f4       0x10 src\os\kozos.o
+                0x080097f4                kz_sysdown
  .text.kz_syscall
-                0x08009770       0x34 src\os\kozos.o
-                0x08009770                kz_syscall
+                0x08009804       0x34 src\os\kozos.o
+                0x08009804                kz_syscall
  .text.kz_srvcall
-                0x080097a4       0x1e src\os\kozos.o
-                0x080097a4                kz_srvcall
- *fill*         0x080097c2        0x2 
+                0x08009838       0x1e src\os\kozos.o
+                0x08009838                kz_srvcall
+ *fill*         0x08009856        0x2 
  .text.kz_get_time_ms
-                0x080097c4       0x18 src\os\kozos.o
-                0x080097c4                kz_get_time_ms
+                0x08009858       0x18 src\os\kozos.o
+                0x08009858                kz_get_time_ms
  .text.kz_get_time_s
-                0x080097dc       0x18 src\os\kozos.o
-                0x080097dc                kz_get_time_s
+                0x08009870       0x18 src\os\kozos.o
+                0x08009870                kz_get_time_s
  .text.SysTick_init
-                0x080097f4       0x24 src\os\kozos.o
+                0x08009888       0x24 src\os\kozos.o
  .text.SysTick_Handler
-                0x08009818       0x34 src\os\kozos.o
-                0x08009818                SysTick_Handler
+                0x080098ac       0x34 src\os\kozos.o
+                0x080098ac                SysTick_Handler
  .text.mng_tsleep
-                0x0800984c       0xe4 src\os\kozos.o
+                0x080098e0       0xe4 src\os\kozos.o
  .text.kzmem_init_pool
-                0x08009930       0x70 src\os\memory.o
+                0x080099c4       0x70 src\os\memory.o
  .text.kzmem_init
-                0x080099a0       0x3c src\os\memory.o
-                0x080099a0                kzmem_init
+                0x08009a34       0x3c src\os\memory.o
+                0x08009a34                kzmem_init
  .text.kzmem_alloc
-                0x080099dc       0x78 src\os\memory.o
-                0x080099dc                kzmem_alloc
+                0x08009a70       0x78 src\os\memory.o
+                0x08009a70                kzmem_alloc
  .text.kzmem_free
-                0x08009a54       0x5c src\os\memory.o
-                0x08009a54                kzmem_free
- .text.kz_run   0x08009ab0       0x3c src\os\syscall.o
-                0x08009ab0                kz_run
- .text.kz_exit  0x08009aec       0x10 src\os\syscall.o
-                0x08009aec                kz_exit
+                0x08009ae8       0x5c src\os\memory.o
+                0x08009ae8                kzmem_free
+ .text.kz_run   0x08009b44       0x3c src\os\syscall.o
+                0x08009b44                kz_run
+ .text.kz_exit  0x08009b80       0x10 src\os\syscall.o
+                0x08009b80                kz_exit
  .text.kz_chpri
-                0x08009afc       0x22 src\os\syscall.o
-                0x08009afc                kz_chpri
+                0x08009b90       0x22 src\os\syscall.o
+                0x08009b90                kz_chpri
  .text.kz_kmalloc
-                0x08009b1e       0x2e src\os\syscall.o
-                0x08009b1e                kz_kmalloc
+                0x08009bb2       0x2e src\os\syscall.o
+                0x08009bb2                kz_kmalloc
  .text.kz_kmfree
-                0x08009b4c       0x22 src\os\syscall.o
-                0x08009b4c                kz_kmfree
- .text.kz_send  0x08009b6e       0x30 src\os\syscall.o
-                0x08009b6e                kz_send
- .text.kz_recv  0x08009b9e       0x30 src\os\syscall.o
-                0x08009b9e                kz_recv
+                0x08009be0       0x22 src\os\syscall.o
+                0x08009be0                kz_kmfree
+ .text.kz_send  0x08009c02       0x30 src\os\syscall.o
+                0x08009c02                kz_send
+ .text.kz_recv  0x08009c32       0x30 src\os\syscall.o
+                0x08009c32                kz_recv
  .text.kz_setintr
-                0x08009bce       0x2a src\os\syscall.o
-                0x08009bce                kz_setintr
+                0x08009c62       0x2a src\os\syscall.o
+                0x08009c62                kz_setintr
  .text.kz_tsleep
-                0x08009bf8       0x22 src\os\syscall.o
-                0x08009bf8                kz_tsleep
+                0x08009c8c       0x22 src\os\syscall.o
+                0x08009c8c                kz_tsleep
  .text.kx_kmalloc
-                0x08009c1a       0x22 src\os\syscall.o
-                0x08009c1a                kx_kmalloc
- .text.kx_send  0x08009c3c       0x30 src\os\syscall.o
-                0x08009c3c                kx_send
+                0x08009cae       0x22 src\os\syscall.o
+                0x08009cae                kx_kmalloc
+ .text.kx_send  0x08009cd0       0x30 src\os\syscall.o
+                0x08009cd0                kx_send
  .text.pin_function_init
-                0x08009c6c       0xa4 src\pin_function.o
-                0x08009c6c                pin_function_init
+                0x08009d00       0xa4 src\pin_function.o
+                0x08009d00                pin_function_init
  .text.Reset_Handler
-                0x08009d10       0x50 src\startup_stm32l4r5xx.o
-                0x08009d10                Reset_Handler
+                0x08009da4       0x50 src\startup_stm32l4r5xx.o
+                0x08009da4                Reset_Handler
  .text.Default_Handler
-                0x08009d60        0x2 src\startup_stm32l4r5xx.o
-                0x08009d60                RTC_Alarm_IRQHandler
-                0x08009d60                EXTI2_IRQHandler
-                0x08009d60                TIM8_TRG_COM_IRQHandler
-                0x08009d60                TIM8_CC_IRQHandler
-                0x08009d60                DebugMon_Handler
-                0x08009d60                TIM1_CC_IRQHandler
-                0x08009d60                TSC_IRQHandler
-                0x08009d60                HardFault_Handler
-                0x08009d60                TAMP_STAMP_IRQHandler
-                0x08009d60                PendSV_Handler
-                0x08009d60                NMI_Handler
-                0x08009d60                EXTI3_IRQHandler
-                0x08009d60                LPTIM2_IRQHandler
-                0x08009d60                DFSDM1_FLT1_IRQHandler
-                0x08009d60                GFXMMU_IRQHandler
-                0x08009d60                I2C3_ER_IRQHandler
-                0x08009d60                DFSDM1_FLT2_IRQHandler
-                0x08009d60                EXTI0_IRQHandler
-                0x08009d60                I2C2_EV_IRQHandler
-                0x08009d60                CAN1_RX0_IRQHandler
-                0x08009d60                FPU_IRQHandler
-                0x08009d60                TIM1_UP_TIM16_IRQHandler
-                0x08009d60                UsageFault_Handler
-                0x08009d60                LTDC_ER_IRQHandler
-                0x08009d60                SPI1_IRQHandler
-                0x08009d60                OCTOSPI1_IRQHandler
-                0x08009d60                DCMI_IRQHandler
-                0x08009d60                TIM8_UP_IRQHandler
-                0x08009d60                OCTOSPI2_IRQHandler
-                0x08009d60                DMA2_Channel2_IRQHandler
-                0x08009d60                DMA1_Channel4_IRQHandler
-                0x08009d60                SAI2_IRQHandler
-                0x08009d60                ADC1_IRQHandler
-                0x08009d60                DFSDM1_FLT3_IRQHandler
-                0x08009d60                USART3_IRQHandler
-                0x08009d60                DMA1_Channel7_IRQHandler
-                0x08009d60                CAN1_RX1_IRQHandler
-                0x08009d60                UART5_IRQHandler
-                0x08009d60                TIM4_IRQHandler
-                0x08009d60                DMA2_Channel1_IRQHandler
-                0x08009d60                I2C1_EV_IRQHandler
-                0x08009d60                DMAMUX1_OVR_IRQHandler
-                0x08009d60                DMA1_Channel6_IRQHandler
-                0x08009d60                UART4_IRQHandler
-                0x08009d60                DMA2_Channel4_IRQHandler
-                0x08009d60                TIM3_IRQHandler
-                0x08009d60                RCC_IRQHandler
-                0x08009d60                DMA1_Channel1_IRQHandler
-                0x08009d60                Default_Handler
-                0x08009d60                DMA2_Channel7_IRQHandler
-                0x08009d60                EXTI15_10_IRQHandler
-                0x08009d60                TIM7_IRQHandler
-                0x08009d60                SDMMC1_IRQHandler
-                0x08009d60                TIM5_IRQHandler
-                0x08009d60                I2C3_EV_IRQHandler
-                0x08009d60                EXTI9_5_IRQHandler
-                0x08009d60                RTC_WKUP_IRQHandler
-                0x08009d60                LTDC_IRQHandler
-                0x08009d60                PVD_PVM_IRQHandler
-                0x08009d60                SPI2_IRQHandler
-                0x08009d60                MemManage_Handler
-                0x08009d60                CAN1_TX_IRQHandler
-                0x08009d60                SVC_Handler
-                0x08009d60                DMA2_Channel5_IRQHandler
-                0x08009d60                CRS_IRQHandler
-                0x08009d60                DMA1_Channel5_IRQHandler
-                0x08009d60                EXTI4_IRQHandler
-                0x08009d60                RNG_IRQHandler
-                0x08009d60                TIM1_TRG_COM_TIM17_IRQHandler
-                0x08009d60                DMA1_Channel3_IRQHandler
-                0x08009d60                COMP_IRQHandler
-                0x08009d60                WWDG_IRQHandler
-                0x08009d60                I2C4_EV_IRQHandler
-                0x08009d60                LPUART1_IRQHandler
-                0x08009d60                DMA2_Channel6_IRQHandler
-                0x08009d60                TIM2_IRQHandler
-                0x08009d60                DMA2D_IRQHandler
-                0x08009d60                EXTI1_IRQHandler
-                0x08009d60                USART2_IRQHandler
-                0x08009d60                DFSDM1_FLT0_IRQHandler
-                0x08009d60                I2C2_ER_IRQHandler
-                0x08009d60                DMA1_Channel2_IRQHandler
-                0x08009d60                TIM8_BRK_IRQHandler
-                0x08009d60                CAN1_SCE_IRQHandler
-                0x08009d60                FLASH_IRQHandler
-                0x08009d60                BusFault_Handler
-                0x08009d60                USART1_IRQHandler
-                0x08009d60                OTG_FS_IRQHandler
-                0x08009d60                SPI3_IRQHandler
-                0x08009d60                I2C1_ER_IRQHandler
-                0x08009d60                FMC_IRQHandler
-                0x08009d60                LPTIM1_IRQHandler
-                0x08009d60                I2C4_ER_IRQHandler
-                0x08009d60                SAI1_IRQHandler
-                0x08009d60                DMA2_Channel3_IRQHandler
-                0x08009d60                TIM1_BRK_TIM15_IRQHandler
- *fill*         0x08009d62        0x2 
+                0x08009df4        0x2 src\startup_stm32l4r5xx.o
+                0x08009df4                RTC_Alarm_IRQHandler
+                0x08009df4                EXTI2_IRQHandler
+                0x08009df4                TIM8_TRG_COM_IRQHandler
+                0x08009df4                TIM8_CC_IRQHandler
+                0x08009df4                DebugMon_Handler
+                0x08009df4                TIM1_CC_IRQHandler
+                0x08009df4                TSC_IRQHandler
+                0x08009df4                HardFault_Handler
+                0x08009df4                TAMP_STAMP_IRQHandler
+                0x08009df4                PendSV_Handler
+                0x08009df4                NMI_Handler
+                0x08009df4                EXTI3_IRQHandler
+                0x08009df4                LPTIM2_IRQHandler
+                0x08009df4                DFSDM1_FLT1_IRQHandler
+                0x08009df4                GFXMMU_IRQHandler
+                0x08009df4                I2C3_ER_IRQHandler
+                0x08009df4                DFSDM1_FLT2_IRQHandler
+                0x08009df4                EXTI0_IRQHandler
+                0x08009df4                I2C2_EV_IRQHandler
+                0x08009df4                CAN1_RX0_IRQHandler
+                0x08009df4                FPU_IRQHandler
+                0x08009df4                TIM1_UP_TIM16_IRQHandler
+                0x08009df4                UsageFault_Handler
+                0x08009df4                LTDC_ER_IRQHandler
+                0x08009df4                SPI1_IRQHandler
+                0x08009df4                OCTOSPI1_IRQHandler
+                0x08009df4                DCMI_IRQHandler
+                0x08009df4                TIM8_UP_IRQHandler
+                0x08009df4                OCTOSPI2_IRQHandler
+                0x08009df4                DMA2_Channel2_IRQHandler
+                0x08009df4                DMA1_Channel4_IRQHandler
+                0x08009df4                SAI2_IRQHandler
+                0x08009df4                ADC1_IRQHandler
+                0x08009df4                DFSDM1_FLT3_IRQHandler
+                0x08009df4                USART3_IRQHandler
+                0x08009df4                DMA1_Channel7_IRQHandler
+                0x08009df4                CAN1_RX1_IRQHandler
+                0x08009df4                UART5_IRQHandler
+                0x08009df4                TIM4_IRQHandler
+                0x08009df4                DMA2_Channel1_IRQHandler
+                0x08009df4                I2C1_EV_IRQHandler
+                0x08009df4                DMAMUX1_OVR_IRQHandler
+                0x08009df4                DMA1_Channel6_IRQHandler
+                0x08009df4                UART4_IRQHandler
+                0x08009df4                DMA2_Channel4_IRQHandler
+                0x08009df4                TIM3_IRQHandler
+                0x08009df4                RCC_IRQHandler
+                0x08009df4                DMA1_Channel1_IRQHandler
+                0x08009df4                Default_Handler
+                0x08009df4                DMA2_Channel7_IRQHandler
+                0x08009df4                EXTI15_10_IRQHandler
+                0x08009df4                TIM7_IRQHandler
+                0x08009df4                SDMMC1_IRQHandler
+                0x08009df4                TIM5_IRQHandler
+                0x08009df4                I2C3_EV_IRQHandler
+                0x08009df4                EXTI9_5_IRQHandler
+                0x08009df4                RTC_WKUP_IRQHandler
+                0x08009df4                LTDC_IRQHandler
+                0x08009df4                PVD_PVM_IRQHandler
+                0x08009df4                SPI2_IRQHandler
+                0x08009df4                MemManage_Handler
+                0x08009df4                CAN1_TX_IRQHandler
+                0x08009df4                SVC_Handler
+                0x08009df4                DMA2_Channel5_IRQHandler
+                0x08009df4                CRS_IRQHandler
+                0x08009df4                DMA1_Channel5_IRQHandler
+                0x08009df4                EXTI4_IRQHandler
+                0x08009df4                RNG_IRQHandler
+                0x08009df4                TIM1_TRG_COM_TIM17_IRQHandler
+                0x08009df4                DMA1_Channel3_IRQHandler
+                0x08009df4                COMP_IRQHandler
+                0x08009df4                WWDG_IRQHandler
+                0x08009df4                I2C4_EV_IRQHandler
+                0x08009df4                LPUART1_IRQHandler
+                0x08009df4                DMA2_Channel6_IRQHandler
+                0x08009df4                TIM2_IRQHandler
+                0x08009df4                DMA2D_IRQHandler
+                0x08009df4                EXTI1_IRQHandler
+                0x08009df4                USART2_IRQHandler
+                0x08009df4                DFSDM1_FLT0_IRQHandler
+                0x08009df4                I2C2_ER_IRQHandler
+                0x08009df4                DMA1_Channel2_IRQHandler
+                0x08009df4                TIM8_BRK_IRQHandler
+                0x08009df4                CAN1_SCE_IRQHandler
+                0x08009df4                FLASH_IRQHandler
+                0x08009df4                BusFault_Handler
+                0x08009df4                USART1_IRQHandler
+                0x08009df4                OTG_FS_IRQHandler
+                0x08009df4                SPI3_IRQHandler
+                0x08009df4                I2C1_ER_IRQHandler
+                0x08009df4                FMC_IRQHandler
+                0x08009df4                LPTIM1_IRQHandler
+                0x08009df4                I2C4_ER_IRQHandler
+                0x08009df4                SAI1_IRQHandler
+                0x08009df4                DMA2_Channel3_IRQHandler
+                0x08009df4                TIM1_BRK_TIM15_IRQHandler
+ *fill*         0x08009df6        0x2 
  .text.SystemInit
-                0x08009d64       0x6c src\system_stm32l4xx.o
-                0x08009d64                SystemInit
+                0x08009df8       0x6c src\system_stm32l4xx.o
+                0x08009df8                SystemInit
  .text.is_ram_addr
-                0x08009dd0       0x30 src\system_stm32l4xx.o
-                0x08009dd0                is_ram_addr
+                0x08009e64       0x30 src\system_stm32l4xx.o
+                0x08009e64                is_ram_addr
  .text.is_peri_addr
-                0x08009e00       0x74 src\system_stm32l4xx.o
-                0x08009e00                is_peri_addr
- .text.ts_itoa  0x08009e74       0x92 src\tiny_printf.o
-                0x08009e74                ts_itoa
+                0x08009e94       0x74 src\system_stm32l4xx.o
+                0x08009e94                is_peri_addr
+ .text.ts_itoa  0x08009f08       0x92 src\tiny_printf.o
+                0x08009f08                ts_itoa
  .text.ts_formatstring
-                0x08009f06      0x12e src\tiny_printf.o
-                0x08009f06                ts_formatstring
+                0x08009f9a      0x12e src\tiny_printf.o
+                0x08009f9a                ts_formatstring
  .text.siprintf
-                0x0800a034       0x2c src\tiny_printf.o
-                0x0800a034                siprintf
-                0x0800a034                sprintf
- .text.puts     0x0800a060       0x58 src\tiny_printf.o
-                0x0800a060                puts
- .text.atoi     0x0800a0b8        0x8 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-atoi.o)
-                0x0800a0b8                atoi
+                0x0800a0c8       0x2c src\tiny_printf.o
+                0x0800a0c8                siprintf
+                0x0800a0c8                sprintf
+ .text.puts     0x0800a0f4       0x58 src\tiny_printf.o
+                0x0800a0f4                puts
+ .text.atoi     0x0800a14c        0x8 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-atoi.o)
+                0x0800a14c                atoi
  .text.__libc_init_array
-                0x0800a0c0       0x48 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-init.o)
-                0x0800a0c0                __libc_init_array
- .text.memcmp   0x0800a108       0x1e c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memcmp.o)
-                0x0800a108                memcmp
- .text.memcpy   0x0800a126       0x16 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memcpy-stub.o)
-                0x0800a126                memcpy
- .text.memset   0x0800a13c       0x10 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memset.o)
-                0x0800a13c                memset
- .text.strchr   0x0800a14c       0x1c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strchr.o)
-                0x0800a14c                strchr
- .text.strcpy   0x0800a168       0x10 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strcpy.o)
-                0x0800a168                strcpy
+                0x0800a154       0x48 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-init.o)
+                0x0800a154                __libc_init_array
+ .text.memcmp   0x0800a19c       0x1e c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memcmp.o)
+                0x0800a19c                memcmp
+ .text.memcpy   0x0800a1ba       0x16 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memcpy-stub.o)
+                0x0800a1ba                memcpy
+ .text.memset   0x0800a1d0       0x10 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memset.o)
+                0x0800a1d0                memset
+ .text.strchr   0x0800a1e0       0x1c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strchr.o)
+                0x0800a1e0                strchr
+ .text.strcpy   0x0800a1fc       0x10 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strcpy.o)
+                0x0800a1fc                strcpy
  .text._strtol_l.isra.0
-                0x0800a178      0x100 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strtol.o)
- .text.strtol   0x0800a278       0x2c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strtol.o)
-                0x0800a278                strtol
+                0x0800a20c      0x100 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strtol.o)
+ .text.strtol   0x0800a30c       0x2c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strtol.o)
+                0x0800a30c                strtol
  .text.__locale_ctype_ptr_l
-                0x0800a2a4        0x6 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-locale.o)
-                0x0800a2a4                __locale_ctype_ptr_l
+                0x0800a338        0x6 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-locale.o)
+                0x0800a338                __locale_ctype_ptr_l
  .text.__ascii_mbtowc
-                0x0800a2aa       0x24 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-mbtowc_r.o)
-                0x0800a2aa                __ascii_mbtowc
+                0x0800a33e       0x24 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-mbtowc_r.o)
+                0x0800a33e                __ascii_mbtowc
  .text.__ascii_wctomb
-                0x0800a2ce       0x1a c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-wctomb_r.o)
-                0x0800a2ce                __ascii_wctomb
- .text._write   0x0800a2e8       0x10 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libnosys.a(write.o)
-                0x0800a2e8                _write
+                0x0800a362       0x1a c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-wctomb_r.o)
+                0x0800a362                __ascii_wctomb
+ .text._write   0x0800a37c       0x10 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libnosys.a(write.o)
+                0x0800a37c                _write
  *(.glue_7)
- .glue_7        0x0800a2f8        0x0 linker stubs
+ .glue_7        0x0800a38c        0x0 linker stubs
  *(.glue_7t)
- .glue_7t       0x0800a2f8        0x0 linker stubs
+ .glue_7t       0x0800a38c        0x0 linker stubs
  *(.eh_frame)
- .eh_frame      0x0800a2f8        0x0 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
+ .eh_frame      0x0800a38c        0x0 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
  *(.init)
- .init          0x0800a2f8        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crti.o
-                0x0800a2f8                _init
- .init          0x0800a2fc        0x8 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtn.o
+ .init          0x0800a38c        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crti.o
+                0x0800a38c                _init
+ .init          0x0800a390        0x8 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtn.o
  *(.fini)
- .fini          0x0800a304        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crti.o
-                0x0800a304                _fini
- .fini          0x0800a308        0x8 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtn.o
-                0x0800a310                . = ALIGN (0x4)
-                0x0800a310                _etext = .
+ .fini          0x0800a398        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crti.o
+                0x0800a398                _fini
+ .fini          0x0800a39c        0x8 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtn.o
+                0x0800a3a4                . = ALIGN (0x4)
+                0x0800a3a4                _etext = .
 
-.vfp11_veneer   0x0800a310        0x0
- .vfp11_veneer  0x0800a310        0x0 linker stubs
+.vfp11_veneer   0x0800a3a4        0x0
+ .vfp11_veneer  0x0800a3a4        0x0 linker stubs
 
-.v4_bx          0x0800a310        0x0
- .v4_bx         0x0800a310        0x0 linker stubs
+.v4_bx          0x0800a3a4        0x0
+ .v4_bx         0x0800a3a4        0x0 linker stubs
 
-.iplt           0x0800a310        0x0
- .iplt          0x0800a310        0x0 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
+.iplt           0x0800a3a4        0x0
+ .iplt          0x0800a3a4        0x0 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
 
-.rodata         0x0800a310     0x1894
-                0x0800a310                . = ALIGN (0x4)
+.rodata         0x0800a3a4     0x198c
+                0x0800a3a4                . = ALIGN (0x4)
  *(.rodata)
- .rodata        0x0800a310       0x1b src\apl\console.o
- *fill*         0x0800a32b        0x1 
- .rodata        0x0800a32c      0x26e src\apl\loading_app.o
- *fill*         0x0800a59a        0x2 
- .rodata        0x0800a59c      0x193 src\dev\bt_dev.o
- *fill*         0x0800a72f        0x1 
- .rodata        0x0800a730       0xe9 src\dev\mcp2515.o
- *fill*         0x0800a819        0x3 
- .rodata        0x0800a81c      0x408 src\dev\w25q20ew_ctrl.o
- .rodata        0x0800ac24       0x19 src\drv\octspi.o
- *fill*         0x0800ac3d        0x3 
- .rodata        0x0800ac40        0x5 src\main.o
- *fill*         0x0800ac45        0x3 
- .rodata        0x0800ac48        0x9 src\mng\cyc.o
- *fill*         0x0800ac51        0x3 
- .rodata        0x0800ac54      0x23e src\mng\flash_mng.o
- *fill*         0x0800ae92        0x2 
- .rodata        0x0800ae94       0x1f src\os\kozos.o
- *fill*         0x0800aeb3        0x1 
- .rodata        0x0800aeb4        0x2 src\tiny_printf.o
+ .rodata        0x0800a3a4       0x1b src\apl\console.o
+ *fill*         0x0800a3bf        0x1 
+ .rodata        0x0800a3c0      0x26e src\apl\loading_app.o
+ *fill*         0x0800a62e        0x2 
+ .rodata        0x0800a630      0x193 src\dev\bt_dev.o
+ *fill*         0x0800a7c3        0x1 
+ .rodata        0x0800a7c4       0xe9 src\dev\mcp2515.o
+ *fill*         0x0800a8ad        0x3 
+ .rodata        0x0800a8b0      0x456 src\dev\w25q20ew_ctrl.o
+ *fill*         0x0800ad06        0x2 
+ .rodata        0x0800ad08       0x19 src\drv\octspi.o
+ *fill*         0x0800ad21        0x3 
+ .rodata        0x0800ad24        0x5 src\main.o
+ *fill*         0x0800ad29        0x3 
+ .rodata        0x0800ad2c        0x9 src\mng\cyc.o
+ *fill*         0x0800ad35        0x3 
+ .rodata        0x0800ad38      0x23e src\mng\flash_mng.o
+ *fill*         0x0800af76        0x2 
+ .rodata        0x0800af78       0x1f src\os\kozos.o
+ *fill*         0x0800af97        0x1 
+ .rodata        0x0800af98        0x2 src\tiny_printf.o
  *(.rodata*)
- *fill*         0x0800aeb6        0x2 
- .rodata.fsm    0x0800aeb8       0x48 src\apl\loading_app.o
- .rodata.fsm    0x0800af00       0xa0 src\dev\bt_dev.o
+ *fill*         0x0800af9a        0x2 
+ .rodata.fsm    0x0800af9c       0x48 src\apl\loading_app.o
+ .rodata.fsm    0x0800afe4       0xa0 src\dev\bt_dev.o
  .rodata.spi_open_par
-                0x0800afa0        0x8 src\dev\mcp2515.o
+                0x0800b084        0x8 src\dev\mcp2515.o
  .rodata.cmd_config_tbl
-                0x0800afa8      0x364 src\dev\w25q20ew_cmd.o
+                0x0800b08c      0x39c src\dev\w25q20ew_cmd.o
  .rodata.open_par
-                0x0800b30c       0x14 src\dev\w25q20ew_ctrl.o
+                0x0800b428       0x14 src\dev\w25q20ew_ctrl.o
  .rodata.dma_cfg
-                0x0800b320       0x54 src\drv\dma.o
+                0x0800b43c       0x54 src\drv\dma.o
  .rodata.dma_resource_cnv_tbl
-                0x0800b374       0x28 src\drv\dma.o
+                0x0800b490       0x28 src\drv\dma.o
  .rodata.i2c_cfg_tbl
-                0x0800b39c       0x38 src\drv\i2c_wrapper.o
+                0x0800b4b8       0x38 src\drv\i2c_wrapper.o
  .rodata.octspi_cfg
-                0x0800b3d4       0x30 src\drv\octspi.o
+                0x0800b4f0       0x30 src\drv\octspi.o
  .rodata.sai_cfg
-                0x0800b404       0x14 src\drv\sai.o
+                0x0800b520       0x14 src\drv\sai.o
  .rodata.spi_cfg
-                0x0800b418       0x54 src\drv\spi.o
+                0x0800b534       0x54 src\drv\spi.o
  .rodata.spi_dma_info
-                0x0800b46c       0x24 src\drv\spi.o
+                0x0800b588       0x24 src\drv\spi.o
  .rodata.usart_cfg
-                0x0800b490       0x48 src\drv\usart.o
+                0x0800b5ac       0x48 src\drv\usart.o
  .rodata.fls_mng_func_tbl
-                0x0800b4d8       0x1c src\mng\flash_mng.o
+                0x0800b5f4       0x1c src\mng\flash_mng.o
  .rodata.pin_func
-                0x0800b4f4      0x55c src\pin_function.o
+                0x0800b610      0x5cc src\pin_function.o
  .rodata.AHBPrescTable
-                0x0800ba50       0x10 src\system_stm32l4xx.o
-                0x0800ba50                AHBPrescTable
+                0x0800bbdc       0x10 src\system_stm32l4xx.o
+                0x0800bbdc                AHBPrescTable
  .rodata.APBPrescTable
-                0x0800ba60        0x8 src\system_stm32l4xx.o
-                0x0800ba60                APBPrescTable
+                0x0800bbec        0x8 src\system_stm32l4xx.o
+                0x0800bbec                APBPrescTable
  .rodata.MSIRangeTable
-                0x0800ba68       0x30 src\system_stm32l4xx.o
-                0x0800ba68                MSIRangeTable
+                0x0800bbf4       0x30 src\system_stm32l4xx.o
+                0x0800bbf4                MSIRangeTable
  .rodata._setlocale_r.str1.1
-                0x0800ba98        0x8 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-locale.o)
+                0x0800bc24        0x8 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-locale.o)
                                   0x9 (size before relaxing)
  .rodata.str1.1
-                0x0800baa0        0x2 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-locale.o)
+                0x0800bc2c        0x2 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-locale.o)
  .rodata._ctype_
-                0x0800baa2      0x101 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-ctype_.o)
-                0x0800baa2                _ctype_
-                0x0800bba4                . = ALIGN (0x4)
- *fill*         0x0800bba3        0x1 
+                0x0800bc2e      0x101 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-ctype_.o)
+                0x0800bc2e                _ctype_
+                0x0800bd30                . = ALIGN (0x4)
+ *fill*         0x0800bd2f        0x1 
 
-.rel.dyn        0x0800bba4        0x0
- .rel.iplt      0x0800bba4        0x0 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
+.rel.dyn        0x0800bd30        0x0
+ .rel.iplt      0x0800bd30        0x0 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
 
 .ARM.extab
  *(.ARM.extab* .gnu.linkonce.armextab.*)
 
-.ARM            0x0800bba4        0x0
-                0x0800bba4                __exidx_start = .
+.ARM            0x0800bd30        0x0
+                0x0800bd30                __exidx_start = .
  *(.ARM.exidx*)
-                0x0800bba4                __exidx_end = .
+                0x0800bd30                __exidx_end = .
 
-.preinit_array  0x0800bba4        0x0
-                0x0800bba4                PROVIDE (__preinit_array_start, .)
+.preinit_array  0x0800bd30        0x0
+                0x0800bd30                PROVIDE (__preinit_array_start, .)
  *(.preinit_array*)
-                0x0800bba4                PROVIDE (__preinit_array_end, .)
+                0x0800bd30                PROVIDE (__preinit_array_end, .)
 
-.init_array     0x0800bba4        0x4
-                0x0800bba4                PROVIDE (__init_array_start, .)
+.init_array     0x0800bd30        0x4
+                0x0800bd30                PROVIDE (__init_array_start, .)
  *(SORT(.init_array.*))
  *(.init_array*)
- .init_array    0x0800bba4        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
-                0x0800bba8                PROVIDE (__init_array_end, .)
+ .init_array    0x0800bd30        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
+                0x0800bd34                PROVIDE (__init_array_end, .)
 
-.fini_array     0x0800bba8        0x4
+.fini_array     0x0800bd34        0x4
                 [!provide]                PROVIDE (__fini_array_start, .)
  *(SORT(.fini_array.*))
  *(.fini_array*)
- .fini_array    0x0800bba8        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
+ .fini_array    0x0800bd34        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
                 [!provide]                PROVIDE (__fini_array_end, .)
-                0x0800bbac                _sidata = LOADADDR (.data)
+                0x0800bd38                _sidata = LOADADDR (.data)
 
 ._os_stack      0x20000000     0x8000
                 0x20000000                . = ALIGN (0x4)
@@ -6974,9 +6986,9 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../l
                 0x20010000                . = (. + _OS_SYSTEM_POOL_SIZE)
  *fill*         0x20008000     0x8000 
                 0x20010000                _system_pool_end = .
-                0x0800bbac                _siram2 = LOADADDR (.ram2)
+                0x0800bd38                _siram2 = LOADADDR (.ram2)
 
-.ram2           0x10000000        0x0 load address 0x0800bbac
+.ram2           0x10000000        0x0 load address 0x0800bd38
                 0x10000000                . = ALIGN (0x4)
                 0x10000000                _sram2 = .
  *(.ram2)
@@ -6984,7 +6996,7 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../l
                 0x10000000                . = ALIGN (0x4)
                 0x10000000                _eram2 = .
 
-.data           0x20040000      0x238 load address 0x0800bbac
+.data           0x20040000      0x238 load address 0x0800bd38
                 0x20040000                . = ALIGN (0x4)
                 0x20040000                _sdata = .
  *(.data)
@@ -7014,11 +7026,11 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../l
                 0x20040238                . = ALIGN (0x4)
                 0x20040238                _edata = .
 
-.igot.plt       0x20040238        0x0 load address 0x0800bde4
+.igot.plt       0x20040238        0x0 load address 0x0800bf70
  .igot.plt      0x20040238        0x0 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtbegin.o
                 0x20040238                . = ALIGN (0x4)
 
-.bss            0x20040238    0x45c64 load address 0x0800bde4
+.bss            0x20040238    0x45cb4 load address 0x0800bf70
                 0x20040238                _sbss = .
                 0x20040238                __bss_start__ = _sbss
  *(.bss)
@@ -7039,47 +7051,47 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../l
  .bss.mcp2515_ctl
                 0x20071634        0x4 src\dev\mcp2515.o
  .bss.w25q20ew_ctl
-                0x20071638        0xc src\dev\w25q20ew_ctrl.o
+                0x20071638       0x5c src\dev\w25q20ew_ctrl.o
  .bss.w25q20ew_buff
-                0x20071644     0x1000 src\dev\w25q20ew_ctrl.o
- .bss.dma_ctl   0x20072644       0xfc src\drv\dma.o
- .bss.i2c_ctl   0x20072740      0x128 src\drv\i2c_wrapper.o
+                0x20071694     0x1000 src\dev\w25q20ew_ctrl.o
+ .bss.dma_ctl   0x20072694       0xfc src\drv\dma.o
+ .bss.i2c_ctl   0x20072790      0x128 src\drv\i2c_wrapper.o
  .bss.octspi_ctl
-                0x20072868       0x20 src\drv\octspi.o
- .bss.sai_ctl   0x20072888    0x10020 src\drv\sai.o
- .bss.spi_ctl   0x200828a8       0x54 src\drv\spi.o
+                0x200728b8       0x20 src\drv\octspi.o
+ .bss.sai_ctl   0x200728d8    0x10020 src\drv\sai.o
+ .bss.spi_ctl   0x200828f8       0x54 src\drv\spi.o
  .bss.usart_ctl
-                0x200828fc     0x1884 src\drv\usart.o
+                0x2008294c     0x1884 src\drv\usart.o
  .bss.dbg_int_info
-                0x20084180      0x334 src\misc\debug.o
+                0x200841d0      0x334 src\misc\debug.o
  .bss.dbg_tsk_info
-                0x200844b4      0x148 src\misc\debug.o
+                0x20084504      0x148 src\misc\debug.o
  .bss.dbg_dispatch_tsk_info
-                0x200845fc      0x148 src\misc\debug.o
+                0x2008464c      0x148 src\misc\debug.o
  .bss.cycmsg_que
-                0x20084744        0x8 src\mng\cyc.o
- .bss.cyc_ctl   0x2008474c        0x8 src\mng\cyc.o
+                0x20084794        0x8 src\mng\cyc.o
+ .bss.cyc_ctl   0x2008479c        0x8 src\mng\cyc.o
  .bss.fls_mng_ctl
-                0x20084754        0x4 src\mng\flash_mng.o
+                0x200847a4        0x4 src\mng\flash_mng.o
  .bss.flash_mng_buff
-                0x20084758     0x1000 src\mng\flash_mng.o
- .bss.current   0x20085758        0x4 src\os\kozos.o
- .bss.threads   0x2008575c      0x3fc src\os\kozos.o
- .bss.handlers  0x20085b58      0x1b8 src\os\kozos.o
- .bss.msgboxes  0x20085d10       0xf0 src\os\kozos.o
- .bss.mng_time  0x20085e00        0x8 src\os\kozos.o
- .bss.readyque  0x20085e08       0x80 src\os\kozos.o
- .bss.timque    0x20085e88        0x8 src\os\kozos.o
+                0x200847a8     0x1000 src\mng\flash_mng.o
+ .bss.current   0x200857a8        0x4 src\os\kozos.o
+ .bss.threads   0x200857ac      0x3fc src\os\kozos.o
+ .bss.handlers  0x20085ba8      0x1b8 src\os\kozos.o
+ .bss.msgboxes  0x20085d60       0xf0 src\os\kozos.o
+ .bss.mng_time  0x20085e50        0x8 src\os\kozos.o
+ .bss.readyque  0x20085e58       0x80 src\os\kozos.o
+ .bss.timque    0x20085ed8        0x8 src\os\kozos.o
  .bss.init_dispatch.13824
-                0x20085e90        0x4 src\os\kozos.o
+                0x20085ee0        0x4 src\os\kozos.o
  *(COMMON)
- COMMON         0x20085e94        0x4 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.o
-                0x20085e94                uwTick
- COMMON         0x20085e98        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-reent.o)
-                0x20085e98                errno
-                0x20085e9c                . = ALIGN (0x4)
-                0x20085e9c                _ebss = .
-                0x20085e9c                __bss_end__ = _ebss
+ COMMON         0x20085ee4        0x4 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.o
+                0x20085ee4                uwTick
+ COMMON         0x20085ee8        0x4 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-reent.o)
+                0x20085ee8                errno
+                0x20085eec                . = ALIGN (0x4)
+                0x20085eec                _ebss = .
+                0x20085eec                __bss_end__ = _ebss
 
 .memory_b1_text
  *(.mb1text)
@@ -7207,7 +7219,7 @@ LOAD c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../l
                 0x00000b39       0x22 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/armv7e-m/fpu/crtn.o
 OUTPUT(System.elf elf32-littlearm)
 
-.debug_info     0x00000000    0x21ae7
+.debug_info     0x00000000    0x22442
  .debug_info    0x00000000      0xcb2 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.o
  .debug_info    0x00000cb2      0xfb7 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_cortex.o
  .debug_info    0x00001c69      0xa76 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_dma.o
@@ -7222,30 +7234,30 @@ OUTPUT(System.elf elf32-littlearm)
  .debug_info    0x0000b52e     0x115d src\dev\MSP2807.o
  .debug_info    0x0000c68b     0x1847 src\dev\bt_dev.o
  .debug_info    0x0000ded2     0x131e src\dev\mcp2515.o
- .debug_info    0x0000f1f0     0x107b src\dev\w25q20ew_cmd.o
- .debug_info    0x0001026b     0x1513 src\dev\w25q20ew_ctrl.o
- .debug_info    0x0001177e     0x141f src\drv\dma.o
- .debug_info    0x00012b9d     0x18f2 src\drv\i2c_wrapper.o
- .debug_info    0x0001448f     0x1c72 src\drv\octspi.o
- .debug_info    0x00016101     0x17a4 src\drv\sai.o
- .debug_info    0x000178a5     0x163b src\drv\spi.o
- .debug_info    0x00018ee0     0x130f src\drv\usart.o
- .debug_info    0x0001a1ef      0xb55 src\main.o
- .debug_info    0x0001ad44      0x859 src\misc\debug.o
- .debug_info    0x0001b59d      0xcea src\misc\str_util.o
- .debug_info    0x0001c287      0x53d src\mng\cyc.o
- .debug_info    0x0001c7c4     0x1175 src\mng\flash_mng.o
- .debug_info    0x0001d939       0x7c src\os\dispatch.o
- .debug_info    0x0001d9b5       0x7c src\os\intr.o
- .debug_info    0x0001da31     0x1707 src\os\kozos.o
- .debug_info    0x0001f138      0x4f4 src\os\memory.o
- .debug_info    0x0001f62c      0xb2e src\os\syscall.o
- .debug_info    0x0002015a      0x4a1 src\pin_function.o
- .debug_info    0x000205fb       0x84 src\startup_stm32l4r5xx.o
- .debug_info    0x0002067f      0x7f0 src\system_stm32l4xx.o
- .debug_info    0x00020e6f      0xc78 src\tiny_printf.o
+ .debug_info    0x0000f1f0     0x1116 src\dev\w25q20ew_cmd.o
+ .debug_info    0x00010306     0x1dd3 src\dev\w25q20ew_ctrl.o
+ .debug_info    0x000120d9     0x141f src\drv\dma.o
+ .debug_info    0x000134f8     0x18f2 src\drv\i2c_wrapper.o
+ .debug_info    0x00014dea     0x1c72 src\drv\octspi.o
+ .debug_info    0x00016a5c     0x17a4 src\drv\sai.o
+ .debug_info    0x00018200     0x163b src\drv\spi.o
+ .debug_info    0x0001983b     0x130f src\drv\usart.o
+ .debug_info    0x0001ab4a      0xb55 src\main.o
+ .debug_info    0x0001b69f      0x859 src\misc\debug.o
+ .debug_info    0x0001bef8      0xcea src\misc\str_util.o
+ .debug_info    0x0001cbe2      0x53d src\mng\cyc.o
+ .debug_info    0x0001d11f     0x1175 src\mng\flash_mng.o
+ .debug_info    0x0001e294       0x7c src\os\dispatch.o
+ .debug_info    0x0001e310       0x7c src\os\intr.o
+ .debug_info    0x0001e38c     0x1707 src\os\kozos.o
+ .debug_info    0x0001fa93      0x4f4 src\os\memory.o
+ .debug_info    0x0001ff87      0xb2e src\os\syscall.o
+ .debug_info    0x00020ab5      0x4a1 src\pin_function.o
+ .debug_info    0x00020f56       0x84 src\startup_stm32l4r5xx.o
+ .debug_info    0x00020fda      0x7f0 src\system_stm32l4xx.o
+ .debug_info    0x000217ca      0xc78 src\tiny_printf.o
 
-.debug_abbrev   0x00000000     0x4b98
+.debug_abbrev   0x00000000     0x4bea
  .debug_abbrev  0x00000000      0x1f6 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.o
  .debug_abbrev  0x000001f6      0x2da Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_cortex.o
  .debug_abbrev  0x000004d0      0x1d4 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_dma.o
@@ -7261,29 +7273,29 @@ OUTPUT(System.elf elf32-littlearm)
  .debug_abbrev  0x00001ac0      0x34e src\dev\bt_dev.o
  .debug_abbrev  0x00001e0e      0x26f src\dev\mcp2515.o
  .debug_abbrev  0x0000207d      0x233 src\dev\w25q20ew_cmd.o
- .debug_abbrev  0x000022b0      0x2a9 src\dev\w25q20ew_ctrl.o
- .debug_abbrev  0x00002559      0x29e src\drv\dma.o
- .debug_abbrev  0x000027f7      0x24c src\drv\i2c_wrapper.o
- .debug_abbrev  0x00002a43      0x2a1 src\drv\octspi.o
- .debug_abbrev  0x00002ce4      0x2ce src\drv\sai.o
- .debug_abbrev  0x00002fb2      0x2db src\drv\spi.o
- .debug_abbrev  0x0000328d      0x2c5 src\drv\usart.o
- .debug_abbrev  0x00003552      0x1b9 src\main.o
- .debug_abbrev  0x0000370b      0x1c2 src\misc\debug.o
- .debug_abbrev  0x000038cd      0x24a src\misc\str_util.o
- .debug_abbrev  0x00003b17      0x191 src\mng\cyc.o
- .debug_abbrev  0x00003ca8      0x275 src\mng\flash_mng.o
- .debug_abbrev  0x00003f1d       0x12 src\os\dispatch.o
- .debug_abbrev  0x00003f2f       0x14 src\os\intr.o
- .debug_abbrev  0x00003f43      0x3fd src\os\kozos.o
- .debug_abbrev  0x00004340      0x18a src\os\memory.o
- .debug_abbrev  0x000044ca      0x1b1 src\os\syscall.o
- .debug_abbrev  0x0000467b      0x133 src\pin_function.o
- .debug_abbrev  0x000047ae       0x12 src\startup_stm32l4r5xx.o
- .debug_abbrev  0x000047c0      0x176 src\system_stm32l4xx.o
- .debug_abbrev  0x00004936      0x262 src\tiny_printf.o
+ .debug_abbrev  0x000022b0      0x2fb src\dev\w25q20ew_ctrl.o
+ .debug_abbrev  0x000025ab      0x29e src\drv\dma.o
+ .debug_abbrev  0x00002849      0x24c src\drv\i2c_wrapper.o
+ .debug_abbrev  0x00002a95      0x2a1 src\drv\octspi.o
+ .debug_abbrev  0x00002d36      0x2ce src\drv\sai.o
+ .debug_abbrev  0x00003004      0x2db src\drv\spi.o
+ .debug_abbrev  0x000032df      0x2c5 src\drv\usart.o
+ .debug_abbrev  0x000035a4      0x1b9 src\main.o
+ .debug_abbrev  0x0000375d      0x1c2 src\misc\debug.o
+ .debug_abbrev  0x0000391f      0x24a src\misc\str_util.o
+ .debug_abbrev  0x00003b69      0x191 src\mng\cyc.o
+ .debug_abbrev  0x00003cfa      0x275 src\mng\flash_mng.o
+ .debug_abbrev  0x00003f6f       0x12 src\os\dispatch.o
+ .debug_abbrev  0x00003f81       0x14 src\os\intr.o
+ .debug_abbrev  0x00003f95      0x3fd src\os\kozos.o
+ .debug_abbrev  0x00004392      0x18a src\os\memory.o
+ .debug_abbrev  0x0000451c      0x1b1 src\os\syscall.o
+ .debug_abbrev  0x000046cd      0x133 src\pin_function.o
+ .debug_abbrev  0x00004800       0x12 src\startup_stm32l4r5xx.o
+ .debug_abbrev  0x00004812      0x176 src\system_stm32l4xx.o
+ .debug_abbrev  0x00004988      0x262 src\tiny_printf.o
 
-.debug_aranges  0x00000000     0x14d0
+.debug_aranges  0x00000000     0x14f8
  .debug_aranges
                 0x00000000      0x130 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.o
  .debug_aranges
@@ -7313,51 +7325,51 @@ OUTPUT(System.elf elf32-littlearm)
  .debug_aranges
                 0x00000b78       0x78 src\dev\mcp2515.o
  .debug_aranges
-                0x00000bf0       0x88 src\dev\w25q20ew_cmd.o
+                0x00000bf0       0x98 src\dev\w25q20ew_cmd.o
  .debug_aranges
-                0x00000c78       0xe0 src\dev\w25q20ew_ctrl.o
+                0x00000c88       0xf8 src\dev\w25q20ew_ctrl.o
  .debug_aranges
-                0x00000d58       0x80 src\drv\dma.o
+                0x00000d80       0x80 src\drv\dma.o
  .debug_aranges
-                0x00000dd8       0x78 src\drv\i2c_wrapper.o
+                0x00000e00       0x78 src\drv\i2c_wrapper.o
  .debug_aranges
-                0x00000e50       0x90 src\drv\octspi.o
+                0x00000e78       0x90 src\drv\octspi.o
  .debug_aranges
-                0x00000ee0       0x68 src\drv\sai.o
+                0x00000f08       0x68 src\drv\sai.o
  .debug_aranges
-                0x00000f48       0x78 src\drv\spi.o
+                0x00000f70       0x78 src\drv\spi.o
  .debug_aranges
-                0x00000fc0       0x70 src\drv\usart.o
+                0x00000fe8       0x70 src\drv\usart.o
  .debug_aranges
-                0x00001030       0x28 src\main.o
+                0x00001058       0x28 src\main.o
  .debug_aranges
-                0x00001058       0x38 src\misc\debug.o
+                0x00001080       0x38 src\misc\debug.o
  .debug_aranges
-                0x00001090       0x48 src\misc\str_util.o
+                0x000010b8       0x48 src\misc\str_util.o
  .debug_aranges
-                0x000010d8       0x38 src\mng\cyc.o
+                0x00001100       0x38 src\mng\cyc.o
  .debug_aranges
-                0x00001110       0x78 src\mng\flash_mng.o
+                0x00001138       0x78 src\mng\flash_mng.o
  .debug_aranges
-                0x00001188       0x28 src\os\dispatch.o
+                0x000011b0       0x28 src\os\dispatch.o
  .debug_aranges
-                0x000011b0       0x20 src\os\intr.o
+                0x000011d8       0x20 src\os\intr.o
  .debug_aranges
-                0x000011d0      0x140 src\os\kozos.o
+                0x000011f8      0x140 src\os\kozos.o
  .debug_aranges
-                0x00001310       0x38 src\os\memory.o
+                0x00001338       0x38 src\os\memory.o
  .debug_aranges
-                0x00001348       0xa8 src\os\syscall.o
+                0x00001370       0xa8 src\os\syscall.o
  .debug_aranges
-                0x000013f0       0x20 src\pin_function.o
+                0x00001418       0x20 src\pin_function.o
  .debug_aranges
-                0x00001410       0x28 src\startup_stm32l4r5xx.o
+                0x00001438       0x28 src\startup_stm32l4r5xx.o
  .debug_aranges
-                0x00001438       0x38 src\system_stm32l4xx.o
+                0x00001460       0x38 src\system_stm32l4xx.o
  .debug_aranges
-                0x00001470       0x60 src\tiny_printf.o
+                0x00001498       0x60 src\tiny_printf.o
 
-.debug_ranges   0x00000000     0x1290
+.debug_ranges   0x00000000     0x12b8
  .debug_ranges  0x00000000      0x120 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.o
  .debug_ranges  0x00000120      0x108 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_cortex.o
  .debug_ranges  0x00000228       0x80 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_dma.o
@@ -7372,29 +7384,29 @@ OUTPUT(System.elf elf32-littlearm)
  .debug_ranges  0x00000980       0x40 src\dev\MSP2807.o
  .debug_ranges  0x000009c0       0xe8 src\dev\bt_dev.o
  .debug_ranges  0x00000aa8       0x68 src\dev\mcp2515.o
- .debug_ranges  0x00000b10       0x78 src\dev\w25q20ew_cmd.o
- .debug_ranges  0x00000b88       0xd0 src\dev\w25q20ew_ctrl.o
- .debug_ranges  0x00000c58       0x70 src\drv\dma.o
- .debug_ranges  0x00000cc8       0x68 src\drv\i2c_wrapper.o
- .debug_ranges  0x00000d30       0x80 src\drv\octspi.o
- .debug_ranges  0x00000db0       0x58 src\drv\sai.o
- .debug_ranges  0x00000e08       0x68 src\drv\spi.o
- .debug_ranges  0x00000e70       0x60 src\drv\usart.o
- .debug_ranges  0x00000ed0       0x18 src\main.o
- .debug_ranges  0x00000ee8       0x28 src\misc\debug.o
- .debug_ranges  0x00000f10       0x38 src\misc\str_util.o
- .debug_ranges  0x00000f48       0x28 src\mng\cyc.o
- .debug_ranges  0x00000f70       0x68 src\mng\flash_mng.o
- .debug_ranges  0x00000fd8       0x20 src\os\dispatch.o
- .debug_ranges  0x00000ff8      0x130 src\os\kozos.o
- .debug_ranges  0x00001128       0x28 src\os\memory.o
- .debug_ranges  0x00001150       0x98 src\os\syscall.o
- .debug_ranges  0x000011e8       0x10 src\pin_function.o
- .debug_ranges  0x000011f8       0x20 src\startup_stm32l4r5xx.o
- .debug_ranges  0x00001218       0x28 src\system_stm32l4xx.o
- .debug_ranges  0x00001240       0x50 src\tiny_printf.o
+ .debug_ranges  0x00000b10       0x88 src\dev\w25q20ew_cmd.o
+ .debug_ranges  0x00000b98       0xe8 src\dev\w25q20ew_ctrl.o
+ .debug_ranges  0x00000c80       0x70 src\drv\dma.o
+ .debug_ranges  0x00000cf0       0x68 src\drv\i2c_wrapper.o
+ .debug_ranges  0x00000d58       0x80 src\drv\octspi.o
+ .debug_ranges  0x00000dd8       0x58 src\drv\sai.o
+ .debug_ranges  0x00000e30       0x68 src\drv\spi.o
+ .debug_ranges  0x00000e98       0x60 src\drv\usart.o
+ .debug_ranges  0x00000ef8       0x18 src\main.o
+ .debug_ranges  0x00000f10       0x28 src\misc\debug.o
+ .debug_ranges  0x00000f38       0x38 src\misc\str_util.o
+ .debug_ranges  0x00000f70       0x28 src\mng\cyc.o
+ .debug_ranges  0x00000f98       0x68 src\mng\flash_mng.o
+ .debug_ranges  0x00001000       0x20 src\os\dispatch.o
+ .debug_ranges  0x00001020      0x130 src\os\kozos.o
+ .debug_ranges  0x00001150       0x28 src\os\memory.o
+ .debug_ranges  0x00001178       0x98 src\os\syscall.o
+ .debug_ranges  0x00001210       0x10 src\pin_function.o
+ .debug_ranges  0x00001220       0x20 src\startup_stm32l4r5xx.o
+ .debug_ranges  0x00001240       0x28 src\system_stm32l4xx.o
+ .debug_ranges  0x00001268       0x50 src\tiny_printf.o
 
-.debug_line     0x00000000     0xb0cc
+.debug_line     0x00000000     0xb19a
  .debug_line    0x00000000      0x4de Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.o
  .debug_line    0x000004de      0x586 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_cortex.o
  .debug_line    0x00000a64      0x4cd Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_dma.o
@@ -7409,30 +7421,30 @@ OUTPUT(System.elf elf32-littlearm)
  .debug_line    0x00005045      0x4dd src\dev\MSP2807.o
  .debug_line    0x00005522      0x5f2 src\dev\bt_dev.o
  .debug_line    0x00005b14      0x40e src\dev\mcp2515.o
- .debug_line    0x00005f22      0x3ec src\dev\w25q20ew_cmd.o
- .debug_line    0x0000630e      0x6ca src\dev\w25q20ew_ctrl.o
- .debug_line    0x000069d8      0x4a8 src\drv\dma.o
- .debug_line    0x00006e80      0x515 src\drv\i2c_wrapper.o
- .debug_line    0x00007395      0x4e3 src\drv\octspi.o
- .debug_line    0x00007878      0x4a3 src\drv\sai.o
- .debug_line    0x00007d1b      0x4b6 src\drv\spi.o
- .debug_line    0x000081d1      0x450 src\drv\usart.o
- .debug_line    0x00008621      0x2eb src\main.o
- .debug_line    0x0000890c      0x2ad src\misc\debug.o
- .debug_line    0x00008bb9      0x6e7 src\misc\str_util.o
- .debug_line    0x000092a0      0x2ad src\mng\cyc.o
- .debug_line    0x0000954d      0x511 src\mng\flash_mng.o
- .debug_line    0x00009a5e       0x63 src\os\dispatch.o
- .debug_line    0x00009ac1       0x44 src\os\intr.o
- .debug_line    0x00009b05      0x63c src\os\kozos.o
- .debug_line    0x0000a141      0x2da src\os\memory.o
- .debug_line    0x0000a41b      0x44d src\os\syscall.o
- .debug_line    0x0000a868      0x26a src\pin_function.o
- .debug_line    0x0000aad2       0x7b src\startup_stm32l4r5xx.o
- .debug_line    0x0000ab4d      0x2c0 src\system_stm32l4xx.o
- .debug_line    0x0000ae0d      0x2bf src\tiny_printf.o
+ .debug_line    0x00005f22      0x418 src\dev\w25q20ew_cmd.o
+ .debug_line    0x0000633a      0x76f src\dev\w25q20ew_ctrl.o
+ .debug_line    0x00006aa9      0x4a8 src\drv\dma.o
+ .debug_line    0x00006f51      0x515 src\drv\i2c_wrapper.o
+ .debug_line    0x00007466      0x4e0 src\drv\octspi.o
+ .debug_line    0x00007946      0x4a3 src\drv\sai.o
+ .debug_line    0x00007de9      0x4b6 src\drv\spi.o
+ .debug_line    0x0000829f      0x450 src\drv\usart.o
+ .debug_line    0x000086ef      0x2eb src\main.o
+ .debug_line    0x000089da      0x2ad src\misc\debug.o
+ .debug_line    0x00008c87      0x6e7 src\misc\str_util.o
+ .debug_line    0x0000936e      0x2ad src\mng\cyc.o
+ .debug_line    0x0000961b      0x511 src\mng\flash_mng.o
+ .debug_line    0x00009b2c       0x63 src\os\dispatch.o
+ .debug_line    0x00009b8f       0x44 src\os\intr.o
+ .debug_line    0x00009bd3      0x63c src\os\kozos.o
+ .debug_line    0x0000a20f      0x2da src\os\memory.o
+ .debug_line    0x0000a4e9      0x44d src\os\syscall.o
+ .debug_line    0x0000a936      0x26a src\pin_function.o
+ .debug_line    0x0000aba0       0x7b src\startup_stm32l4r5xx.o
+ .debug_line    0x0000ac1b      0x2c0 src\system_stm32l4xx.o
+ .debug_line    0x0000aedb      0x2bf src\tiny_printf.o
 
-.debug_str      0x00000000     0x712b
+.debug_str      0x00000000     0x7406
  .debug_str     0x00000000      0xe92 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.o
                                 0xf43 (size before relaxing)
  .debug_str     0x00000e92      0x3fa Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_cortex.o
@@ -7447,57 +7459,57 @@ OUTPUT(System.elf elf32-littlearm)
                                 0xb61 (size before relaxing)
  .debug_str     0x00002cd8      0x3eb Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_rcc.o
                                 0xb0b (size before relaxing)
- .debug_str     0x000030c3      0x79d Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_rcc_ex.o
+ .debug_str     0x000030c3      0x793 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_rcc_ex.o
                                 0xf6d (size before relaxing)
- .debug_str     0x00003860      0x6f3 src\apl\console.o
+ .debug_str     0x00003856      0x6f3 src\apl\console.o
                                 0xbdb (size before relaxing)
- .debug_str     0x00003f53      0x1fd src\apl\loading_app.o
+ .debug_str     0x00003f49      0x1fd src\apl\loading_app.o
                                 0xc4c (size before relaxing)
- .debug_str     0x00004150       0x45 src\clock.o
+ .debug_str     0x00004146       0x45 src\clock.o
                                 0xa46 (size before relaxing)
- .debug_str     0x00004195      0x421 src\dev\MSP2807.o
+ .debug_str     0x0000418b      0x421 src\dev\MSP2807.o
                                 0xd52 (size before relaxing)
- .debug_str     0x000045b6      0x534 src\dev\bt_dev.o
+ .debug_str     0x000045ac      0x534 src\dev\bt_dev.o
                                0x104c (size before relaxing)
- .debug_str     0x00004aea      0x15e src\dev\mcp2515.o
+ .debug_str     0x00004ae0      0x15e src\dev\mcp2515.o
                                0x118f (size before relaxing)
- .debug_str     0x00004c48      0x316 src\dev\w25q20ew_cmd.o
-                                0xbae (size before relaxing)
- .debug_str     0x00004f5e      0x4f6 src\dev\w25q20ew_ctrl.o
-                                0xea9 (size before relaxing)
- .debug_str     0x00005454      0x35c src\drv\dma.o
+ .debug_str     0x00004c3e      0x340 src\dev\w25q20ew_cmd.o
+                                0xbd8 (size before relaxing)
+ .debug_str     0x00004f7e      0x7b6 src\dev\w25q20ew_ctrl.o
+                               0x14ca (size before relaxing)
+ .debug_str     0x00005734      0x35c src\drv\dma.o
                                0x1167 (size before relaxing)
- .debug_str     0x000057b0      0x1ba src\drv\i2c_wrapper.o
+ .debug_str     0x00005a90      0x1ba src\drv\i2c_wrapper.o
                                0x1675 (size before relaxing)
- .debug_str     0x0000596a      0x636 src\drv\octspi.o
+ .debug_str     0x00005c4a      0x631 src\drv\octspi.o
                                0x17a4 (size before relaxing)
- .debug_str     0x00005fa0      0x403 src\drv\sai.o
+ .debug_str     0x0000627b      0x403 src\drv\sai.o
                                0x1347 (size before relaxing)
- .debug_str     0x000063a3      0x102 src\drv\spi.o
+ .debug_str     0x0000667e      0x102 src\drv\spi.o
                                0x1469 (size before relaxing)
- .debug_str     0x000064a5      0x173 src\drv\usart.o
+ .debug_str     0x00006780      0x173 src\drv\usart.o
                                 0xfe0 (size before relaxing)
- .debug_str     0x00006618       0x1c src\main.o
+ .debug_str     0x000068f3       0x1c src\main.o
                                 0x8af (size before relaxing)
- .debug_str     0x00006634      0x28f src\misc\debug.o
+ .debug_str     0x0000690f      0x28f src\misc\debug.o
                                 0x771 (size before relaxing)
- .debug_str     0x000068c3       0x6f src\misc\str_util.o
+ .debug_str     0x00006b9e       0x6f src\misc\str_util.o
                                 0x90b (size before relaxing)
- .debug_str     0x00006932       0xa7 src\mng\cyc.o
+ .debug_str     0x00006c0d       0xa7 src\mng\cyc.o
                                 0x568 (size before relaxing)
- .debug_str     0x000069d9      0x1d2 src\mng\flash_mng.o
+ .debug_str     0x00006cb4      0x1d2 src\mng\flash_mng.o
                                 0xae3 (size before relaxing)
- .debug_str     0x00006bab      0x2e6 src\os\kozos.o
+ .debug_str     0x00006e86      0x2e6 src\os\kozos.o
                                0x1145 (size before relaxing)
- .debug_str     0x00006e91       0x76 src\os\memory.o
+ .debug_str     0x0000716c       0x76 src\os\memory.o
                                 0x510 (size before relaxing)
- .debug_str     0x00006f07       0xdf src\os\syscall.o
+ .debug_str     0x000071e2       0xdf src\os\syscall.o
                                 0x8bb (size before relaxing)
- .debug_str     0x00006fe6       0x51 src\pin_function.o
+ .debug_str     0x000072c1       0x51 src\pin_function.o
                                 0x542 (size before relaxing)
- .debug_str     0x00007037       0x54 src\system_stm32l4xx.o
+ .debug_str     0x00007312       0x54 src\system_stm32l4xx.o
                                 0x69f (size before relaxing)
- .debug_str     0x0000708b       0xa0 src\tiny_printf.o
+ .debug_str     0x00007366       0xa0 src\tiny_printf.o
                                 0x695 (size before relaxing)
 
 .comment        0x00000000       0x7c
@@ -7536,7 +7548,7 @@ OUTPUT(System.elf elf32-littlearm)
  .comment       0x0000007c       0x7d src\system_stm32l4xx.o
  .comment       0x0000007c       0x7d src\tiny_printf.o
 
-.debug_frame    0x00000000     0x5358
+.debug_frame    0x00000000     0x5410
  .debug_frame   0x00000000      0x498 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal.o
  .debug_frame   0x00000498      0x498 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_cortex.o
  .debug_frame   0x00000930      0x24c Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_dma.o
@@ -7551,38 +7563,38 @@ OUTPUT(System.elf elf32-littlearm)
  .debug_frame   0x00002a50      0x10c src\dev\MSP2807.o
  .debug_frame   0x00002b5c      0x408 src\dev\bt_dev.o
  .debug_frame   0x00002f64      0x1bc src\dev\mcp2515.o
- .debug_frame   0x00003120      0x21c src\dev\w25q20ew_cmd.o
- .debug_frame   0x0000333c      0x398 src\dev\w25q20ew_ctrl.o
- .debug_frame   0x000036d4      0x1b8 src\drv\dma.o
- .debug_frame   0x0000388c      0x1bc src\drv\i2c_wrapper.o
- .debug_frame   0x00003a48      0x238 src\drv\octspi.o
- .debug_frame   0x00003c80      0x178 src\drv\sai.o
- .debug_frame   0x00003df8      0x1a8 src\drv\spi.o
- .debug_frame   0x00003fa0      0x18c src\drv\usart.o
- .debug_frame   0x0000412c       0x54 src\main.o
- .debug_frame   0x00004180       0xac src\misc\debug.o
- .debug_frame   0x0000422c       0xfc src\misc\str_util.o
- .debug_frame   0x00004328       0xa0 src\mng\cyc.o
- .debug_frame   0x000043c8      0x1c0 src\mng\flash_mng.o
- .debug_frame   0x00004588      0x508 src\os\kozos.o
- .debug_frame   0x00004a90       0xa0 src\os\memory.o
- .debug_frame   0x00004b30      0x290 src\os\syscall.o
- .debug_frame   0x00004dc0       0x38 src\pin_function.o
- .debug_frame   0x00004df8       0xa8 src\system_stm32l4xx.o
- .debug_frame   0x00004ea0      0x1bc src\tiny_printf.o
- .debug_frame   0x0000505c       0x30 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-atoi.o)
- .debug_frame   0x0000508c       0x2c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-init.o)
- .debug_frame   0x000050b8       0x28 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memcmp.o)
- .debug_frame   0x000050e0       0x28 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memcpy-stub.o)
- .debug_frame   0x00005108       0x20 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memset.o)
- .debug_frame   0x00005128       0x20 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strchr.o)
- .debug_frame   0x00005148       0x20 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strcpy.o)
- .debug_frame   0x00005168       0x88 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strtol.o)
- .debug_frame   0x000051f0       0x68 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-locale.o)
- .debug_frame   0x00005258       0x48 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-mbtowc_r.o)
- .debug_frame   0x000052a0       0x5c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-reent.o)
- .debug_frame   0x000052fc       0x3c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-wctomb_r.o)
- .debug_frame   0x00005338       0x20 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libnosys.a(write.o)
+ .debug_frame   0x00003120      0x268 src\dev\w25q20ew_cmd.o
+ .debug_frame   0x00003388      0x404 src\dev\w25q20ew_ctrl.o
+ .debug_frame   0x0000378c      0x1b8 src\drv\dma.o
+ .debug_frame   0x00003944      0x1bc src\drv\i2c_wrapper.o
+ .debug_frame   0x00003b00      0x238 src\drv\octspi.o
+ .debug_frame   0x00003d38      0x178 src\drv\sai.o
+ .debug_frame   0x00003eb0      0x1a8 src\drv\spi.o
+ .debug_frame   0x00004058      0x18c src\drv\usart.o
+ .debug_frame   0x000041e4       0x54 src\main.o
+ .debug_frame   0x00004238       0xac src\misc\debug.o
+ .debug_frame   0x000042e4       0xfc src\misc\str_util.o
+ .debug_frame   0x000043e0       0xa0 src\mng\cyc.o
+ .debug_frame   0x00004480      0x1c0 src\mng\flash_mng.o
+ .debug_frame   0x00004640      0x508 src\os\kozos.o
+ .debug_frame   0x00004b48       0xa0 src\os\memory.o
+ .debug_frame   0x00004be8      0x290 src\os\syscall.o
+ .debug_frame   0x00004e78       0x38 src\pin_function.o
+ .debug_frame   0x00004eb0       0xa8 src\system_stm32l4xx.o
+ .debug_frame   0x00004f58      0x1bc src\tiny_printf.o
+ .debug_frame   0x00005114       0x30 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-atoi.o)
+ .debug_frame   0x00005144       0x2c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-init.o)
+ .debug_frame   0x00005170       0x28 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memcmp.o)
+ .debug_frame   0x00005198       0x28 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memcpy-stub.o)
+ .debug_frame   0x000051c0       0x20 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-memset.o)
+ .debug_frame   0x000051e0       0x20 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strchr.o)
+ .debug_frame   0x00005200       0x20 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strcpy.o)
+ .debug_frame   0x00005220       0x88 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-strtol.o)
+ .debug_frame   0x000052a8       0x68 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-locale.o)
+ .debug_frame   0x00005310       0x48 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-mbtowc_r.o)
+ .debug_frame   0x00005358       0x5c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-reent.o)
+ .debug_frame   0x000053b4       0x3c c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libc_nano.a(lib_a-wctomb_r.o)
+ .debug_frame   0x000053f0       0x20 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libnosys.a(write.o)
 
 .stab           0x00000000       0x24
  .stab          0x00000000       0x24 c:/program files (x86)/atollic/truestudio for stm32 9.3.0/armtools/bin/../lib/gcc/arm-atollic-eabi/6.3.1/../../../../arm-atollic-eabi/lib/armv7e-m/fpu\libnosys.a(write.o)
@@ -8452,8 +8464,10 @@ HAL_OSPI_AutoPolling                              Drivers\STM32L4xx_HAL_Driver\S
 HAL_OSPI_AutoPolling_IT                           Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_CmdCpltCallback                          Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_Command                                  Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
+                                                  src\dev\w25q20ew_ctrl.o
 HAL_OSPI_Command_IT                               Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_DeInit                                   Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
+                                                  src\dev\w25q20ew_ctrl.o
 HAL_OSPI_ErrorCallback                            Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_FifoThresholdCallback                    Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_GetError                                 Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
@@ -8463,10 +8477,12 @@ HAL_OSPI_HyperbusCfg                              Drivers\STM32L4xx_HAL_Driver\S
 HAL_OSPI_HyperbusCmd                              Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_IRQHandler                               Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_Init                                     Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
+                                                  src\dev\w25q20ew_ctrl.o
 HAL_OSPI_MemoryMapped                             Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_MspDeInit                                Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_MspInit                                  Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_Receive                                  Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
+                                                  src\dev\w25q20ew_ctrl.o
 HAL_OSPI_Receive_DMA                              Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_Receive_IT                               Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
 HAL_OSPI_RxCpltCallback                           Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_ospi.o
@@ -9887,6 +9903,7 @@ kz_tsleep                                         src\os\syscall.o
                                                   src\drv\usart.o
                                                   src\drv\spi.o
                                                   src\dev\w25q20ew_ctrl.o
+                                                  src\dev\w25q20ew_cmd.o
                                                   src\dev\btn_dev.o
                                                   src\dev\MSP2807.o
 kz_wait                                           src\os\syscall.o
@@ -9989,6 +10006,7 @@ octospi_recv                                      src\drv\octspi.o
 octospi_send                                      src\drv\octspi.o
                                                   src\dev\w25q20ew_cmd.o
 opctspi_common_handler                            src\drv\octspi.o
+open_quad                                         src\dev\w25q20ew_ctrl.o
 pFlash                                            Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_flash.o
                                                   Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_flash_ramfunc.o
                                                   Drivers\STM32L4xx_HAL_Driver\Src\stm32l4xx_hal_flash_ex.o
@@ -10007,6 +10025,7 @@ pin_function_init                                 src\pin_function.o
 printf                                            src\tiny_printf.o
 puts                                              src\tiny_printf.o
                                                   src\os\kozos.o
+read_quad                                         src\dev\w25q20ew_ctrl.o
 sai1_handler                                      src\drv\sai.o
 sai_init                                          src\drv\sai.o
                                                   src\main.o
@@ -10123,12 +10142,15 @@ w25q20ew_cmd_get_devise_id                        src\dev\w25q20ew_cmd.o
                                                   src\dev\w25q20ew_ctrl.o
 w25q20ew_cmd_get_sfdp                             src\dev\w25q20ew_cmd.o
                                                   src\dev\w25q20ew_ctrl.o
+w25q20ew_cmd_read_dual                            src\dev\w25q20ew_cmd.o
 w25q20ew_cmd_read_quad                            src\dev\w25q20ew_cmd.o
                                                   src\dev\w25q20ew_ctrl.o
 w25q20ew_cmd_read_single                          src\dev\w25q20ew_cmd.o
 w25q20ew_cmd_read_status_1                        src\dev\w25q20ew_cmd.o
                                                   src\dev\w25q20ew_ctrl.o
 w25q20ew_cmd_read_status_2                        src\dev\w25q20ew_cmd.o
+                                                  src\dev\w25q20ew_ctrl.o
+w25q20ew_cmd_reset                                src\dev\w25q20ew_cmd.o
                                                   src\dev\w25q20ew_ctrl.o
 w25q20ew_cmd_set_memory_mapped                    src\dev\w25q20ew_cmd.o
                                                   src\dev\w25q20ew_ctrl.o
